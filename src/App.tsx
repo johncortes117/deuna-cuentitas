@@ -15,21 +15,39 @@ import { mockMisCuentitas } from './data/mockData';
 // ═══════════════════════════════════════════════════════════════
 function App() {
   const [screen, setScreen] = useState<Screen>('login');
+  const [commerce, setCommerce] = useState<{ id: string; name: string } | null>(null);
 
   return (
-    <div className="min-h-screen bg-gray-900 flex justify-center items-center font-sans">
-      <div className="w-[390px] bg-[#0a0a0a] rounded-[52px] p-3.5 shadow-2xl">
+    <div className="min-h-screen bg-gray-900 flex justify-center items-center font-sans py-8">
+      {/* Marco de iPhone 15 */}
+      <div className="relative w-[393px] h-[852px] bg-[#0a0a0a] rounded-[55px] shadow-[0_0_0_2px_#1f1f1f,0_20px_40px_rgba(0,0,0,0.5)] p-[12px]">
+        {/* Botones de Hardware */}
+        <div className="absolute -left-[3px] top-[115px] w-[3px] h-[26px] bg-[#1f1f1f] rounded-l-md" /> {/* Mute */}
+        <div className="absolute -left-[3px] top-[165px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" /> {/* Vol+ */}
+        <div className="absolute -left-[3px] top-[230px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" /> {/* Vol- */}
+        <div className="absolute -right-[3px] top-[200px] w-[3px] h-[75px] bg-[#1f1f1f] rounded-r-md" /> {/* Power */}
+
+        {/* Pantalla Interna */}
         <div
-          className="bg-white rounded-[40px] overflow-hidden h-[870px] flex flex-col relative"
+          className="bg-white w-full h-full rounded-[43px] overflow-hidden flex flex-col relative"
           style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
         >
           {/* Dynamic Island */}
-          <div className="absolute top-3.5 left-1/2 -translate-x-1/2 w-[120px] h-[34px] bg-[#0a0a0a] rounded-[20px] z-10" />
+          <div className="absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 flex items-center justify-end px-3">
+            {/* Lente de la cámara invisible */}
+            <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
+          </div>
 
           {screen === 'login' ? (
-            <LoginScreen onIngresar={() => setScreen('dashboard')} />
+            <LoginScreen onIngresar={(c) => {
+              setCommerce(c);
+              setScreen('dashboard');
+            }} />
           ) : (
-            <DashboardScreen onBack={() => setScreen('login')} />
+            <DashboardScreen commerce={commerce} onBack={() => {
+              setCommerce(null);
+              setScreen('login');
+            }} />
           )}
         </div>
       </div>
@@ -40,9 +58,30 @@ function App() {
 // ═══════════════════════════════════════════════════════════════
 // Pantalla de Login (vista original)
 // ═══════════════════════════════════════════════════════════════
-function LoginScreen({ onIngresar }: { onIngresar: () => void }) {
+function LoginScreen({ onIngresar }: { onIngresar: (commerce: { id: string, name: string }) => void }) {
   const [role, setRole] = useState<'admin' | 'vendedor'>('admin');
   const [visible, setVisible] = useState(false);
+  const [name, setName] = useState('');
+
+  const handleLogin = () => {
+    const term = name.trim().toLowerCase();
+
+    let commerceId = 'NEG001';
+    let displayName = name.trim() || 'Jervin';
+
+    if (term.includes('carmita')) {
+      commerceId = 'NEG001';
+      displayName = 'Carmita';
+    } else if (term.includes('roberto')) {
+      commerceId = 'NEG002';
+      displayName = 'Don Roberto';
+    } else if (term.includes('luc')) {
+      commerceId = 'NEG003';
+      displayName = 'Lucía';
+    }
+
+    onIngresar({ id: commerceId, name: displayName });
+  };
 
   const accountNumber = '1234556443';
   const displayNumber = visible
@@ -55,9 +94,9 @@ function LoginScreen({ onIngresar }: { onIngresar: () => void }) {
       <StatusBar />
 
       {/* Contenido principal */}
-      <div className="flex flex-col flex-1 px-6 pb-6">
+      <div className="flex flex-col flex-1 px-6 pb-13">
         {/* Logo */}
-        <div className="flex flex-col items-center mt-5 mb-6">
+        <div className="flex flex-col items-center mt-3 mb-3">
           <h1 className="text-[48px] font-black text-[#4C1D80] leading-none tracking-[-2px]">
             deuna!
           </h1>
@@ -67,19 +106,19 @@ function LoginScreen({ onIngresar }: { onIngresar: () => void }) {
         </div>
 
         {/* QR */}
-        <div className="relative w-[250px] h-[250px] mx-auto mb-5 flex items-center justify-center">
-          <div className="absolute top-0 left-0 w-7 h-7 border-t-[3px] border-l-[3px] border-gray-300 rounded-tl-sm" />
-          <div className="absolute top-0 right-0 w-7 h-7 border-t-[3px] border-r-[3px] border-gray-300 rounded-tr-sm" />
-          <div className="absolute bottom-0 left-0 w-7 h-7 border-b-[3px] border-l-[3px] border-gray-300 rounded-bl-sm" />
-          <div className="absolute bottom-0 right-0 w-7 h-7 border-b-[3px] border-r-[3px] border-gray-300 rounded-br-sm" />
+        <div className="relative w-[210px] h-[210px] mx-auto mb-4 flex items-center justify-center">
+          <div className="absolute top-0 left-0 w-5 h-5 border-t-[3px] border-l-[3px] border-gray-300 rounded-tl-sm" />
+          <div className="absolute top-0 right-0 w-5 h-5 border-t-[3px] border-r-[3px] border-gray-300 rounded-tr-sm" />
+          <div className="absolute bottom-0 left-0 w-5 h-5 border-b-[3px] border-l-[3px] border-gray-300 rounded-bl-sm" />
+          <div className="absolute bottom-0 right-0 w-5 h-5 border-b-[3px] border-r-[3px] border-gray-300 rounded-br-sm" />
           <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https://deuna.com/negocios&color=000000&bgcolor=ffffff&margin=0"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://deuna.com/negocios&color=000000&bgcolor=ffffff&margin=0"
             alt="Código QR de Deuna Negocios"
-            className="w-[210px] h-[210px] object-contain"
+            className="w-[180px] h-[180px] object-contain"
           />
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="bg-white rounded-full w-14 h-14 flex items-center justify-center shadow-[0_0_0_5px_white]">
-              <span className="text-[#4C1D80] font-black text-2xl italic tracking-tighter">d!</span>
+            <div className="bg-white rounded-full w-12 h-12 flex items-center justify-center shadow-[0_0_0_5px_white]">
+              <span className="text-[#4C1D80] font-black text-xl italic tracking-tighter">d!</span>
             </div>
           </div>
         </div>
@@ -119,6 +158,17 @@ function LoginScreen({ onIngresar }: { onIngresar: () => void }) {
 
         <div className="h-px bg-gray-100 mb-4" />
 
+        {/* Input Usuario (Añadido para las demos) */}
+        <div className="mb-5 relative">
+          <input
+            type="text"
+            placeholder="Usuario (Ej. Carmita, Roberto, Lucía)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full bg-[#F4F4F6] border border-gray-200 rounded-[16px] py-3.5 px-4 text-[14px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors"
+          />
+        </div>
+
         {/* Verificar cobro */}
         <div className="text-center mb-5">
           <p className="text-[#4C1D80] font-semibold text-sm mb-3.5">Verificar un cobro</p>
@@ -130,8 +180,10 @@ function LoginScreen({ onIngresar }: { onIngresar: () => void }) {
 
         {/* CTA */}
         <button
-          onClick={onIngresar}
-          className="mt-auto w-full bg-[#4C1D80] text-white py-4 rounded-[14px] text-[17px] font-bold hover:bg-[#3d1766] active:scale-[0.98] transition-all tracking-tight"
+          onClick={handleLogin}
+          disabled={!name.trim()}
+          className={`mt-auto w-full py-4 rounded-[14px] text-[17px] font-bold active:scale-[0.98] transition-all tracking-tight shrink-0 ${name.trim() ? 'bg-[#4C1D80] text-white hover:bg-[#3d1766]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
         >
           Ingresar
         </button>
@@ -143,7 +195,7 @@ function LoginScreen({ onIngresar }: { onIngresar: () => void }) {
 // ═══════════════════════════════════════════════════════════════
 // Pantalla Dashboard / Cobrar
 // ═══════════════════════════════════════════════════════════════
-function DashboardScreen({ onBack }: { onBack: () => void }) {
+function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: { id: string, name: string } | null }) {
   const [tab, setTab] = useState<Tab>('cobrar');
   const [payMode, setPayMode] = useState<PayMode>('qr');
   const [bottomTab, setBottomTab] = useState<BottomTab>('inicio');
@@ -188,7 +240,7 @@ function DashboardScreen({ onBack }: { onBack: () => void }) {
           />
         </div>
       ) : bottomTab === 'ia' ? (
-        <ChatbotView />
+        <ChatbotView commerceId={commerce?.id || 'NEG001'} />
       ) : (
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header */}
@@ -204,7 +256,7 @@ function DashboardScreen({ onBack }: { onBack: () => void }) {
                 </button>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[15px] font-bold text-[#1a1a1a] truncate">Hola! Jervin</span>
+                    <span className="text-[15px] font-bold text-[#1a1a1a] truncate">Hola! {commerce?.name || 'Jervin'}</span>
                     <span className="bg-[#4C1D80] text-white text-[9px] font-bold px-2 py-[1px] rounded">
                       Admin
                     </span>

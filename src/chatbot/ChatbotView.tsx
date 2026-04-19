@@ -19,7 +19,6 @@ interface QuickReply {
 // ─── Config ──────────────────────────────────────────────────────
 
 const API_BASE = 'http://localhost:3000';
-const COMMERCE_ID = 'NEG001'; // TODO: leer del contexto de autenticación
 
 // ─── Íconos ──────────────────────────────────────────────────────
 
@@ -81,11 +80,10 @@ function MessageBubble({ msg }: { msg: Message }) {
     <div className={`flex items-end gap-2 max-w-[85%] ${isBot ? 'self-start' : 'self-end flex-row-reverse'}`}>
       {isBot ? <BotAvatar /> : <UserAvatar />}
       <div
-        className={`rounded-[20px] ${
-          isBot
+        className={`rounded-[20px] ${isBot
             ? 'bg-white border border-gray-100 rounded-bl-sm text-[#1a1a1a]'
             : 'bg-[#4C1D80] rounded-br-sm text-white'
-        }`}
+          }`}
         style={{ padding: '10px 14px' }}
       >
         <p className="text-[13.5px] leading-[1.5] whitespace-pre-wrap">{msg.text}</p>
@@ -136,7 +134,7 @@ function nowTime() {
 // Componente principal
 // ═══════════════════════════════════════════════════════════════
 
-export function ChatbotView() {
+export function ChatbotView({ commerceId = 'NEG001' }: { commerceId?: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -146,10 +144,15 @@ export function ChatbotView() {
 
   // ─── Iniciar sesión ─────────────────────────────────────────────
   useEffect(() => {
+    // Reset al cambiar de comercio
+    setSessionId(null);
+    setMessages([]);
+    setQuickReplies([]);
+
     fetch(`${API_BASE}/chat/session/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commerceId: COMMERCE_ID, role: 'admin' }),
+      body: JSON.stringify({ commerceId, role: 'admin' }),
     })
       .then((r) => r.json())
       .then((data) => {
@@ -163,7 +166,7 @@ export function ChatbotView() {
         setQuickReplies(data.quickReplies ?? []);
       })
       .catch((err) => console.error('Error al iniciar sesión:', err));
-  }, []);
+  }, [commerceId]);
 
   // ─── Auto-scroll ────────────────────────────────────────────────
   useEffect(() => {
