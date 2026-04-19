@@ -61,7 +61,7 @@ export class AgentService {
 
   // ─── Punto de entrada público ────────────────────────────────────
 
-  async run(params: AgentRunParams): Promise<string> {
+  async run(params: AgentRunParams): Promise<{ text: string; suggestions: string[] }> {
     const { commerceId, role, userMessage, history } = params;
 
     try {
@@ -87,10 +87,20 @@ export class AgentService {
 
       const result = await agent.invoke({ messages });
 
-      return this.extractText(result.messages.at(-1)?.content);
+      const rawText = this.extractText(result.messages.at(-1)?.content);
+      const splitIdx = rawText.indexOf('---SUGGESTIONS---');
+      
+      if (splitIdx !== -1) {
+        const text = rawText.substring(0, splitIdx).trim();
+        const suggestionsRaw = rawText.substring(splitIdx + '---SUGGESTIONS---'.length);
+        const suggestions = suggestionsRaw.split('|').map(s => s.trim()).filter(Boolean);
+        return { text, suggestions };
+      }
+
+      return { text: rawText, suggestions: [] };
     } catch (error) {
       this.logger.error('AgentService.run failed', error);
-      return FALLBACK_MSG;
+      return { text: FALLBACK_MSG, suggestions: [] };
     }
   }
 
