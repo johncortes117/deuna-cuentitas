@@ -81,8 +81,8 @@ function MessageBubble({ msg }: { msg: Message }) {
       {isBot ? <BotAvatar /> : <UserAvatar />}
       <div
         className={`rounded-[20px] ${isBot
-            ? 'bg-white border border-gray-100 rounded-bl-sm text-[#1a1a1a]'
-            : 'bg-[#4C1D80] rounded-br-sm text-white'
+          ? 'bg-white border border-gray-100 rounded-bl-sm text-[#1a1a1a]'
+          : 'bg-[#4C1D80] rounded-br-sm text-white'
           }`}
         style={{ padding: '10px 14px' }}
       >
@@ -259,10 +259,10 @@ export function ChatbotView({ commerceId = 'NEG001' }: { commerceId?: string }) 
       {/* Header */}
       <div className="px-5 pt-2 pb-4 border-b border-gray-100 flex items-center gap-3 shrink-0">
         <div className="w-10 h-10 bg-[#4C1D80] rounded-full flex items-center justify-center shadow-sm shrink-0">
-          <SparkleIcon />
+          <span className="text-white font-black text-lg italic tracking-tighter">d!</span>
         </div>
         <div>
-          <h2 className="text-[16px] font-bold text-[#1a1a1a] leading-tight">Asistente IA</h2>
+          <h2 className="text-[16px] font-bold text-[#1a1a1a] leading-tight">CUENTITAS IA</h2>
           <p className="text-[12px] text-[#2FD9A9] font-medium flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#2FD9A9] inline-block animate-pulse" />
             En línea

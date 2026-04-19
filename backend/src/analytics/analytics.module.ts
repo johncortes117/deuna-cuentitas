@@ -1,14 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
+import { AnalyticsController } from './analytics.controller';
 
-/**
- * AnalyticsModule — acceso de solo lectura a los datos de transacciones.
- *
- * No expone ningún controller HTTP. Es consumido internamente
- * por ChatModule → AgentService. El LLM nunca accede directamente
- * a este servicio; solo lo hace a través de las tools tipadas del agente.
- */
 @Module({
+  controllers: [AnalyticsController],
   providers: [AnalyticsService],
   exports: [AnalyticsService],
 })

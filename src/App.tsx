@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // ─── Tipos ───
 type Screen = 'login' | 'dashboard';
@@ -8,7 +8,9 @@ type BottomTab = 'inicio' | 'micaja' | 'menu' | 'ia';
 
 import { ChatbotView } from './chatbot/ChatbotView';
 import MisCuentitas from './components/dashboard/MisCuentitas';
-import { mockMisCuentitas } from './data/mockData';
+import { mockMisCuentitas, type MisCuentitasData } from './data/mockData';
+
+const API_BASE = 'http://localhost:3000';
 
 // ═══════════════════════════════════════════════════════════════
 // Componente principal
@@ -201,6 +203,15 @@ function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: {
   const [bottomTab, setBottomTab] = useState<BottomTab>('inicio');
   const [amount, setAmount] = useState('0');
   const [showSaldo, setShowSaldo] = useState(false);
+  const [dashboardData, setDashboardData] = useState<MisCuentitasData>(mockMisCuentitas);
+
+  useEffect(() => {
+    if (!commerce?.id) return;
+    fetch(`${API_BASE}/analytics/dashboard/${commerce.id}`)
+      .then((r) => r.json())
+      .then((data) => setDashboardData(data))
+      .catch(() => { /* mantiene mockMisCuentitas como fallback */ });
+  }, [commerce?.id]);
 
   const handleKey = (key: string) => {
     if (key === 'del') {
@@ -231,7 +242,7 @@ function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: {
       {showSaldo ? (
         <div className="flex flex-col flex-1 overflow-hidden" style={{ backgroundColor: '#F5F4F0' }}>
           <MisCuentitas
-            data={mockMisCuentitas}
+            data={dashboardData}
             onClose={() => setShowSaldo(false)}
             onOpenChat={() => {
               setShowSaldo(false);
@@ -357,24 +368,43 @@ function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: {
             /* ── Tab Gestionar ── */
             <div className="flex flex-col flex-1 px-5 overflow-y-auto pb-4">
               {/* Mi Saldo */}
-              <button
-                onClick={() => setShowSaldo(true)}
-                className="bg-[#F8F8FA] rounded-2xl p-5 mt-5 mb-6 flex items-center justify-between border border-gray-100 w-full text-left shrink-0"
-              >
-                <div>
-                  <p className="text-gray-500 text-[13px] font-medium mb-1">Mis Cuentitas</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[32px] font-bold text-[#1a1a1a] leading-none">$0,80</span>
-                    <span className="text-gray-400">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </span>
-                  </div>
-                </div>
-                <ChevronRightIcon />
-              </button>
+              {(() => {
+                const total = dashboardData.summary.totalToday;
+                const diff = dashboardData.summary.vsYesterday;
+                const fmtAmt = (n: number) => Math.abs(n).toFixed(2).replace('.', ',');
+                const isUp = diff > 0;
+                const isDown = diff < 0;
+                return (
+                  <button
+                    onClick={() => setShowSaldo(true)}
+                    className="bg-[#F8F8FA] rounded-2xl p-5 mt-5 mb-6 flex items-center justify-between border border-gray-100 w-full text-left shrink-0"
+                  >
+                    <div>
+                      <p className="text-gray-500 text-[13px] font-medium mb-1">Mis Cuentitas</p>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-[32px] font-bold text-[#1a1a1a] leading-none">${fmtAmt(total)}</span>
+                        <span className="text-gray-400">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </span>
+                      </div>
+                      {(isUp || isDown) && (
+                        <span
+                          className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                          style={isUp
+                            ? { backgroundColor: '#EAF3DE', color: '#3B6D11' }
+                            : { backgroundColor: '#FCEBEB', color: '#A32D2D' }}
+                        >
+                          {isUp ? `$${fmtAmt(diff)} más que ayer` : `$${fmtAmt(diff)} menos que ayer`}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronRightIcon />
+                  </button>
+                );
+              })()}
 
               {/* Accesos rápidos */}
               <h3 className="text-[16px] font-bold text-[#1a1a1a] mb-4 shrink-0">Accesos rápidos</h3>
