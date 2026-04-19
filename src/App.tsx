@@ -109,9 +109,8 @@ function LoginScreen({ onIngresar }: { onIngresar: () => void }) {
             <button
               key={r}
               onClick={() => setRole(r)}
-              className={`flex-1 py-3 text-[13px] rounded-[26px] transition-all font-medium ${
-                role === r ? 'bg-white text-[#4C1D80] font-semibold shadow-sm' : 'text-gray-400'
-              }`}
+              className={`flex-1 py-3 text-[13px] rounded-[26px] transition-all font-medium ${role === r ? 'bg-white text-[#4C1D80] font-semibold shadow-sm' : 'text-gray-400'
+                }`}
             >
               {r === 'admin' ? 'Administrador' : 'Vendedor'}
             </button>
@@ -233,9 +232,8 @@ function DashboardScreen({ onBack }: { onBack: () => void }) {
                 <button
                   key={t}
                   onClick={() => setTab(t)}
-                  className={`flex-1 pb-3 text-[14px] font-semibold transition-colors relative ${
-                    tab === t ? 'text-[#4C1D80]' : 'text-gray-400'
-                  }`}
+                  className={`flex-1 pb-3 text-[14px] font-semibold transition-colors relative ${tab === t ? 'text-[#4C1D80]' : 'text-gray-400'
+                    }`}
                 >
                   {t === 'cobrar' ? 'Cobrar' : 'Gestionar'}
                   {tab === t && (
@@ -263,11 +261,10 @@ function DashboardScreen({ onBack }: { onBack: () => void }) {
                   <button
                     key={m}
                     onClick={() => setPayMode(m)}
-                    className={`flex-1 py-2.5 text-[13px] rounded-full transition-all font-semibold ${
-                      payMode === m
-                        ? 'bg-[#4C1D80] text-white shadow-sm'
-                        : 'text-gray-400'
-                    }`}
+                    className={`flex-1 py-2.5 text-[13px] rounded-full transition-all font-semibold ${payMode === m
+                      ? 'bg-[#4C1D80] text-white shadow-sm'
+                      : 'text-gray-400'
+                      }`}
                   >
                     {m === 'qr' ? 'QR' : 'Manual'}
                   </button>
@@ -282,7 +279,7 @@ function DashboardScreen({ onBack }: { onBack: () => void }) {
 
               {/* Teclado numérico */}
               <div className="grid grid-cols-3 gap-y-1 mt-2 flex-1 content-center">
-                {['1','2','3','4','5','6','7','8','9',',','0','del'].map(key => (
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', 'del'].map(key => (
                   <button
                     key={key}
                     onClick={() => handleKey(key)}
@@ -295,11 +292,10 @@ function DashboardScreen({ onBack }: { onBack: () => void }) {
 
               {/* CTA */}
               <button
-                className={`w-full py-4 rounded-[14px] text-[16px] font-bold transition-all mt-2 mb-1 shrink-0 ${
-                  hasAmount
-                    ? 'bg-[#4C1D80] text-white active:scale-[0.98]'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
+                className={`w-full py-4 rounded-[14px] text-[16px] font-bold transition-all mt-2 mb-1 shrink-0 ${hasAmount
+                  ? 'bg-[#4C1D80] text-white active:scale-[0.98]'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
                 disabled={!hasAmount}
               >
                 Continuar para Cobrar
@@ -367,15 +363,14 @@ function DashboardScreen({ onBack }: { onBack: () => void }) {
         {([
           { id: 'inicio' as BottomTab, label: 'Inicio', icon: <BottomHomeIcon active={bottomTab === 'inicio'} /> },
           { id: 'micaja' as BottomTab, label: 'Mi Caja', icon: <CashRegisterIcon active={bottomTab === 'micaja'} /> },
-          { id: 'ia' as BottomTab, label: 'IA', icon: <IAIcon active={bottomTab === 'ia'} /> },
+          { id: 'ia' as BottomTab, label: 'Cuentitas', icon: <IAIcon active={bottomTab === 'ia'} /> },
           { id: 'menu' as BottomTab, label: 'Menú', icon: <MenuIcon active={bottomTab === 'menu'} /> },
         ]).map(item => (
           <button
             key={item.id}
             onClick={() => setBottomTab(item.id)}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1 ${
-              bottomTab === item.id ? 'text-[#4C1D80]' : 'text-gray-400'
-            }`}
+            className={`flex flex-col items-center gap-0.5 px-4 py-1 ${bottomTab === item.id ? 'text-[#4C1D80]' : 'text-gray-400'
+              }`}
           >
             {item.icon}
             <span className="text-[10px] font-semibold">{item.label}</span>
@@ -520,11 +515,17 @@ const MenuIcon = ({ active }: { active: boolean }) => (
     <line x1="4" y1="18" x2="20" y2="18" />
   </svg>
 );
-const IAIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? '#4C1D80' : 'none'} stroke={active ? '#4C1D80' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z" />
-  </svg>
-);
+const IAIcon = ({ active }: { active: boolean }) => {
+  const color = active ? '#4C1D80' : 'currentColor';
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={color}>
+      <rect x="1.5" y="12" width="5.5" height="10" rx="2.5" />
+      <rect x="9" y="8" width="5.5" height="14" rx="2.5" />
+      <rect x="16.5" y="3" width="5.5" height="19" rx="2.5" />
+      <path d="M2.5 9c3.5-1 6.5-3 8-5.5l-1.5-1.5h6v6l-1.5-1.5c-2 3-5.5 5-9.5 4.5z" />
+    </svg>
+  );
+};
 
 // ── Gestionar Icons & Components ──
 function QuickAction({ icon, label }: { icon: React.ReactNode; label: string }) {
