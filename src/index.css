@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Reset mínimo — todo el diseño se controla con Tailwind */
+body {
+  margin: 0;
+}

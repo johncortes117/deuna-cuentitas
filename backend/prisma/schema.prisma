@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ChatSession {
+  id             String        @id @default(uuid())
+  commerceId     String        // Identificador del comercio conectado
+  role           String        // "admin" o "vendedor"
+  isEscalated    Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  messages       ChatMessage[]
+
+  @@index([commerceId])
+}
+
+model ChatMessage {
+  id             String      @id @default(uuid())
+  sessionId      String
+  session        ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sender         String      // "user" o "bot"
+  text           String?     // Texto libre si lo hay
+  actionId       String?     // ID de quick reply si usó un botón
+  createdAt      DateTime    @default(now())
+
+  @@index([sessionId])
+}
