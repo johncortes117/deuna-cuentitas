@@ -3,13 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model ChatSession {
   id             String        @id @default(uuid())
-  commerceId     String        // Identificador del comercio conectado
-  role           String        // "admin" o "vendedor"
+  commerceId     String
+  role           String
   isEscalated    Boolean       @default(false)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -23,9 +24,9 @@ model ChatMessage {
   id             String      @id @default(uuid())
   sessionId      String
   session        ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  sender         String      // "user" o "bot"
-  text           String?     // Texto libre si lo hay
-  actionId       String?     // ID de quick reply si usó un botón
+  sender         String
+  text           String?
+  actionId       String?
   createdAt      DateTime    @default(now())
 
   @@index([sessionId])

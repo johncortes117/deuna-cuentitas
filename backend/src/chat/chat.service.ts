@@ -1,11 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NlpService } from './nlp.service';
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly nlpService: NlpService
+  ) {}
 
   async startSession(commerceId: string, role: string) {
     const session = await this.prisma.chatSession.create({
@@ -34,10 +38,19 @@ export class ChatService {
       },
     });
 
-    // 2. Lógica NLP simulada (Mock)
-    const responseText = actionId 
-        ? `Recibí tu pulsación del botón (${actionId}), pero mi lógica conversacional exacta aún se está desarrollando.`
-        : `Leí tu mensaje: "${text}". Aún estoy aprendiendo, por lo que esta es una respuesta automática del backend.`;
+    // 2. Lógica NLP Real (con fallback a Mock interno)
+    // Recuperamos la sesión para saber quién es el comercio actual
+    const session = await this.prisma.chatSession.findUnique({ where: { id: sessionId } });
+    if (!session) {
+      throw new Error('Sesión no encontrada');
+    }
+
+    let responseText = '';
+    if (actionId) {
+      responseText = `Recibí tu pulsación del botón (${actionId}), pero mi lógica de botones exacta aún se está desarrollando.`;
+    } else {
+      responseText = await this.nlpService.generateResponse(session.commerceId, text || '');
+    }
 
     // 3. Guardar respuesta del bot en BD
     const botMessage = await this.prisma.chatMessage.create({

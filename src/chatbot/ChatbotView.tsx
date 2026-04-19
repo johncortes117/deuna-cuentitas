@@ -39,7 +39,7 @@ export function ChatbotView() {
     fetch('http://localhost:3000/chat/session/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commerceId: 'com-12345', role: 'admin' })
+      body: JSON.stringify({ commerceId: 'NEG001', role: 'admin' })
     })
     .then(res => res.json())
     .then(data => {
@@ -55,7 +55,12 @@ export function ChatbotView() {
   }, []);
 
   const handleSend = async () => {
-    if (!inputValue.trim() || !sessionId) return;
+    if (!inputValue.trim()) return;
+
+    if (!sessionId) {
+      console.warn("Intento de envío sin sessionId listo. Se intentará de todas formas.");
+    }
+    const currentSessionId = sessionId || 'temp-id';
 
     const textPayload = inputValue.trim();
 
@@ -75,7 +80,7 @@ export function ChatbotView() {
       const response = await fetch('http://localhost:3000/chat/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, text: textPayload })
+        body: JSON.stringify({ sessionId: currentSessionId, text: textPayload })
       });
       const data = await response.json();
       
