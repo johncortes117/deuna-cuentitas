@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatAnthropic } from '@langchain/anthropic';
+import { ChatOpenAI } from '@langchain/openai';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { tool } from '@langchain/core/tools';
@@ -48,12 +48,12 @@ const FALLBACK_MSG =
 @Injectable()
 export class AgentService {
   private readonly logger = new Logger(AgentService.name);
-  private readonly llm: ChatAnthropic;
+  private readonly llm: ChatOpenAI;
 
   constructor(private readonly analytics: AnalyticsService) {
-    this.llm = new ChatAnthropic({
-      model: process.env.CLAUDE_MODEL ?? 'claude-haiku-4-5-20251001',
-      apiKey: process.env.ANTHROPIC_API_KEY,
+    this.llm = new ChatOpenAI({
+      model: 'gpt-4o',
+      apiKey: process.env.OPENAI_API_KEY,
       temperature: 0.2,
       maxTokens: 1024,
     });
