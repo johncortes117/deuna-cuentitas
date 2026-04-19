@@ -262,7 +262,9 @@ export function ChatbotView({ commerceId = 'NEG001' }: { commerceId?: string }) 
           <span className="text-white font-black text-lg italic tracking-tighter">d!</span>
         </div>
         <div>
-          <h2 className="text-[16px] font-bold text-[#1a1a1a] leading-tight">CUENTITAS IA</h2>
+          <h2 className="text-[16px] font-bold text-[#1a1a1a] leading-tight flex items-center gap-2">
+            CUENTITAS IA <SparkleIcon />
+          </h2>
           <p className="text-[12px] text-[#2FD9A9] font-medium flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#2FD9A9] inline-block animate-pulse" />
             En línea
