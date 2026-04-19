@@ -171,6 +171,25 @@ El agente IA usa LangGraph ReAct y puede encadenar múltiples herramientas para 
 
 ---
 
+## Documentación extendida
+
+```
+docs/
+├── presentation/
+│   ├── pitch.md           → Pitch del hackathon (problema, solución, tech)
+│   └── demo-script.md     → Guía de demo en vivo paso a paso
+├── architecture/
+│   ├── system-overview.md → Diagrama completo del sistema
+│   ├── ai-agent.md        → Arquitectura del agente conversacional
+│   └── proactive-insights.md → Motor de insights por WhatsApp
+└── dev/
+    ├── setup.md           → Setup local detallado
+    ├── api-reference.md   → Todos los endpoints con ejemplos
+    └── dataset.md         → Referencia del dataset de prueba
+```
+
+---
+
 ## Comandos útiles
 
 ### Frontend
