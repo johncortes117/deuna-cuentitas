@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { MisCuentitasData } from '../../data/mockData';
+import './MisCuentitas.css';
 
 // ─── Props ──────────────────────────────────────────────────────
 export interface MisCuentitasProps {
@@ -8,38 +9,12 @@ export interface MisCuentitasProps {
   onOpenChat?: () => void;
 }
 
-// ─── Design tokens Deuna ────────────────────────────────────────
-const D = {
-  primary:   '#452757', // Morado Deuna
-  accent:    '#00D3A4', // Verde Deuna
-  barLight:  '#C0F5EA', // Verde Deuna claro para barras inactivas
-  badgeUp:   { bg: '#EAF3DE', fg: '#3B6D11' },
-  badgeDown: { bg: '#FFF0F0', fg: '#D54C4C' }, // Ajustado para ser rosado suave/rojo pastel
-  cardBg:    '#FFFFFF',
-  screenBg:  '#F5F4F0',
-  textMain:  '#1A1A2E',
-  textSub:   '#8F96A3',
-  textMuted: '#B0B5C0',
-  border:    'rgba(0,0,0,0.06)',
-  rowDiv:    'rgba(0,0,0,0.04)',
-  avatars: [
-    { bg: '#EEEDFE', fg: '#5E54B9' },
-    { bg: '#E1F5EE', fg: '#1C755E' },
-    { bg: '#FAECE7', fg: '#A24A2E' },
-  ],
-} as const;
-
 // ─── Helpers ────────────────────────────────────────────────────
 function fmt(n: number): string {
   const a = Math.abs(n);
   return a === Math.floor(a) ? `$${a}` : `$${a.toFixed(2).replace('.', ',')}`;
 }
 
-function fmtVs(vs: number): string {
-  return `${vs >= 0 ? '+' : '−'}${fmt(vs)} vs ayer`;
-}
-
-// ─── Íconos ─────────────────────────────────────────────────────
 const IcoBack = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white"
     strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -47,284 +22,174 @@ const IcoBack = () => (
   </svg>
 );
 
-const IcoChat = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white"
-    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-);
-
-// ─── Card base ──────────────────────────────────────────────────
-function Card({ children, mb = 8 }: { children: React.ReactNode; mb?: number }) {
-  return (
-    <div style={{
-      backgroundColor: D.cardBg,
-      borderRadius: 18,
-      border: `0.5px solid ${D.border}`,
-      padding: '12px 14px',
-      marginBottom: mb,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.015)'
-    }}>
-      {children}
-    </div>
-  );
-}
-
-function Divider({ my = 10 }: { my?: number }) {
-  return <div style={{ height: '0.5px', backgroundColor: D.border, margin: `${my}px 0` }} />;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Tarjeta 1 — Resumen + Hora pico (lado a lado)
-// ═══════════════════════════════════════════════════════════════
-function CardResumen({ s, ph }: {
-  s: MisCuentitasData['summary'];
-  ph: MisCuentitasData['peakHours'];
-}) {
-  if (s.cobrosCount === 0) {
-    return (
-      <Card>
-        <p style={{ fontSize: 11, color: D.textSub, margin: '0 0 6px' }}>Resumen del día</p>
-        <p style={{ fontSize: 13, color: D.textSub, margin: 0 }}>
-          Hoy todavía no hay cobros registrados.
-        </p>
-      </Card>
-    );
-  }
-
-  const max = Math.max(...s.last7Days, 0.01);
-  const badge = s.vsYesterday >= 0 ? D.badgeUp : D.badgeDown;
-
-  return (
-    <Card>
-      {/* Monto grande + badge */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div>
-          <p style={{ fontSize: 26, fontWeight: 700, color: D.textMain, lineHeight: 1, margin: 0, letterSpacing: '-0.5px' }}>
-            {fmt(s.totalToday)}
-          </p>
-          <p style={{ fontSize: 11, color: D.textSub, margin: '5px 0 0' }}>
-            {s.cobrosCount} {s.cobrosCount === 1 ? 'cobro' : 'cobros'} · hasta ahora
-          </p>
-        </div>
-        <span style={{
-          backgroundColor: badge.bg,
-          color: badge.fg,
-          padding: '4px 8px',
-          borderRadius: 14,
-          fontSize: 10,
-          fontWeight: 600,
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-        }}>
-          {fmtVs(s.vsYesterday)}
-        </span>
-      </div>
-
-      <Divider my={10} />
-
-      {/* Dos columnas: gráfica de días | hora pico */}
-      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start' }}>
-
-        {/* ── Columna izquierda: gráfica 7 días ── */}
-        <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 9, color: D.textMuted, margin: '0 0 6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Esta semana
-          </p>
-
-          {/* Barras verticales */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 32 }}>
-            {s.last7Days.map((val, i) => {
-              const isToday = i === s.last7Days.length - 1;
-              const h = Math.max((val / max) * 32, 2);
-              return (
-                <div key={i} style={{ flex: 1, height: 32, display: 'flex', alignItems: 'flex-end' }}>
-                  <div style={{
-                    width: '100%',
-                    height: h,
-                    borderRadius: '2px 2px 0 0',
-                    backgroundColor: isToday ? D.accent : D.barLight,
-                  }} />
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Etiquetas de días */}
-          <div style={{ display: 'flex', gap: 3, marginTop: 4 }}>
-            {s.dayLabels.map((d, i) => (
-              <span key={i} style={{
-                flex: 1,
-                textAlign: 'center',
-                fontSize: 8,
-                color: i === s.dayLabels.length - 1 ? D.accent : D.textMuted,
-                fontWeight: i === s.dayLabels.length - 1 ? 700 : 500,
-              }}>
-                {d}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Separador vertical */}
-        <div style={{
-          width: '0.5px',
-          backgroundColor: D.border,
-          alignSelf: 'stretch',
-          margin: '0 14px',
-        }} />
-
-        {/* ── Columna derecha: hora pico ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-          <p style={{ fontSize: 9, color: D.textMuted, margin: '0 0 6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Hora pico
-          </p>
-          <p style={{ fontSize: 20, fontWeight: 700, color: D.primary, lineHeight: 1, margin: '0 0 4px', letterSpacing: '-0.3px' }}>
-            {ph.peakLabel}
-          </p>
-          <p style={{ fontSize: 11, color: D.textSub, margin: 0 }}>
-            {ph.peakCount} cobros
-          </p>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Tarjeta ranking — reutilizable (clientes y vendedores)
-// ═══════════════════════════════════════════════════════════════
-interface RankRow {
-  name: string;
-  initials: string;
-  totalAmount: number;
-  count: number;
-  countLabel: string;
-}
-
-function CardRanking({ title, rows }: { title: string; rows: RankRow[] }) {
-  if (rows.length === 0) return null;
-
-  return (
-    <Card>
-      <p style={{ fontSize: 11, color: D.textSub, margin: '0 0 4px', fontWeight: 500 }}>{title}</p>
-
-      {rows.slice(0, 3).map((row, i) => {
-        const av = D.avatars[i] ?? D.avatars[D.avatars.length - 1];
-        return (
-          <React.Fragment key={row.name}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0' }}>
-              <span style={{ width: 12, flexShrink: 0, textAlign: 'center', fontSize: 10, color: D.textMuted, fontWeight: 500 }}>
-                {i + 1}
-              </span>
-              <div style={{
-                width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                backgroundColor: av.bg, color: av.fg,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 10, fontWeight: 700,
-              }}>
-                {row.initials}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontSize: 11, fontWeight: 600, color: D.textMain, margin: '0 0 1px',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {row.name}
-                </p>
-                <p style={{ fontSize: 10, color: D.textSub, margin: 0 }}>
-                  {row.count} {row.countLabel}
-                </p>
-              </div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: D.primary, flexShrink: 0 }}>
-                {fmt(row.totalAmount)}
-              </span>
-            </div>
-            {i < Math.min(rows.length, 3) - 1 && (
-              <div style={{ height: '0.5px', backgroundColor: D.rowDiv }} />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </Card>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Componente principal — MisCuentitas
-// ═══════════════════════════════════════════════════════════════
 export default function MisCuentitas({ data, onClose, onOpenChat }: MisCuentitasProps) {
   const { summary, peakHours, topClients, vendors } = data;
 
-  const clientRows: RankRow[] = topClients.map(c => ({
-    name: c.name, initials: c.initials, totalAmount: c.totalAmount,
-    count: c.visits, countLabel: c.visits === 1 ? 'visita' : 'visitas',
-  }));
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
 
-  const vendorRows: RankRow[] = vendors.map(v => ({
-    name: v.name, initials: v.initials, totalAmount: v.totalAmount,
-    count: v.transactions, countLabel: v.transactions === 1 ? 'transacción' : 'transacciones',
-  }));
+  // Calc chart data
+  const maxVal = Math.max(...summary.last7Days, 0.01);
+  const sumAvg = summary.last7Days.reduce((a, b) => a + b, 0) / (summary.last7Days.length || 1);
+  // Cap visually between 10% and 90% so the dashed line doesn't go off-chart
+  const avgLineY = Math.max(10, Math.min(90, (sumAvg / maxVal) * 100));
+
+  const isTodayTarget = selectedDayIndex === null || selectedDayIndex === summary.last7Days.length - 1;
+  const dayIncome = selectedDayIndex === null ? summary.totalToday : (summary.last7Days[selectedDayIndex] || 0);
+  
+  const selectedDayLabel = isTodayTarget ? 'Hoy' : summary.dayLabels[selectedDayIndex!];
+  
+  // Format the title logic for grammar "Ingresos de Hoy" vs "Ingresos del Dom"
+  const titlePrefix = isTodayTarget ? 'Ingresos de' : 'Ingresos del';
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#F5F4F0]">
-      {/* ══ Header morado ══════════════ */}
-      <div style={{ backgroundColor: D.primary, flexShrink: 0, paddingBottom: 24, paddingTop: 60 }}>
-        {/* Nav: volver + título */}
-        <div className="flex items-center px-4">
-          <button onClick={onClose} className="p-1 -ml-1 active:opacity-70 transition-opacity" aria-label="Volver">
-            <IcoBack />
-          </button>
-          <div className="flex-1 text-center pr-6">
-            <p style={{ fontSize: 17, fontWeight: 700, color: 'white', margin: 0, letterSpacing: '-0.3px' }}>
-              Mis Cuentitas
-            </p>
-          </div>
+        {/* ══ Header morado original ══════════════ */}
+        <div style={{ backgroundColor: '#452757', flexShrink: 0, paddingBottom: 24, paddingTop: 60 }}>
+            {/* Nav: volver + título */}
+            <div className="flex items-center px-4">
+                <button onClick={onClose} className="p-1 -ml-1 active:opacity-70 transition-opacity" aria-label="Volver">
+                    <IcoBack />
+                </button>
+                <div className="flex-1 text-center pr-6">
+                    <p style={{ fontSize: 17, fontWeight: 700, color: 'white', margin: 0, letterSpacing: '-0.3px' }}>
+                    Mis Cuentitas
+                    </p>
+                </div>
+            </div>
         </div>
-      </div>
 
-      {/* ══ Área de contenido solapado ══════════════════ */}
-      {/* Superposición (-mt-4) y flex-1 sin scroll automático */}
-      <div className="flex-1 bg-[#F5F4F0] -mt-5 rounded-t-[20px] relative px-4 pt-4 pb-2 flex flex-col overflow-hidden shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
-        
-        {/* Contenedor estricto para fijar layout sin overflow */}
-        <div className="flex flex-col flex-1 h-full max-h-full">
-          
-          {/* Resumen del día + hora pico */}
-          <CardResumen s={summary} ph={peakHours} />
+        {/* ══ Contenido envolvente original ══════════════ */}
+        <div className="flex-1 bg-[#F5F4F0] -mt-5 rounded-t-[20px] relative flex flex-col overflow-y-auto shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+            <div className="mis-cuentitas-container !bg-transparent !p-0 mx-4 mt-4">
+                
+                <main className="main-content !mt-0 !p-0">
+                    {/* SALDO CARD */}
+                    <section className="card">
+                        <div className="balance-title">{titlePrefix} {selectedDayLabel}</div>
+                        <div className="balance-amount-wrapper">
+                            <div className="main-amount">{fmt(dayIncome)}</div>
+                            <svg className="eye-icon" viewBox="0 0 24 24">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                            </svg>
+                        </div>
 
-          {/* Ranking clientes */}
-          <CardRanking title="Tus mejores clientes este mes" rows={clientRows} />
+                        <div className="quick-stats">
+                            <div className="stat-box">
+                                <div className="stat-label">Cobros hoy</div>
+                                <div className="stat-value">{summary.cobrosCount} cobros</div>
+                            </div>
+                            <div className="stat-box">
+                                <div className="stat-label">Hora pico</div>
+                                <div className="stat-value">{peakHours.peakLabel && peakHours.peakLabel !== '' ? peakHours.peakLabel : '-'}</div>
+                            </div>
+                        </div>
+                    </section>
 
-          {/* Ranking vendedores (solo si ≥ 2) */}
-          {vendors.length >= 2 && (
-            <CardRanking title="Tu equipo este mes" rows={vendorRows} />
-          )}
+                    {/* CHART CARD */}
+                    <section className="card">
+                        <div className="section-header">
+                            <h2 className="section-title">Esta semana</h2>
+                            <span className="average-badge">Media: {fmt(sumAvg)}</span>
+                        </div>
+                        <div className="chart-container">
+                            <div className="average-line-visual" style={{ bottom: `${avgLineY}%` }}></div>
+                            {summary.last7Days.map((val, i) => {
+                                const isSelected = i === selectedDayIndex;
+                                const isToday = i === summary.last7Days.length - 1;
+                                const h = Math.max((val / maxVal) * 100, 4); 
+                                
+                                let barClass = 'mid';
+                                if (val > sumAvg * 1.3) barClass = 'high';
+                                else if (val < sumAvg * 0.7) barClass = val === 0 ? 'very-low' : 'low';
+                                
+                                // All opaque by default (when null). Only dim non-selected when a day is selected.
+                                const opacityStyle = selectedDayIndex === null || isSelected ? 1 : 0.4;
+                                // Subtle scale
+                                const transformStyle = isSelected ? 'scaleY(1.05) translateY(-2px)' : 'none';
 
-          {/* Botón CTA al final flotando/anclado abajo */}
-          <div className="mt-auto pt-1 mb-2 shrink-0">
-            <button
-              onClick={onOpenChat}
-              className="w-full flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-              style={{
-                backgroundColor: D.primary,
-                color: 'white',
-                borderRadius: 16,
-                padding: '12px 16px',
-                border: 'none',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                letterSpacing: '-0.1px',
-                boxShadow: '0 4px 14px rgba(116, 100, 236, 0.25)'
-              }}
-            >
-              <IcoChat />
-              Pregúntame algo
-            </button>
-          </div>
+                                return (
+                                    <div 
+                                        className="bar-group" 
+                                        key={i} 
+                                        onClick={() => setSelectedDayIndex(isSelected ? null : i)}
+                                    >
+                                        <div 
+                                            className={`bar ${barClass} transition-all duration-300`} 
+                                            style={{ height: `${h}%`, opacity: opacityStyle, transform: transformStyle }}
+                                        ></div>
+                                        <span className={`day-label ${isSelected ? 'active' : ''}`}>{summary.dayLabels[i]}</span>
+                                        {isToday && <span className="absolute -bottom-4 text-[9px] text-[#A0A0B5] font-bold">Hoy</span>}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+
+                    {/* TOP CLIENTS CARD */}
+                    <section className="card">
+                        <div className="section-header">
+                            <h2 className="section-title">Tus mejores clientes este mes</h2>
+                        </div>
+                        <div>
+                        {topClients.map((client, i) => {
+                            const colorClass = ['bg-purple', 'bg-green', 'bg-orange'][i % 3];
+                            return (
+                                <div className="list-item" key={client.name}>
+                                    <div className="item-rank">{i + 1}</div>
+                                    <div className={`avatar ${colorClass}`}>
+                                        {client.initials}
+                                    </div>
+                                    <div className="item-info">
+                                        <h3 className="item-name">{client.name}</h3>
+                                        <p className="item-sub">{client.visits} visitas</p>
+                                    </div>
+                                    <div className="item-value">{fmt(client.totalAmount)}</div>
+                                </div>
+                            );
+                        })}
+                        {topClients.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-gray)' }}>Aún no hay suficientes datos registrados este mes.</p>}
+                        </div>
+                    </section>
+
+                    {/* TOP VENDORS CARD */}
+                    {vendors && vendors.length >= 2 && (
+                    <section className="card">
+                        <div className="section-header">
+                            <h2 className="section-title">Tu equipo este mes</h2>
+                        </div>
+                        <div>
+                        {vendors.map((v, i) => {
+                            const colorClass = ['bg-purple', 'bg-green', 'bg-orange'][i % 3];
+                            return (
+                                <div className="list-item" key={v.name}>
+                                    <div className="item-rank">{i + 1}</div>
+                                    <div className={`avatar ${colorClass}`}>
+                                        {v.initials}
+                                    </div>
+                                    <div className="item-info">
+                                        <h3 className="item-name">{v.name}</h3>
+                                        <p className="item-sub">{v.transactions} cobros</p>
+                                    </div>
+                                    <div className="item-value">{fmt(v.totalAmount)}</div>
+                                </div>
+                            );
+                        })}
+                        </div>
+                    </section>
+                    )}
+                </main>
+
+                <div className="ai-button-container !mt-4 mb-8">
+                    <button className="ai-button" onClick={onOpenChat}>
+                        <svg viewBox="0 0 24 24">
+                            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
+                            <path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z" />
+                        </svg>
+                        Pregúntale a Cuentitas
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
   );
 }

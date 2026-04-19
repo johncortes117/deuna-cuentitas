@@ -1,0 +1,339 @@
+/* --- VARIABLES DE MARCA DEUNA --- */
+.mis-cuentitas-container {
+    --deuna-purple: #35235D;
+    --deuna-purple-light: #EBE5F7;
+    --deuna-green: #25D39D;
+    --deuna-green-light: #E3FBF4;
+
+    --bg-white: #FFFFFF;
+    --bg-app: #F4F5F7;
+    --bg-card: #FFFFFF;
+
+    --text-dark: #1E1E2D;
+    --text-gray: #7A7A9D;
+    --text-light-gray: #A0A0B5;
+
+    --chart-very-low: #FF6B6B;
+    --chart-low: #FF8A65;
+    --chart-mid: #A7F3D0;
+    --chart-high: var(--deuna-green);
+    --chart-avg-line: #A0A0B5;
+
+    background-color: var(--bg-app);
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    position: relative;
+    padding-bottom: 20px;
+}
+
+/* --- HEADER --- */
+.mis-cuentitas-container .m-header {
+    display: flex;
+    align-items: center;
+    padding: 24px 20px 20px 20px;
+    background-color: var(--deuna-purple);
+    color: var(--bg-white);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    border-bottom-left-radius: 24px;
+    border-bottom-right-radius: 24px;
+    box-shadow: 0 4px 12px rgba(53, 35, 93, 0.15);
+}
+
+.mis-cuentitas-container .m-header svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--bg-white);
+    cursor: pointer;
+}
+
+.mis-cuentitas-container .m-header h1 {
+    flex-grow: 1;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    margin-right: 24px;
+    margin-left: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.mis-cuentitas-container .main-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: -10px;
+}
+
+.mis-cuentitas-container .card {
+    background-color: var(--bg-card);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* SALDO */
+.mis-cuentitas-container .balance-title {
+    color: var(--text-gray);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.mis-cuentitas-container .balance-amount-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.mis-cuentitas-container .main-amount {
+    color: var(--text-dark);
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+
+.mis-cuentitas-container .eye-icon {
+    width: 22px;
+    height: 22px;
+    fill: var(--text-light-gray);
+    cursor: pointer;
+}
+
+/* STATS RÁPIDAS */
+.mis-cuentitas-container .quick-stats {
+    display: flex;
+    gap: 12px;
+    border-top: 1px solid #F0F2F5;
+    padding-top: 16px;
+}
+
+.mis-cuentitas-container .stat-box {
+    flex: 1;
+    background: var(--bg-app);
+    padding: 12px;
+    border-radius: 12px;
+}
+
+.mis-cuentitas-container .stat-label {
+    font-size: 11px;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.mis-cuentitas-container .stat-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--deuna-purple);
+}
+
+/* --- GRÁFICO --- */
+.mis-cuentitas-container .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.mis-cuentitas-container .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.mis-cuentitas-container .average-badge {
+    font-size: 12px;
+    background-color: var(--bg-app);
+    color: var(--text-gray);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.mis-cuentitas-container .chart-container {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 140px;
+    position: relative;
+    padding-bottom: 20px;
+    z-index: 1;
+}
+
+/* LÍNEA DE MEDIA (SÓLO VISUAL) */
+.mis-cuentitas-container .average-line-visual {
+    position: absolute;
+    width: 100%;
+    bottom: 45%;
+    left: 0;
+    border-top: 2px dashed #CBD5E1;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* BARRAS */
+.mis-cuentitas-container .bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 12%;
+    height: 100%;
+    justify-content: flex-end;
+    z-index: 2;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    position: relative;
+    padding-bottom: 24px;
+}
+
+.mis-cuentitas-container .bar-group:active {
+    transform: scale(0.95);
+}
+
+.mis-cuentitas-container .bar {
+    width: 100%;
+    border-radius: 6px;
+    min-height: 4px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mis-cuentitas-container .bar.very-low {
+    background-color: var(--chart-very-low);
+}
+
+.mis-cuentitas-container .bar.low {
+    background-color: var(--chart-low);
+}
+
+.mis-cuentitas-container .bar.mid {
+    background-color: var(--chart-mid);
+}
+
+.mis-cuentitas-container .bar.high {
+    background-color: var(--chart-high);
+}
+
+.mis-cuentitas-container .day-label {
+    font-size: 12px;
+    color: var(--text-gray);
+    font-weight: 600;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: color 0.3s ease, font-weight 0.3s ease;
+}
+
+.mis-cuentitas-container .day-label.active {
+    color: var(--text-dark);
+    font-weight: 800;
+}
+
+/* --- RANKING --- */
+.mis-cuentitas-container .list-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #F0F2F5;
+}
+
+.mis-cuentitas-container .list-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.mis-cuentitas-container .item-rank {
+    color: var(--text-light-gray);
+    font-size: 14px;
+    width: 24px;
+    font-weight: 700;
+}
+
+.mis-cuentitas-container .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    margin-right: 12px;
+}
+
+.mis-cuentitas-container .avatar.bg-purple {
+    background-color: var(--deuna-purple-light);
+    color: var(--deuna-purple);
+}
+
+.mis-cuentitas-container .avatar.bg-green {
+    background-color: var(--deuna-green-light);
+    color: #0C8B64;
+}
+
+.mis-cuentitas-container .avatar.bg-orange {
+    background-color: #FFEDD5;
+    color: #9A3412;
+}
+
+.mis-cuentitas-container .item-info {
+    flex-grow: 1;
+}
+
+.mis-cuentitas-container .item-name {
+    color: var(--text-dark);
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    margin-top: 0;
+}
+
+.mis-cuentitas-container .item-sub {
+    color: var(--text-gray);
+    font-size: 12px;
+    margin: 0;
+}
+
+.mis-cuentitas-container .item-value {
+    font-weight: 700;
+    color: var(--text-dark);
+    font-size: 16px;
+}
+
+/* --- BOTÓN IA --- */
+.mis-cuentitas-container .ai-button-container {
+    padding: 0 20px;
+    margin-top: auto;
+}
+
+.mis-cuentitas-container .ai-button {
+    width: 100%;
+    background-color: var(--deuna-purple);
+    color: white;
+    border: none;
+    padding: 16px;
+    border-radius: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(53, 35, 93, 0.3);
+}
+
+.mis-cuentitas-container .ai-button svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--deuna-green);
+}

@@ -76,10 +76,12 @@ export class AgentService {
         stateModifier: buildSystemPrompt({ commerceId, role }),
       });
 
-      const messages = [
-        ...this.mapHistory(history),
-        new HumanMessage(userMessage),
-      ];
+      let messages = this.mapHistory(history);
+      
+      const lastHistoryMessage = history[history.length - 1];
+      if (!lastHistoryMessage || lastHistoryMessage.sender !== 'user' || lastHistoryMessage.text !== userMessage) {
+        messages.push(new HumanMessage(userMessage));
+      }
 
       this.logger.log(
         `Agent run — commerce: ${commerceId} | msg: "${userMessage.slice(0, 60)}"`,

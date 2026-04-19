@@ -295,7 +295,7 @@ export function ChatbotView({ commerceId = 'NEG001' }: { commerceId?: string }) 
       </div>
 
       {/* Input */}
-      <div className="px-4 pt-2 pb-1 bg-white shrink-0">
+      <div className="px-4 pt-2 pb-3 bg-white shrink-0">
         <div className="flex items-end gap-2 bg-[#F4F4F6] rounded-[24px] p-2 border border-gray-100">
           <textarea
             value={inputValue}
@@ -317,6 +317,7 @@ export function ChatbotView({ commerceId = 'NEG001' }: { commerceId?: string }) 
             <SendIcon />
           </button>
         </div>
+        <p className="text-[10px] text-center text-[#A0A0B5] mt-2 mb-0">Este asistente es una IA y puede cometer errores.</p>
       </div>
     </div>
   );

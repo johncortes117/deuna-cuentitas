@@ -8,6 +8,7 @@ type BottomTab = 'inicio' | 'micaja' | 'menu' | 'ia';
 
 import { ChatbotView } from './chatbot/ChatbotView';
 import MisCuentitas from './components/dashboard/MisCuentitas';
+import MisCuentitasOnboarding from './components/dashboard/MisCuentitasOnboarding';
 import { mockMisCuentitas, type MisCuentitasData } from './data/mockData';
 
 const API_BASE = 'http://localhost:3000';
@@ -203,6 +204,8 @@ function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: {
   const [bottomTab, setBottomTab] = useState<BottomTab>('inicio');
   const [amount, setAmount] = useState('0');
   const [showSaldo, setShowSaldo] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [dashboardData, setDashboardData] = useState<MisCuentitasData>(mockMisCuentitas);
 
   useEffect(() => {
@@ -236,10 +239,21 @@ function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: {
   return (
     <>
       {/* ── Status Bar ── */}
-      {!showSaldo && <StatusBar />}
+      {!showSaldo && !showOnboarding && <StatusBar />}
 
       {/* ── Contenido Principal ── */}
-      {showSaldo ? (
+      {showOnboarding ? (
+        <div className="flex flex-col flex-1 overflow-hidden" style={{ backgroundColor: '#F5F4F0' }}>
+          <MisCuentitasOnboarding
+            onBack={() => setShowOnboarding(false)}
+            onContinue={() => {
+              setHasAcceptedTerms(true);
+              setShowOnboarding(false);
+              setShowSaldo(true);
+            }}
+          />
+        </div>
+      ) : showSaldo ? (
         <div className="flex flex-col flex-1 overflow-hidden" style={{ backgroundColor: '#F5F4F0' }}>
           <MisCuentitas
             data={dashboardData}
@@ -376,7 +390,13 @@ function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: {
                 const isDown = diff < 0;
                 return (
                   <button
-                    onClick={() => setShowSaldo(true)}
+                    onClick={() => {
+                      if (hasAcceptedTerms) {
+                        setShowSaldo(true);
+                      } else {
+                        setShowOnboarding(true);
+                      }
+                    }}
                     className="bg-[#F8F8FA] rounded-2xl p-5 mt-5 mb-6 flex items-center justify-between border border-gray-100 w-full text-left shrink-0"
                   >
                     <div>
@@ -450,7 +470,17 @@ function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: {
         ]).map(item => (
           <button
             key={item.id}
-            onClick={() => setBottomTab(item.id)}
+            onClick={() => {
+              if (item.id === 'ia' && !hasAcceptedTerms) {
+                setShowOnboarding(true);
+              } else {
+                setBottomTab(item.id);
+                if (item.id !== 'ia') {
+                  setShowSaldo(false);
+                  setShowOnboarding(false);
+                }
+              }
+            }}
             className={`flex flex-col items-center gap-0.5 px-4 py-1 ${bottomTab === item.id ? 'text-[#4C1D80]' : 'text-gray-400'
               }`}
           >

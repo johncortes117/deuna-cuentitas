@@ -41,8 +41,7 @@ export class ChatService {
     return {
       sessionId: session.id,
       welcomeMessage:
-        '¡Hola! Soy tu asistente de Deuna Negocios. Puedo contarte cómo van tus ventas, ' +
-        'quiénes son tus mejores clientes, cuál es tu hora pico y mucho más. ¿En qué te ayudo?',
+        'Soy tu asistente de Deuna Negocios. ¿En qué te ayudo?',
       quickReplies: [
         { id: 'DAILY_SUMMARY', label: '¿Cómo voy hoy?' },
         { id: 'WEEKLY_TREND',  label: 'Últimos 7 días' },
