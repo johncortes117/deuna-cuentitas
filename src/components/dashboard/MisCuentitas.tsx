@@ -10,8 +10,9 @@ export interface MisCuentitasProps {
 
 // ─── Design tokens Deuna ────────────────────────────────────────
 const D = {
-  primary:   '#7464EC', // Ajustado a un lila/morado más parecido a la imagen
-  barLight:  '#EBE9FC',
+  primary:   '#452757', // Morado Deuna
+  accent:    '#00D3A4', // Verde Deuna
+  barLight:  '#C0F5EA', // Verde Deuna claro para barras inactivas
   badgeUp:   { bg: '#EAF3DE', fg: '#3B6D11' },
   badgeDown: { bg: '#FFF0F0', fg: '#D54C4C' }, // Ajustado para ser rosado suave/rojo pastel
   cardBg:    '#FFFFFF',
@@ -142,7 +143,7 @@ function CardResumen({ s, ph }: {
                     width: '100%',
                     height: h,
                     borderRadius: '2px 2px 0 0',
-                    backgroundColor: isToday ? D.primary : D.barLight,
+                    backgroundColor: isToday ? D.accent : D.barLight,
                   }} />
                 </div>
               );
@@ -156,7 +157,7 @@ function CardResumen({ s, ph }: {
                 flex: 1,
                 textAlign: 'center',
                 fontSize: 8,
-                color: i === s.dayLabels.length - 1 ? D.primary : D.textMuted,
+                color: i === s.dayLabels.length - 1 ? D.accent : D.textMuted,
                 fontWeight: i === s.dayLabels.length - 1 ? 700 : 500,
               }}>
                 {d}
