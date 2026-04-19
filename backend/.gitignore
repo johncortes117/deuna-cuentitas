@@ -7,3 +7,12 @@ node_modules
 # Database
 *.db
 *.db-journal
+
+# WhatsApp Web JS dependencies & sessions
+.wwebjs_cache/
+.wwebjs_auth/
+data/whatsapp-auth/
+
+# Temporales de test
+test-trigger.js
+test-clear.js

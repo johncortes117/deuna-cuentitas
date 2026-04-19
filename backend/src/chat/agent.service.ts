@@ -299,4 +299,23 @@ export class AgentService {
     }
     return FALLBACK_MSG;
   }
+
+  // ─── WhatsApp Report Generation ──────────────────────────────────
+  async generateInsightReport(commerceId: string, summaryData: any): Promise<string> {
+    this.logger.log(`Generating insight report for commerce: ${commerceId}`);
+    try {
+      const prompt = `Eres el asistente inteligente de Deuna Negocios.
+Genera un mensaje corto, amable y motivacional para enviar por WhatsApp al dueño del negocio.
+Usa emojis moderadamente. Que no sea más de dos párrafos cortos.
+Dile al usuario el resumen de sus ventas de hoy basado en estos datos en formato JSON:
+${JSON.stringify(summaryData, null, 2)}
+Formatea los números en dólares (ej: $15.00). Si los cobros son 0, dale ánimo. Si son altos, felicítalo.`;
+
+      const response = await this.llm.invoke([new HumanMessage(prompt)]);
+      return this.extractText(response.content);
+    } catch (error) {
+      this.logger.error('AgentService.generateInsightReport failed', error);
+      return 'Aquí tienes el resumen de tu día. Abre la app de Cuentitas para más detalles echando un vistazo a tus ventas. 📊';
+    }
+  }
 }

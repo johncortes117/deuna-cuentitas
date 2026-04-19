@@ -231,6 +231,50 @@ export class AnalyticsService {
     };
   }
 
+  // ─── Retención — clientes que vuelven ───────────────────────────
+
+  /**
+   * Clients who made a purchase on `date` but had been inactive for at least
+   * `inactiveDays` before that — i.e., genuinely returning customers.
+   */
+  getReturningClientsToday(
+    commerceId: string,
+    inactiveDays = 30,
+    date?: string,
+  ): { clientName: string; clientId: string }[] {
+    const targetDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : this.today();
+    const safe = Math.min(Math.max(inactiveDays, 1), 365);
+
+    return this.db.rawQuery(
+      `SELECT DISTINCT t1.client_name AS clientName, t1.client_id AS clientId
+       FROM transactions t1
+       WHERE t1.business_id = ?
+         AND t1.date = ?
+         AND NOT EXISTS (
+           SELECT 1 FROM transactions t2
+           WHERE t2.business_id = t1.business_id
+             AND t2.client_id = t1.client_id
+             AND t2.date < ?
+             AND t2.date >= date(?, ?)
+         )
+         AND EXISTS (
+           SELECT 1 FROM transactions t3
+           WHERE t3.business_id = t1.business_id
+             AND t3.client_id = t1.client_id
+             AND t3.date < date(?, ?)
+         )`,
+      [
+        commerceId,
+        targetDate,
+        targetDate,
+        targetDate,
+        `-${safe} days`,
+        targetDate,
+        `-${safe} days`,
+      ],
+    );
+  }
+
   // ─── Privados ────────────────────────────────────────────────────
 
   private today(): string {

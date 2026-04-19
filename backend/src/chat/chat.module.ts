@@ -8,5 +8,6 @@ import { AgentService } from './agent.service';
   imports: [AnalyticsModule],
   controllers: [ChatController],
   providers: [ChatService, AgentService],
+  exports: [AgentService],
 })
 export class ChatModule {}
