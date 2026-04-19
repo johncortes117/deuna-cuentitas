@@ -1,6 +1,24 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { NlpService } from './nlp.service';
+import { AgentService, type MessageRecord } from './agent.service';
+
+// ─── Quick replies predefinidos ──────────────────────────────────
+// El frontend puede enviar un `actionId` en lugar de texto libre.
+// Esto permite botones de acceso rápido sin que el LLM deba interpretar
+// el ID — se resuelve antes de llegar al agente.
+const QUICK_REPLY_MAP: Record<string, string> = {
+  DAILY_SUMMARY: '¿Cuánto he vendido hoy?',
+  WEEKLY_TREND:  '¿Cómo fueron los últimos 7 días?',
+  TOP_CLIENTS:   '¿Quiénes son mis mejores clientes este mes?',
+  PEAK_HOURS:    '¿A qué hora vendo más?',
+  TEAM_RANKING:  '¿Cómo va mi equipo este mes?',
+  INACTIVE:      '¿Qué clientes no han vuelto en los últimos 14 días?',
+  COMPARE_WEEKS: '¿Cómo fue esta semana comparado con la semana pasada?',
+  BEST_DAY:      '¿Cuál fue mi mejor día de ventas?',
+  GENERAL:       'Dame un resumen general de mi negocio.',
+};
+
+const MAX_MESSAGES_PER_SESSION = 100;
 
 @Injectable()
 export class ChatService {
@@ -8,64 +26,106 @@ export class ChatService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly nlpService: NlpService
+    private readonly agentService: AgentService,
   ) {}
+
+  // ─── Iniciar sesión ──────────────────────────────────────────────
 
   async startSession(commerceId: string, role: string) {
     const session = await this.prisma.chatSession.create({
-      data: {
-        commerceId,
-        role,
-      },
+      data: { commerceId, role },
     });
-    this.logger.log(`Session started: ${session.id}`);
-    
-    // Aquí devolveríamos un JWT en etapas de Seguridad, por ahora el sessionId es el token de acceso básico.
+
+    this.logger.log(`Session started: ${session.id} — commerce: ${commerceId}`);
+
     return {
       sessionId: session.id,
-      welcomeMessage: "¡Hola! Soy tu asistente de Deuna Negocios. ¿En qué te puedo ayudar hoy?",
+      welcomeMessage:
+        '¡Hola! Soy tu asistente de Deuna Negocios. Puedo contarte cómo van tus ventas, ' +
+        'quiénes son tus mejores clientes, cuál es tu hora pico y mucho más. ¿En qué te ayudo?',
+      quickReplies: [
+        { id: 'DAILY_SUMMARY', label: '¿Cómo voy hoy?' },
+        { id: 'WEEKLY_TREND',  label: 'Últimos 7 días' },
+        { id: 'TOP_CLIENTS',   label: 'Mis mejores clientes' },
+        { id: 'PEAK_HOURS',    label: 'Mi hora pico' },
+      ],
     };
   }
 
-  async processMessage(sessionId: string, text?: string, actionId?: string) {
-    // 1. Guardar mensaje del usuario
+  // ─── Procesar mensaje ────────────────────────────────────────────
+
+  async processMessage(
+    sessionId: string,
+    text?: string,
+    actionId?: string,
+  ) {
+    // 1. Validar sesión y obtener contexto del comercio
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+    });
+    if (!session) throw new NotFoundException('Sesión no encontrada');
+
+    // 2. Límite de mensajes por sesión (prevención de abuso)
+    const msgCount = await this.prisma.chatMessage.count({
+      where: { sessionId },
+    });
+    if (msgCount >= MAX_MESSAGES_PER_SESSION) {
+      return {
+        id: 'limit',
+        sender: 'bot',
+        text: 'Has llegado al límite de mensajes de esta sesión. Inicia una nueva para continuar.',
+        createdAt: new Date(),
+      };
+    }
+
+    // 3. Resolver el texto de entrada (mensaje libre o quick reply)
+    const userInput = this.resolveInput(text, actionId);
+
+    // 4. Persistir mensaje del usuario
     await this.prisma.chatMessage.create({
       data: {
         sessionId,
         sender: 'user',
-        text: text || null,
-        actionId: actionId || null,
+        text: userInput,
+        actionId: actionId ?? null,
       },
     });
 
-    // 2. Lógica NLP Real (con fallback a Mock interno)
-    // Recuperamos la sesión para saber quién es el comercio actual
-    const session = await this.prisma.chatSession.findUnique({ where: { id: sessionId } });
-    if (!session) {
-      throw new Error('Sesión no encontrada');
-    }
+    // 5. Cargar historial reciente para contexto del agente
+    const history: MessageRecord[] = await this.prisma.chatMessage.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+      select: { sender: true, text: true },
+    });
 
-    let responseText = '';
-    if (actionId) {
-      responseText = `Recibí tu pulsación del botón (${actionId}), pero mi lógica de botones exacta aún se está desarrollando.`;
-    } else {
-      responseText = await this.nlpService.generateResponse(session.commerceId, text || '');
-    }
+    // 6. Invocar el agente ReAct
+    this.logger.log(`Invoking agent — session: ${sessionId}`);
+    const responseText = await this.agentService.run({
+      commerceId: session.commerceId,
+      role: session.role,
+      userMessage: userInput,
+      history,
+    });
 
-    // 3. Guardar respuesta del bot en BD
+    // 7. Persistir respuesta del bot
     const botMessage = await this.prisma.chatMessage.create({
-      data: {
-        sessionId,
-        sender: 'bot',
-        text: responseText,
-      },
+      data: { sessionId, sender: 'bot', text: responseText },
     });
 
     return {
       id: botMessage.id,
-      sender: 'bot',
+      sender: 'bot' as const,
       text: botMessage.text,
       createdAt: botMessage.createdAt,
     };
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────
+
+  private resolveInput(text?: string, actionId?: string): string {
+    if (text?.trim()) return text.trim();
+    if (actionId) return QUICK_REPLY_MAP[actionId] ?? `Acción: ${actionId}`;
+    return 'Hola';
   }
 }

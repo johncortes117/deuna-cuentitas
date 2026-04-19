@@ -56,7 +56,9 @@ Backend requires these env vars (no `.env` template is committed):
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `DATABASE_URL` | — | PostgreSQL connection string |
+| `DATABASE_URL` | — | PostgreSQL connection string (Prisma / chat sessions) |
+| `ANTHROPIC_API_KEY` | — | API key de Anthropic para el agente LangGraph |
+| `CLAUDE_MODEL` | `claude-haiku-4-5-20251001` | Modelo de Claude a usar |
 | `PORT` | `3000` | NestJS listen port |
 | `REDIS_HOST` | `localhost` | Redis hostname |
 | `REDIS_PORT` | `6379` | Redis port |
