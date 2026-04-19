@@ -216,6 +216,7 @@ export function ChatbotView() {
           }),
         },
       ]);
+      setQuickReplies(data.quickReplies ?? []);
     } catch (err) {
       console.error('Error al enviar mensaje:', err);
       setMessages((prev) => [
@@ -233,7 +234,13 @@ export function ChatbotView() {
   };
 
   const handleSend = () => sendMessage(inputValue);
-  const handleQuickReply = (qr: QuickReply) => sendMessage(undefined, qr.id);
+  const handleQuickReply = (qr: QuickReply) => {
+    if (qr.id.startsWith('sug_')) {
+      sendMessage(qr.label);
+    } else {
+      sendMessage(undefined, qr.id);
+    }
+  };
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();

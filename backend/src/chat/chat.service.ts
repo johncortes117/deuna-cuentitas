@@ -101,7 +101,7 @@ export class ChatService {
 
     // 6. Invocar el agente ReAct
     this.logger.log(`Invoking agent — session: ${sessionId}`);
-    const responseText = await this.agentService.run({
+    const { text: responseText, suggestions } = await this.agentService.run({
       commerceId: session.commerceId,
       role: session.role,
       userMessage: userInput,
@@ -118,6 +118,7 @@ export class ChatService {
       sender: 'bot' as const,
       text: botMessage.text,
       createdAt: botMessage.createdAt,
+      quickReplies: suggestions.map((s, i) => ({ id: `sug_${i}_${Date.now()}`, label: s })),
     };
   }
 
