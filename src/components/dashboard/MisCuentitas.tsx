@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { MisCuentitasData } from '../../data/mockData';
 import './MisCuentitas.css';
 
