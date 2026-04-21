@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 
 // ─── Tipos ───
 type Screen = 'login' | 'dashboard';
@@ -522,7 +522,7 @@ function StatusBar() {
   );
 }
 
-function ActionButton({ label, icon }: { label: string; icon: React.ReactNode }) {
+function ActionButton({ label, icon }: { label: string; icon: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-1.5 cursor-pointer group">
       <div className="w-12 h-12 bg-[#F4F4F6] rounded-full flex items-center justify-center group-hover:bg-purple-50 transition-colors">
@@ -640,7 +640,7 @@ const IAIcon = ({ active }: { active: boolean }) => {
 };
 
 // ── Gestionar Icons & Components ──
-function QuickAction({ icon, label }: { icon: React.ReactNode; label: string }) {
+function QuickAction({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <div className="flex flex-col items-center gap-2 cursor-pointer group">
       <div className="w-14 h-14 bg-[#F4F4F6] rounded-full flex items-center justify-center group-hover:bg-purple-50 transition-colors border border-gray-100">

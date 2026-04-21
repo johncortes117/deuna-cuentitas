@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
 
 // ─── Tipos ───────────────────────────────────────────────────────
 
@@ -244,7 +244,7 @@ export function ChatbotView({ commerceId = 'NEG001' }: { commerceId?: string }) 
       sendMessage(undefined, qr.id);
     }
   };
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();

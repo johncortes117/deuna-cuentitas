@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 interface MisCuentitasOnboardingProps {
   onContinue: () => void;
   onBack: () => void;
 }
 
-const D = {
-  primary: '#452757', // Morado Deuna
-  accent: '#00D3A4', // Verde Deuna
-  textMain: '#1A1A2E',
-  textSub: '#8F96A3',
-  screenBg: '#FFFFFF',
-};
+
 
 const IcoBack = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A2E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -19,33 +13,9 @@ const IcoBack = () => (
   </svg>
 );
 
-const IcoChart = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={D.textMain} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-    </svg>
-);
 
-const IcoChat = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={D.textMain} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-    </svg>
-);
 
-const IcoSort = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={D.textMain} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="2" x2="12" y2="22"></line>
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-    </svg>
-);
-
-const IcoEdu = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={D.textMain} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
-        <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
-    </svg>
-);
-
-const FeatureItem = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
+const FeatureItem = ({ icon, title, description }: { icon: ReactNode, title: string, description: string }) => (
     <div className="flex items-start gap-4 py-3">
         <div className="flex-shrink-0 mt-1">
             {icon}
