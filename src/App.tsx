@@ -199,7 +199,7 @@ function LoginScreen({ onIngresar }: { onIngresar: (commerce: { id: string, name
 // Pantalla Dashboard / Cobrar
 // ═══════════════════════════════════════════════════════════════
 function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: { id: string, name: string } | null }) {
-  const [tab, setTab] = useState<Tab>('cobrar');
+  const [tab, setTab] = useState<Tab>('gestionar');
   const [payMode, setPayMode] = useState<PayMode>('qr');
   const [bottomTab, setBottomTab] = useState<BottomTab>('inicio');
   const [amount, setAmount] = useState('0');

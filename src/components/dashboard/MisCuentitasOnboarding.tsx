@@ -24,11 +24,6 @@ const FeatureItem = ({ icon, title, description }: { icon: ReactNode, title: str
             <h4 className="text-[14px] font-bold text-[#1A1A2E] leading-tight mb-1">{title}</h4>
             <p className="text-[12px] text-[#8F96A3] leading-snug">{description}</p>
         </div>
-        <div className="flex-shrink-0 flex items-center h-[34px]">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8F96A3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-            </svg>
-        </div>
     </div>
 );
 
@@ -66,20 +61,8 @@ export default function MisCuentitasOnboarding({ onContinue, onBack }: MisCuenti
                             <path d="M14 9H19V14" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                     }
-                    title="Ve cómo te está yendo al toque" 
-                    description="Consulta tus ganancias del día y de la semana de forma clara y rápida." 
-                />
-                <FeatureItem 
-                    icon={
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            <path d="M9 10H9.01" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            <path d="M12 10H12.01" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            <path d="M15 10H15.01" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                    }
-                    title="Pregúntale nomás" 
-                    description="Realiza preguntas sobre tus ingresos, gastos o movimientos y obtén respuestas directas." 
+                    title="¿Cómo te fue hoy?" 
+                    description="Mira tus ventas del día, la semana y el mes de un solo vistazo" 
                 />
                 <FeatureItem 
                     icon={
@@ -91,8 +74,30 @@ export default function MisCuentitasOnboarding({ onContinue, onBack }: MisCuenti
                             <path d="M10 16.5C10 16.5 11.5 18 12 18C12.5 18 14 16.5 14 16.5" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                     }
-                    title="Ordena tus ingresos y gastos" 
-                    description="Visualiza de manera organizada todo lo que entra y sale de tu negocio." 
+                    title="¿Quién mueve tu negocio?" 
+                    description="Tus mejores clientes y tu equipo de trabajo, todo en un solo lugar" 
+                />
+                <FeatureItem 
+                    icon={
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M9 10H9.01" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M12 10H12.01" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M15 10H15.01" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    }
+                    title="Mira más allá de los números" 
+                    description="Cuando el dashboard no alcanza, pregúntale a la IA y te explica lo que está pasando en tu negocio" 
+                />
+                <FeatureItem 
+                    icon={
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M12 6v6l4 2" stroke="#1A1A2E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    }
+                    title="Cuentitas trabaja mientras tú descansas" 
+                    description="Recibe cada día información personalizada de tu negocio, ya sea por la app o tu WhatsApp" 
                 />
             </div>
 
