@@ -39,14 +39,14 @@ function App() {
   // Fullscreen components (No iPhone frame for MitiMiti and Scanner)
   if (screen === 'mitimiti') {
     return (
-      <div className="min-h-screen bg-gray-900 flex justify-center items-center font-sans py-8">
-        <div className="relative w-[393px] h-[852px] bg-[#0a0a0a] rounded-[55px] shadow-[0_0_0_2px_#1f1f1f,0_20px_40px_rgba(0,0,0,0.5)] p-[12px]">
-          <div className="absolute -left-[3px] top-[115px] w-[3px] h-[26px] bg-[#1f1f1f] rounded-l-md" />
-          <div className="absolute -left-[3px] top-[165px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
-          <div className="absolute -left-[3px] top-[230px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
-          <div className="absolute -right-[3px] top-[200px] w-[3px] h-[75px] bg-[#1f1f1f] rounded-r-md" />
-          <div className="bg-white w-full h-full rounded-[43px] overflow-hidden flex flex-col relative font-sans">
-            <div className="absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 flex items-center justify-end px-3">
+      <div className="min-h-screen bg-gray-900 flex justify-center items-center font-sans md:py-8">
+        <div className="relative w-full h-[100dvh] md:w-[393px] md:h-[852px] bg-black md:bg-[#0a0a0a] md:rounded-[55px] md:shadow-[0_0_0_2px_#1f1f1f,0_20px_40px_rgba(0,0,0,0.5)] md:p-[12px]">
+          <div className="hidden md:block absolute -left-[3px] top-[115px] w-[3px] h-[26px] bg-[#1f1f1f] rounded-l-md" />
+          <div className="hidden md:block absolute -left-[3px] top-[165px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
+          <div className="hidden md:block absolute -left-[3px] top-[230px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
+          <div className="hidden md:block absolute -right-[3px] top-[200px] w-[3px] h-[75px] bg-[#1f1f1f] rounded-r-md" />
+          <div className="bg-white w-full h-full md:rounded-[43px] overflow-hidden flex flex-col relative font-sans">
+            <div className="hidden md:flex absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 items-center justify-end px-3">
               <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
             </div>
             <MitiMitiApp />
@@ -58,14 +58,14 @@ function App() {
 
   if (screen === 'scanner') {
     return (
-      <div className="min-h-screen bg-gray-900 flex justify-center items-center font-sans py-8">
-        <div className="relative w-[393px] h-[852px] bg-[#0a0a0a] rounded-[55px] shadow-[0_0_0_2px_#1f1f1f,0_20px_40px_rgba(0,0,0,0.5)] p-[12px]">
-          <div className="absolute -left-[3px] top-[115px] w-[3px] h-[26px] bg-[#1f1f1f] rounded-l-md" />
-          <div className="absolute -left-[3px] top-[165px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
-          <div className="absolute -left-[3px] top-[230px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
-          <div className="absolute -right-[3px] top-[200px] w-[3px] h-[75px] bg-[#1f1f1f] rounded-r-md" />
-          <div className="bg-black w-full h-full rounded-[43px] overflow-hidden flex flex-col relative font-sans">
-            <div className="absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 flex items-center justify-end px-3">
+      <div className="min-h-screen bg-gray-900 flex justify-center items-center font-sans md:py-8">
+        <div className="relative w-full h-[100dvh] md:w-[393px] md:h-[852px] bg-black md:bg-[#0a0a0a] md:rounded-[55px] md:shadow-[0_0_0_2px_#1f1f1f,0_20px_40px_rgba(0,0,0,0.5)] md:p-[12px]">
+          <div className="hidden md:block absolute -left-[3px] top-[115px] w-[3px] h-[26px] bg-[#1f1f1f] rounded-l-md" />
+          <div className="hidden md:block absolute -left-[3px] top-[165px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
+          <div className="hidden md:block absolute -left-[3px] top-[230px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
+          <div className="hidden md:block absolute -right-[3px] top-[200px] w-[3px] h-[75px] bg-[#1f1f1f] rounded-r-md" />
+          <div className="bg-black w-full h-full md:rounded-[43px] overflow-hidden flex flex-col relative font-sans">
+            <div className="hidden md:flex absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 items-center justify-end px-3">
               <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
             </div>
             <QRScanner 
@@ -107,19 +107,19 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex justify-center items-center font-sans py-8">
-      {/* Marco de iPhone 15 */}
-      <div className="relative w-[393px] h-[852px] bg-[#0a0a0a] rounded-[55px] shadow-[0_0_0_2px_#1f1f1f,0_20px_40px_rgba(0,0,0,0.5)] p-[12px]">
+    <div className="min-h-screen bg-gray-900 flex justify-center items-center font-sans md:py-8">
+      {/* Marco de iPhone 15 en desktop, fullscreen en mobile */}
+      <div className="relative w-full h-[100dvh] md:w-[393px] md:h-[852px] bg-black md:bg-[#0a0a0a] md:rounded-[55px] md:shadow-[0_0_0_2px_#1f1f1f,0_20px_40px_rgba(0,0,0,0.5)] md:p-[12px]">
         {/* Botones de Hardware */}
-        <div className="absolute -left-[3px] top-[115px] w-[3px] h-[26px] bg-[#1f1f1f] rounded-l-md" />
-        <div className="absolute -left-[3px] top-[165px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
-        <div className="absolute -left-[3px] top-[230px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
-        <div className="absolute -right-[3px] top-[200px] w-[3px] h-[75px] bg-[#1f1f1f] rounded-r-md" />
+        <div className="hidden md:block absolute -left-[3px] top-[115px] w-[3px] h-[26px] bg-[#1f1f1f] rounded-l-md" />
+        <div className="hidden md:block absolute -left-[3px] top-[165px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
+        <div className="hidden md:block absolute -left-[3px] top-[230px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
+        <div className="hidden md:block absolute -right-[3px] top-[200px] w-[3px] h-[75px] bg-[#1f1f1f] rounded-r-md" />
 
         {/* Pantalla Interna */}
-        <div className="bg-white w-full h-full rounded-[43px] overflow-hidden flex flex-col relative font-sans">
+        <div className="bg-white w-full h-full md:rounded-[43px] overflow-hidden flex flex-col relative font-sans">
           {/* Dynamic Island */}
-          <div className="absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 flex items-center justify-end px-3">
+          <div className="hidden md:flex absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 items-center justify-end px-3">
             <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
           </div>
 
