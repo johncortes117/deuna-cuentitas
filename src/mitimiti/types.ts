@@ -67,10 +67,7 @@ export interface UserProfile {
 
 // Rutas del módulo MitiMiti
 export type MitiMitiRoute =
-  | { page: 'home' }
-  | { page: 'scanner' }
-  | { page: 'payment'; targetName: string; targetUserId: string }
-  | { page: 'create'; commerceName: string; totalCents: number }
+  | { page: 'create'; commerceName?: string; totalCents?: number }
   | { page: 'room'; roomId: string }
   | { page: 'join'; token: string }
   | { page: 'success'; roomId: string }

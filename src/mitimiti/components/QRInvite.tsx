@@ -30,19 +30,19 @@ export default function QRInvite({ inviteToken, size = 200 }: QRInviteProps) {
   }, [inviteToken, size]);
 
   return (
-    <div className="relative flex items-center justify-center">
-      {/* Esquinas decorativas estilo DeUna */}
-      <div className="absolute top-0 left-0 w-5 h-5 border-t-[3px] border-l-[3px] border-[#4C1D80] rounded-tl-sm" />
-      <div className="absolute top-0 right-0 w-5 h-5 border-t-[3px] border-r-[3px] border-[#4C1D80] rounded-tr-sm" />
-      <div className="absolute bottom-0 left-0 w-5 h-5 border-b-[3px] border-l-[3px] border-[#4C1D80] rounded-bl-sm" />
-      <div className="absolute bottom-0 right-0 w-5 h-5 border-b-[3px] border-r-[3px] border-[#4C1D80] rounded-br-sm" />
+    <div className="relative p-6">
+      {/* Esquinas decorativas gruesas estilo DeUna Consumer (Captura 3) */}
+      <div className="absolute top-0 left-0 w-8 h-8 border-t-[4px] border-l-[4px] border-[#4C1D80]" />
+      <div className="absolute top-0 right-0 w-8 h-8 border-t-[4px] border-r-[4px] border-[#4C1D80]" />
+      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-[4px] border-l-[4px] border-[#4C1D80]" />
+      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-[4px] border-r-[4px] border-[#4C1D80]" />
 
-      <canvas ref={canvasRef} className="rounded-lg" />
+      <canvas ref={canvasRef} />
 
       {/* Logo d! centrado */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-[0_0_0_4px_white]">
-          <span className="text-[#4C1D80] font-black text-lg italic tracking-tighter">d!</span>
+        <div className="bg-white rounded-full w-14 h-14 flex items-center justify-center shadow-[0_0_0_4px_white]">
+          <span className="text-[#2FD9A9] font-black text-2xl italic tracking-tighter">d!</span>
         </div>
       </div>
     </div>

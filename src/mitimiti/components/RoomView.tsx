@@ -141,20 +141,6 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
   const canLock = isWaiting && participants.length >= 2;
   const hasConfirmed = myParticipant?.confirmation_status === 'confirmed';
 
-  // Compartir link
-  const shareUrl = `${window.location.origin}/#/mitimiti/join/${room.invite_token}`;
-  const handleShare = async () => {
-    if (navigator.share) {
-      await navigator.share({
-        title: 'MitiMiti — Pago grupal',
-        text: `Únete al pago grupal: ${room.commerce_name} — ${formatMoney(room.total_cents)}`,
-        url: shareUrl,
-      });
-    } else {
-      await navigator.clipboard.writeText(shareUrl);
-    }
-  };
-
   return (
     <div className="flex flex-col flex-1">
       {/* Header */}
@@ -222,16 +208,17 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
               Escanea para unirte a la sala
             </p>
 
-            {/* Compartir link */}
+            {/* Descargar PDF */}
             <button
-              onClick={handleShare}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#EEEDFE] rounded-full text-[13px] font-semibold text-[#4C1D80]"
+              onClick={() => alert('Simulación: Descargando PDF del QR...')}
+              className="mt-2 w-full py-[18px] rounded-[18px] bg-[#4C1D80] text-white text-[16px] font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-3"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Compartir link
+              Descargar PDF
             </button>
 
             {/* Mini lista de participantes debajo del QR */}
