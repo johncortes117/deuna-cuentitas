@@ -272,3 +272,26 @@
   color: white;
   box-shadow: 0 1px 3px rgba(76, 29, 128, 0.2);
 }
+
+/* ─── Custom html5-qrcode video fullscreen styling ───────── */
+#mitimiti-qr-reader {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  overflow: hidden !important;
+  border: none !important;
+  background: black !important;
+}
+
+#mitimiti-qr-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+#mitimiti-qr-reader > div {
+  width: 100% !important;
+  height: 100% !important;
+}

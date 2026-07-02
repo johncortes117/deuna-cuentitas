@@ -25,9 +25,8 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
         await scanner.start(
           { facingMode: 'environment' },
           {
-            fps: 10,
-            qrbox: { width: 220, height: 220 },
-            aspectRatio: 1,
+            fps: 15,
+            aspectRatio: 0.5625, // 9:16 portrait ratio
           },
           (decodedText) => {
             if (!hasScanned.current) {
@@ -72,13 +71,8 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
       </div>
 
       {/* Overlay to dim the outside of the scan area */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        boxShadow: 'inset 0 0 0 5000px rgba(0,0,0,0.5)',
-        // we use a clip-path or a custom div layout for the hole.
-        // Actually, html5-qrcode adds its own shading, but we want a custom one.
-        // A simple way is a massive border with border-radius.
-      }}>
-        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[280px] h-[280px] rounded-[30px] shadow-[0_0_0_4000px_rgba(0,0,0,0.4)] border-2 border-white/40" />
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+        <div className="absolute top-[22%] left-1/2 -translate-x-1/2 w-[270px] h-[270px] rounded-[36px] shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] border-[2.5px] border-white/50" />
       </div>
 
       {/* Header */}
