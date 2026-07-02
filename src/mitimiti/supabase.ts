@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import type { Room, Participant, RoomStatus } from './types';
 import { generateId, generateInviteToken, dividirMonto } from './utils';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || 'https://placeholder.supabase.co';
+const supabaseKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || 'placeholder';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
