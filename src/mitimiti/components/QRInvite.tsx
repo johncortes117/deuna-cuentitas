@@ -25,7 +25,7 @@ export default function QRInvite({ inviteToken, size = 200 }: QRInviteProps) {
         dark: '#1a1a1a',
         light: '#ffffff',
       },
-      errorCorrectionLevel: 'M',
+      errorCorrectionLevel: 'H',
     });
   }, [inviteToken, size]);
 
