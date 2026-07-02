@@ -1,0 +1,274 @@
+/* ─── MitiMiti Animations & Styles ────────────────────────── */
+
+/* Entrada de cards de participante */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide up para modales */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide down para cerrar */
+@keyframes slideDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+/* Pulso para procesamiento */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.7;
+  }
+}
+
+/* Check de éxito */
+@keyframes scaleCheck {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Confetti */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-100%) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Timer pulsante cuando queda poco */
+@keyframes timerPulse {
+  0%, 100% {
+    color: #ef4444;
+  }
+  50% {
+    color: #fbbf24;
+  }
+}
+
+/* Spinner de carga */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Fade in genérico */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─── Clases utilitarias ─────────────────────────────────── */
+
+.mitimiti-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.mitimiti-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mitimiti-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.mitimiti-check {
+  animation: scaleCheck 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.mitimiti-spin {
+  animation: spin 1s linear infinite;
+}
+
+.mitimiti-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.mitimiti-timer-danger {
+  animation: timerPulse 1s ease-in-out infinite;
+}
+
+/* ─── Confetti Particles ─────────────────────────────────── */
+
+.mitimiti-confetti {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.mitimiti-confetti-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+
+/* ─── QR Scanner overlay ─────────────────────────────────── */
+
+.mitimiti-scanner-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+
+.mitimiti-scanner-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 240px;
+  height: 240px;
+}
+
+.mitimiti-scanner-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: #4C1D80;
+  border-style: solid;
+  border-width: 0;
+}
+
+.mitimiti-scanner-corner.tl {
+  top: 0; left: 0;
+  border-top-width: 3px;
+  border-left-width: 3px;
+  border-top-left-radius: 4px;
+}
+
+.mitimiti-scanner-corner.tr {
+  top: 0; right: 0;
+  border-top-width: 3px;
+  border-right-width: 3px;
+  border-top-right-radius: 4px;
+}
+
+.mitimiti-scanner-corner.bl {
+  bottom: 0; left: 0;
+  border-bottom-width: 3px;
+  border-left-width: 3px;
+  border-bottom-left-radius: 4px;
+}
+
+.mitimiti-scanner-corner.br {
+  bottom: 0; right: 0;
+  border-bottom-width: 3px;
+  border-right-width: 3px;
+  border-bottom-right-radius: 4px;
+}
+
+/* ─── Scan laser line ────────────────────────────────────── */
+
+@keyframes scanLine {
+  0%, 100% {
+    top: 0;
+  }
+  50% {
+    top: calc(100% - 2px);
+  }
+}
+
+.mitimiti-scan-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #4C1D80, transparent);
+  animation: scanLine 2s ease-in-out infinite;
+}
+
+/* ─── Modal backdrop ─────────────────────────────────────── */
+
+.mitimiti-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+}
+
+.mitimiti-modal {
+  background: white;
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  padding: 24px 20px 32px;
+}
+
+/* ─── Toggle switch for QR/Participants ──────────────────── */
+
+.mitimiti-toggle-container {
+  display: flex;
+  background: #F4F4F6;
+  border-radius: 24px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.mitimiti-toggle-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 22px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: transparent;
+  color: #9ca3af;
+}
+
+.mitimiti-toggle-btn.active {
+  background: #4C1D80;
+  color: white;
+  box-shadow: 0 1px 3px rgba(76, 29, 128, 0.2);
+}

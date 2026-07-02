@@ -1,15 +1,16 @@
 import { useState, useEffect, type ReactNode } from 'react';
 
 // ─── Tipos ───
-type Screen = 'login' | 'dashboard';
+type Screen = 'login' | 'dashboard' | 'mitimiti';
 type Tab = 'cobrar' | 'gestionar';
 type PayMode = 'qr' | 'manual';
-type BottomTab = 'inicio' | 'micaja' | 'menu' | 'ia';
+type BottomTab = 'inicio' | 'micaja' | 'menu' | 'ia' | 'mitimiti';
 
 import { ChatbotView } from './chatbot/ChatbotView';
 import MisCuentitas from './components/dashboard/MisCuentitas';
 import MisCuentitasOnboarding from './components/dashboard/MisCuentitasOnboarding';
 import { mockMisCuentitas, type MisCuentitasData } from './data/mockData';
+import MitiMitiApp from './mitimiti/MitiMitiApp';
 
 const API_BASE = 'http://localhost:3000';
 
@@ -17,8 +18,46 @@ const API_BASE = 'http://localhost:3000';
 // Componente principal
 // ═══════════════════════════════════════════════════════════════
 function App() {
-  const [screen, setScreen] = useState<Screen>('login');
+  const [screen, setScreen] = useState<Screen>(() => {
+    // Si la URL tiene hash de mitimiti, ir directo a MitiMiti
+    if (window.location.hash.startsWith('#/mitimiti')) return 'mitimiti';
+    return 'login';
+  });
   const [commerce, setCommerce] = useState<{ id: string; name: string } | null>(null);
+
+  // Escuchar hash changes
+  useEffect(() => {
+    function handleHash() {
+      if (window.location.hash.startsWith('#/mitimiti')) {
+        setScreen('mitimiti');
+      }
+    }
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  // MitiMiti se renderiza sin el marco de iPhone (fullscreen en móvil)
+  if (screen === 'mitimiti') {
+    return (
+      <div className="min-h-screen bg-gray-900 flex justify-center items-center font-sans py-8">
+        <div className="relative w-[393px] h-[852px] bg-[#0a0a0a] rounded-[55px] shadow-[0_0_0_2px_#1f1f1f,0_20px_40px_rgba(0,0,0,0.5)] p-[12px]">
+          <div className="absolute -left-[3px] top-[115px] w-[3px] h-[26px] bg-[#1f1f1f] rounded-l-md" />
+          <div className="absolute -left-[3px] top-[165px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
+          <div className="absolute -left-[3px] top-[230px] w-[3px] h-[50px] bg-[#1f1f1f] rounded-l-md" />
+          <div className="absolute -right-[3px] top-[200px] w-[3px] h-[75px] bg-[#1f1f1f] rounded-r-md" />
+          <div
+            className="bg-white w-full h-full rounded-[43px] overflow-hidden flex flex-col relative"
+            style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+          >
+            <div className="absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 flex items-center justify-end px-3">
+              <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
+            </div>
+            <MitiMitiApp />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 flex justify-center items-center font-sans py-8">
@@ -465,12 +504,17 @@ function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: {
         {([
           { id: 'inicio' as BottomTab, label: 'Inicio', icon: <BottomHomeIcon active={bottomTab === 'inicio'} /> },
           { id: 'micaja' as BottomTab, label: 'Mi Caja', icon: <CashRegisterIcon active={bottomTab === 'micaja'} /> },
+          { id: 'mitimiti' as BottomTab, label: 'MitiMiti', icon: <MitiMitiIcon active={bottomTab === 'mitimiti'} /> },
           { id: 'ia' as BottomTab, label: 'Cuentitas', icon: <IAIcon active={bottomTab === 'ia'} /> },
           { id: 'menu' as BottomTab, label: 'Menú', icon: <MenuIcon active={bottomTab === 'menu'} /> },
         ]).map(item => (
           <button
             key={item.id}
             onClick={() => {
+              if (item.id === 'mitimiti') {
+                window.location.hash = '#/mitimiti';
+                return;
+              }
               if (item.id === 'ia' && !hasAcceptedTerms) {
                 setShowOnboarding(true);
               } else {
@@ -481,7 +525,7 @@ function DashboardScreen({ onBack, commerce }: { onBack: () => void, commerce: {
                 }
               }
             }}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1 ${bottomTab === item.id ? 'text-[#4C1D80]' : 'text-gray-400'
+            className={`flex flex-col items-center gap-0.5 px-3 py-1 ${bottomTab === item.id ? 'text-[#4C1D80]' : 'text-gray-400'
               }`}
           >
             {item.icon}
@@ -638,6 +682,16 @@ const IAIcon = ({ active }: { active: boolean }) => {
     </svg>
   );
 };
+
+// ── MitiMiti Icon ──
+const MitiMitiIcon = ({ active }: { active: boolean }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#4C1D80' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
 
 // ── Gestionar Icons & Components ──
 function QuickAction({ icon, label }: { icon: ReactNode; label: string }) {
