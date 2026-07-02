@@ -22,6 +22,34 @@ function App() {
 
   useEffect(() => {
     setProfile(getUserProfile());
+
+    // Request fullscreen on first user interaction to provide a native app feel
+    const handleFirstTouch = () => {
+      try {
+        if (
+          document.documentElement.requestFullscreen &&
+          !document.fullscreenElement &&
+          // Only attempt fullscreen on mobile devices (simple heuristic: small screen width or touch capability)
+          window.innerWidth < 768
+        ) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } catch (e) {
+        // Ignore errors if fullscreen is not supported or blocked
+      }
+      
+      // Remove listeners after first interaction
+      window.removeEventListener('click', handleFirstTouch);
+      window.removeEventListener('touchstart', handleFirstTouch);
+    };
+
+    window.addEventListener('click', handleFirstTouch);
+    window.addEventListener('touchstart', handleFirstTouch, { passive: true });
+
+    return () => {
+      window.removeEventListener('click', handleFirstTouch);
+      window.removeEventListener('touchstart', handleFirstTouch);
+    };
   }, []);
 
   useEffect(() => {
