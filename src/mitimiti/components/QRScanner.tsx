@@ -33,7 +33,11 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
             if (!hasScanned.current) {
               hasScanned.current = true;
               onScan(decodedText);
-              scanner.stop().catch(() => {});
+              try {
+                scanner.stop().catch(() => {});
+              } catch (e) {
+                // Ignorar error síncrono si ya está detenido o no ha iniciado completamente
+              }
             }
           },
           () => {
@@ -49,7 +53,11 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
     return () => {
       clearTimeout(timeout);
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
+        try {
+          scannerRef.current.stop().catch(() => {});
+        } catch (e) {
+          // Ignorar error al desmontar
+        }
         scannerRef.current = null;
       }
     };
