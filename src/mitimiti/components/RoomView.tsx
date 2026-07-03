@@ -208,21 +208,8 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
               Escanea para unirte a la sala
             </p>
 
-            {/* Botones de Invitación */}
-            <div className="mt-2 flex gap-3 w-full">
-              <button
-                onClick={() => alert('Simulación: Abriendo contactos para invitar...')}
-                className="flex-1 py-[14px] rounded-[16px] bg-[#EEEDFE] text-[#4C1D80] text-[14px] font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="8.5" cy="7" r="4" />
-                  <line x1="20" y1="8" x2="20" y2="14" />
-                  <line x1="23" y1="11" x2="17" y2="11" />
-                </svg>
-                Contactos
-              </button>
-
+            {/* Compartir link al estilo DeUna (lista) */}
+            <div className="mt-4 w-full">
               <button
                 onClick={async () => {
                   const shareUrl = `${window.location.origin}/#/mitimiti/join/${room.invite_token}`;
@@ -237,14 +224,23 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
                     alert('Link de invitación copiado');
                   }
                 }}
-                className="flex-1 py-[14px] rounded-[16px] bg-[#EEEDFE] text-[#4C1D80] text-[14px] font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                className="w-full flex items-center justify-between py-3 px-1 active:bg-gray-50 transition-colors"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                  <polyline points="16 6 12 2 8 6" />
-                  <line x1="12" y1="2" x2="12" y2="15" />
+                <div className="flex items-center gap-4">
+                  <div className="w-[42px] h-[42px] rounded-full bg-[#F8F8FA] flex items-center justify-center shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[14px] font-bold text-[#1a1a1a] mb-0.5">Envía un link de cobro</p>
+                    <p className="text-[12px] text-gray-500 font-medium leading-tight">Genera un link y compártelo</p>
+                  </div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
                 </svg>
-                Compartir link
               </button>
             </div>
 
@@ -297,6 +293,22 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
                   index={i}
                 />
               ))}
+
+              {/* Añadir de contactos (Sólo visible para host durante waiting) */}
+              {isHost && isWaiting && (
+                <button 
+                  onClick={() => alert('Simulación: Abriendo contactos para invitar...')}
+                  className="w-full flex items-center gap-4 py-4 px-2 active:bg-gray-50 transition-colors"
+                >
+                  <div className="w-[42px] h-[42px] rounded-full bg-[#F8F8FA] flex items-center justify-center shrink-0 border border-gray-200 border-dashed">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4C1D80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </div>
+                  <span className="text-[15px] font-bold text-[#4C1D80]">Añadir desde contactos</span>
+                </button>
+              )}
             </div>
 
             {/* Esperando participantes */}
