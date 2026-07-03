@@ -1,44 +1,69 @@
-# MitiMiti - Documentación de Flujo y Funcionalidad
+# MitiMiti - Documentación de Producto y Arquitectura
 
-## 1. ¿Qué es MitiMiti?
-**MitiMiti** es una nueva funcionalidad conceptual propuesta para la aplicación de DeUna. Su objetivo principal es facilitar la recolección y división de pagos entre grupos de amigos (pagar la cuenta del restaurante, el regalo de un amigo, la cancha de fútbol, etc.) de una manera extremadamente rápida, social y sin fricciones, utilizando la misma mecánica a la que los usuarios ecuatorianos ya están acostumbrados: **el escaneo de códigos QR**.
+## 1. Visión General
+**MitiMiti** es una funcionalidad integrada orgánicamente dentro de la aplicación Consumer de DeUna. Permite a los usuarios dividir cuentas y realizar pagos grupales de manera rápida, transparente y sin fricciones. 
 
-## 2. Experiencia de Usuario (UI/UX)
-El diseño de MitiMiti se ha integrado directamente en la UI de la **App para Usuario (Consumer App)** de DeUna, siguiendo sus patrones de diseño nativos:
-* **Clean UI:** Se utilizan botones limpios y sutiles (fondo claro `#EEEDFE`, texto morado `#4C1D80`), listas minimalistas e íconos estilizados.
-* **Sin distracciones:** Se eliminaron botones invasivos (como "Descargar PDF") de la pantalla de sala para mantener la vista enfocada en compartir e invitar.
-* **App-like feel:** La aplicación se renderiza a pantalla completa (Fullscreen) en dispositivos móviles, eliminando la barra de direcciones del navegador.
+Pensada para situaciones cotidianas (como dividir la cuenta de un restaurante, comprar un regalo grupal o hacer colectas), MitiMiti elimina la incomodidad de cobrar dinero uno por uno y automatiza la distribución y el seguimiento de los pagos en tiempo real.
 
-## 3. Flujos de Uso
+---
 
-### A. Flujo de Creación de Sala (El Host)
-1. **Punto de Entrada:** El usuario abre su aplicación y presiona el ícono de **"MitiMiti"** en la grilla del Dashboard.
-2. **Setup de Sala:** 
-   * Se le pide al anfitrión (Host) el motivo o nombre de la recolección (ej. *"Merienda"* o *"Regalo de Juan"*).
-   * Ingresa el monto total de la cuenta a dividir (ej. *$20.00*).
-3. **Sala de Espera (Waiting Room):** 
-   * Se crea la sala y se muestra un gran **Código QR** en pantalla completa.
-   * El código QR mantiene el branding de DeUna (esquinas moradas gruesas y el logo `d!` verde agua en el centro con un nivel de corrección de error alto - Nivel H - para asegurar lectura rápida).
-   * **Invitar a otros:**
-     * Presencialmente: Los amigos escanean la pantalla del Host con sus propios celulares usando la app DeUna.
-     * A distancia: El Host puede enviar un enlace directo mediante la opción *"Genera un link y compártelo"* debajo del QR.
-     * Manual: En la pestaña "Participantes", el Host tiene la opción *"Añadir desde contactos"*.
+## 2. Flujo de Usuario (Versión Actual V1)
 
-### B. Flujo de Unión (El Invitado)
-1. **Punto de Entrada:**
-   * El invitado abre su app de DeUna, presiona el gran botón de **"Escanear QR"** y apunta a la pantalla del Host. (La pantalla de cámara cubre el 100% de la interfaz para una inmersión total).
-   * *Alternativamente:* El invitado hace clic en el link de WhatsApp enviado por el Host.
-2. **Reconocimiento del QR:** La app identifica que es un "QR de Sala MitiMiti" (en lugar de un pago directo P2P) e inscribe instantáneamente al invitado en la sala del Host.
-3. **Confirmación:** El invitado ve el detalle de la cuenta, y su cuota correspondiente (dividida en partes iguales automáticamente).
-4. **Swipe to Pay:** El invitado confirma su participación realizando el gesto de *"Swipe to Pay"*.
+La V1 sirve como un prototipo robusto y completamente funcional del lado del cliente y manejo de estado en la nube, diseñado para sorprender a los stakeholders y validar el flujo UX.
 
-### C. Bloqueo de Sala y Cobro
-1. **Bloqueo (Lock):** Una vez que todos los invitados están en la lista de la sala, el Host presiona **"Bloquear sala y continuar"**. Esto evita que más personas entren y congela el monto exacto de división para cada participante.
-2. **Confirmación del Host:** El Host revisa el resumen final y presiona *"Cobrar $X"*.
-3. **Transacción en Tiempo Real:** El backend debita el dinero de todos los participantes confirmados y lo acredita en la cuenta del Host.
-4. **Resumen Exitoso:** Se muestra una pantalla de éxito celebrando que *"¡Todos pagaron MitiMiti!"*.
+### 2.1. Creación de la Sala (El Anfitrión)
+1. **Descubrimiento:** El anfitrión escanea el código QR de cobro de un comercio usando el escáner nativo a pantalla completa de la app.
+2. **Intercepción inteligente:** Tras el escaneo, un modal interactivo intercepta la acción para preguntar: *"¿Deseas pagar solo o hacer MitiMiti?"*
+3. **Configuración inicial:** Al seleccionar MitiMiti, el anfitrión ingresa el monto total de la cuenta.
+4. **Sala de Espera (Waiting Room):** 
+   - Se crea una "sala de pago" protegida en tiempo real.
+   - El anfitrión cuenta con una interfaz limpia para invitar a amigos mediante:
+     - Mostrar el **Código QR de la sala** presencialmente (con diseño integrado DeUna: esquinas moradas, centro `d!`).
+     - Presionar **"Genera un link y compártelo"** para enviar la invitación por WhatsApp u otras redes.
+     - Presionar **"Añadir desde contactos"** (visual).
 
-## 4. Arquitectura Técnica
-* **Frontend:** React + Vite + Tailwind CSS. Manejo de estado de navegación local (`Screen`) para la UI de Consumer, combinado con navegación por `hash` (`window.location.hash`) para los enlaces profundos (Deep Links) de MitiMiti.
-* **Escáner QR:** Utiliza `html5-qrcode` ajustado para utilizar el 100% de la pantalla (`object-fit: cover`) eliminando bordes predeterminados.
-* **Sincronización Backend:** Toda la interactividad de la sala está impulsada por el motor de **Supabase Realtime (PostgreSQL)**, lo que permite que el Host vea mágicamente cómo aparecen los nombres de sus amigos en la pantalla en el instante en que estos escanean el QR.
+### 2.2. Unión a la Sala (Los Invitados)
+1. **Acceso Sin Fricción:** Los amigos escanean el QR de la sala o hacen clic en el link de invitación (Deep Linking).
+2. **Sincronización Mágica:** Ingresan de inmediato a la misma sala sin perder contexto. Ven quién es el anfitrión y quiénes ya están adentro.
+3. **División Dinámica:** A medida que ingresan más personas, el motor de MitiMiti divide el monto total equitativamente y en tiempo real en las pantallas de todos.
+
+### 2.3. Ejecución y Liquidación
+1. **Bloqueo (Lock):** Cuando todos están dentro, el anfitrión presiona "Bloquear sala y cobrar". Esto congela los montos y evita el ingreso de nuevos curiosos.
+2. **Confirmación de Pago:** Las pantallas de los invitados cambian instantáneamente al estado de cobro, mostrando exactamente cuánto deben aportar. Presionan "Pagar mi parte".
+3. **Actualización en Vivo:** Al ir pagando, los avatares de los participantes muestran un *check* verde. Todos ven quién ya pagó y a quién se está esperando.
+4. **Finalización:** Cuando el 100% de los participantes ha aportado su parte, la sala lanza un estado de éxito, y el pago se consolida y envía al comercio original.
+
+---
+
+## 3. Arquitectura Técnica
+
+- **Frontend:** `React` + `TypeScript` + `Vite` (Single Page Application).
+- **Diseño UI/UX:** `TailwindCSS`. Se ha replicado milimétricamente la guía de estilos *Consumer* de DeUna (Minimalismo, componentes de lista nativos iOS/Android, colores institucionales `#4C1D80` y `#2FD9A9`, experiencia sin bordes "App-like" con `100dvh` y `manifest` PWA).
+- **Estado Global & Tiempo Real:** `Supabase` (PostgreSQL + Realtime).
+  - Tabla `mitimiti_rooms`: Administra la metadatos de la sala (token, monto, estado `waiting | locked | completed`).
+  - Tabla `mitimiti_participants`: Lleva el control de concurrencia de quién está conectado y su estado de confirmación (`pending | confirmed`).
+  - **Suscripciones Websocket:** El frontend utiliza canales de Supabase para reflejar cambios en milisegundos en todos los dispositivos conectados simultáneamente, brindando un factor "Wow".
+
+---
+
+## 4. Próximos Pasos y Roadmap (V2)
+
+La V2 transformará este prototipo validado en una característica lista para producción, interconectando la lógica de UI con los servicios Core de Banco Pichincha / DeUna.
+
+### 4.1. División Personalizada (Split Asimétrico)
+- No todas las cuentas se dividen en partes iguales. La V2 permitirá que el anfitrión, o cada usuario individual, asigne su monto exacto a pagar de la factura (ideal para restaurantes donde alguien consumió más).
+
+### 4.2. Integración Nativa de Contactos y Notificaciones Push
+- Conectar MitiMiti con el API de libreta de contactos del teléfono o los amigos de DeUna.
+- Al añadir a alguien de contactos, el backend enviará una notificación Push inmediata al teléfono del amigo para que ingrese a la sala con un toque, eliminando la dependencia de enviar links externos por WhatsApp.
+
+### 4.3. Conexión al Core Bancario
+- Reemplazar las transacciones simuladas por llamadas a la API de compensación real.
+- Congelamiento temporal de fondos en las cuentas de los invitados, y una vez que todos aportan, se lanza la transferencia atómica final a la cuenta del comercio.
+
+### 4.4. Pagos Asíncronos ("Te pago luego")
+- Opción para que el anfitrión asuma el 100% del pago en el comercio para no hacer esperar al cajero, y que MitiMiti envíe automáticamente "solicitudes de cobro pendientes" recurrentes a los amigos hasta que liquiden su deuda en la app.
+
+### 4.5. Historial, Split Bills Fijos y Exportación
+- **Descarga de Recibos:** Generación de un PDF formal con el detalle de la cuenta dividida.
+- **Salas Recurrentes:** Capacidad de crear un grupo de MitiMiti fijo para personas que viven juntas y dividen gastos (renta, servicios) todos los meses.
