@@ -10,14 +10,11 @@ interface Props {
 
 export default function LoanRequestCard({ participant, onLendMoney, myBalance }: Props) {
   const [amountStr, setAmountStr] = useState(fromCents(participant.deficit_cents));
-  const [isEditing, setIsEditing] = useState(false);
 
   // Sync when deficit changes (e.g. partial loan received)
   useEffect(() => {
-    if (!isEditing) {
-      setAmountStr(fromCents(participant.deficit_cents));
-    }
-  }, [participant.deficit_cents, isEditing]);
+    setAmountStr(fromCents(participant.deficit_cents));
+  }, [participant.deficit_cents]);
 
   const handleAmountChange = (val: string) => {
     if (/^[0-9,]*$/.test(val)) {
@@ -47,8 +44,6 @@ export default function LoanRequestCard({ participant, onLendMoney, myBalance }:
               inputMode="decimal"
               value={amountStr}
               onChange={(e) => handleAmountChange(e.target.value)}
-              onFocus={() => setIsEditing(true)}
-              onBlur={() => setIsEditing(false)}
               className="flex-1 w-full bg-transparent border-none focus:ring-0 text-[#1a1a1a] font-bold px-1"
             />
             <button
