@@ -368,18 +368,34 @@ export async function lendMoney(
   borrowerName: string,
   amountCents: number
 ): Promise<void> {
-  // Crear deuda
-  const { error: debtError } = await supabase
+  // Buscar si ya existe una deuda en esta sala entre estas dos personas
+  const { data: existingDebt } = await supabase
     .from('mitimiti_debts')
-    .insert({
-      room_id: roomId,
-      debtor_id: borrowerId,
-      debtor_name: borrowerName,
-      creditor_id: lenderId,
-      creditor_name: lenderName,
-      amount_cents: amountCents,
-    });
-  if (debtError) throw new Error(`Error creando deuda: ${debtError.message}`);
+    .select('id, amount_cents')
+    .eq('room_id', roomId)
+    .eq('debtor_id', borrowerId)
+    .eq('creditor_id', lenderId)
+    .maybeSingle();
+
+  if (existingDebt) {
+    const { error: debtError } = await supabase
+      .from('mitimiti_debts')
+      .update({ amount_cents: existingDebt.amount_cents + amountCents })
+      .eq('id', existingDebt.id);
+    if (debtError) throw new Error(`Error actualizando deuda: ${debtError.message}`);
+  } else {
+    const { error: debtError } = await supabase
+      .from('mitimiti_debts')
+      .insert({
+        room_id: roomId,
+        debtor_id: borrowerId,
+        debtor_name: borrowerName,
+        creditor_id: lenderId,
+        creditor_name: lenderName,
+        amount_cents: amountCents,
+      });
+    if (debtError) throw new Error(`Error creando deuda: ${debtError.message}`);
+  }
 
   // Obtener déficit actual del deudor
   const { data: borrower, error: getError } = await supabase
