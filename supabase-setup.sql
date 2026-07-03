@@ -72,14 +72,24 @@ CREATE TABLE IF NOT EXISTS mitimiti_debts (
   creditor_id     TEXT NOT NULL,
   creditor_name   TEXT NOT NULL,
   amount_cents    INTEGER NOT NULL CHECK (amount_cents > 0),
-  status          TEXT NOT NULL DEFAULT 'active'
-    CHECK (status IN ('active', 'paid', 'forgiven')),
+  status          TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'active', 'paid', 'forgiven', 'cancelled')),
   created_at      TIMESTAMPTZ DEFAULT now(),
   paid_at         TIMESTAMPTZ,
   forgiven_at     TIMESTAMPTZ,
   
   UNIQUE(room_id, debtor_id, creditor_id)
 );
+
+-- Actualizar constraint de debts en caso de actualización
+DO $$
+BEGIN
+  ALTER TABLE mitimiti_debts DROP CONSTRAINT IF EXISTS mitimiti_debts_status_check;
+  ALTER TABLE mitimiti_debts ADD CONSTRAINT mitimiti_debts_status_check 
+    CHECK (status IN ('pending', 'active', 'paid', 'forgiven', 'cancelled'));
+EXCEPTION
+  WHEN undefined_object THEN NULL;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_debts_room_id ON mitimiti_debts(room_id);
 CREATE INDEX IF NOT EXISTS idx_debts_debtor ON mitimiti_debts(debtor_id);

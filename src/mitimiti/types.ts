@@ -47,7 +47,7 @@ export interface Debt {
   creditor_id: string;
   creditor_name: string;
   amount_cents: number;
-  status: 'active' | 'paid' | 'forgiven';
+  status: 'pending' | 'active' | 'paid' | 'forgiven' | 'cancelled';
   created_at: string;
   paid_at: string | null;
   forgiven_at: string | null;

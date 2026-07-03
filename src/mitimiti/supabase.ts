@@ -93,6 +93,21 @@ export async function updateRoomStatus(
     .eq('id', roomId);
 
   if (error) throw new Error(`Error actualizando sala: ${error.message}`);
+
+  // Sincronizar estado de las deudas (Liquidación / Auth vs Capture)
+  if (status === 'completed') {
+    await supabase
+      .from('mitimiti_debts')
+      .update({ status: 'active' })
+      .eq('room_id', roomId)
+      .eq('status', 'pending');
+  } else if (status === 'cancelled' || status === 'failed') {
+    await supabase
+      .from('mitimiti_debts')
+      .update({ status: 'cancelled' })
+      .eq('room_id', roomId)
+      .eq('status', 'pending');
+  }
 }
 
 // ─── Participant CRUD ────────────────────────────────────────
@@ -375,6 +390,7 @@ export async function lendMoney(
     .eq('room_id', roomId)
     .eq('debtor_id', borrowerId)
     .eq('creditor_id', lenderId)
+    .eq('status', 'pending')
     .maybeSingle();
 
   if (existingDebt) {
@@ -393,6 +409,7 @@ export async function lendMoney(
         creditor_id: lenderId,
         creditor_name: lenderName,
         amount_cents: amountCents,
+        status: 'pending',
       });
     if (debtError) throw new Error(`Error creando deuda: ${debtError.message}`);
   }
@@ -435,6 +452,7 @@ export async function getMyDebts(userId: string): Promise<Debt[]> {
     .from('mitimiti_debts')
     .select('*')
     .or(`debtor_id.eq.${userId},creditor_id.eq.${userId}`)
+    .in('status', ['active', 'paid', 'forgiven'])
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(`Error obteniendo deudas: ${error.message}`);
