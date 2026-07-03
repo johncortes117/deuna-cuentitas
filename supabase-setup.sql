@@ -47,6 +47,16 @@ CREATE TABLE IF NOT EXISTS mitimiti_participants (
 -- Asegurarse de que las columnas nuevas existan si la tabla ya había sido creada antes
 ALTER TABLE mitimiti_participants ADD COLUMN IF NOT EXISTS deficit_cents INTEGER DEFAULT 0;
 
+-- Actualizar el CHECK constraint en caso de que sea una base de datos antigua que no tenía 'requesting_loan'
+DO $$
+BEGIN
+  ALTER TABLE mitimiti_participants DROP CONSTRAINT IF EXISTS mitimiti_participants_confirmation_status_check;
+  ALTER TABLE mitimiti_participants ADD CONSTRAINT mitimiti_participants_confirmation_status_check 
+    CHECK (confirmation_status IN ('pending', 'confirmed', 'declined', 'requesting_loan'));
+EXCEPTION
+  WHEN undefined_object THEN NULL;
+END $$;
+
 -- 3. Índices para performance
 CREATE INDEX IF NOT EXISTS idx_rooms_invite_token ON mitimiti_rooms(invite_token);
 CREATE INDEX IF NOT EXISTS idx_rooms_status ON mitimiti_rooms(status);
