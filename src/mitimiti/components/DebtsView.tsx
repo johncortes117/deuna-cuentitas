@@ -44,7 +44,7 @@ export default function DebtsView({ onBack }: { onBack: () => void }) {
           className={`pb-3 font-semibold text-[14px] px-1 relative ${tab === 'owe' ? 'text-[#4C1D80]' : 'text-gray-400'}`}
         >
           Debes
-          {debtsIOwe.length > 0 && <span className="ml-1.5 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{debtsIOwe.length}</span>}
+          {debtsIOwe.length > 0 && <span className="ml-1.5 bg-[#00C2E0] text-white text-[10px] px-1.5 py-0.5 rounded-full">{debtsIOwe.length}</span>}
           {tab === 'owe' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#4C1D80] rounded-t-md" />}
         </button>
         <button 
@@ -52,7 +52,7 @@ export default function DebtsView({ onBack }: { onBack: () => void }) {
           className={`pb-3 font-semibold text-[14px] px-1 relative ${tab === 'owed' ? 'text-[#4C1D80]' : 'text-gray-400'}`}
         >
           Te deben
-          {debtsOwedToMe.length > 0 && <span className="ml-1.5 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{debtsOwedToMe.length}</span>}
+          {debtsOwedToMe.length > 0 && <span className="ml-1.5 bg-[#00C2E0] text-white text-[10px] px-1.5 py-0.5 rounded-full">{debtsOwedToMe.length}</span>}
           {tab === 'owed' && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#4C1D80] rounded-t-md" />}
         </button>
         <button 
@@ -73,13 +73,13 @@ export default function DebtsView({ onBack }: { onBack: () => void }) {
               <p className="text-gray-400 text-center mt-10">No debes nada a nadie 🎉</p>
             ) : (
               debtsIOwe.map(debt => (
-                <div key={debt.id} className="bg-white p-4 rounded-[20px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-gray-50 flex flex-col gap-3">
+                <div key={debt.id} className="bg-white p-4 rounded-[20px] shadow-sm border border-[#EBE3F5] flex flex-col gap-4">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-[12px] text-gray-500 font-medium">Le debes a</p>
                       <p className="text-[16px] font-bold text-[#1a1a1a]">{debt.creditor_name}</p>
                     </div>
-                    <span className="text-[20px] font-black text-red-500">{formatMoney(debt.amount_cents)}</span>
+                    <span className="text-[20px] font-black text-[#1a1a1a]">{formatMoney(debt.amount_cents)}</span>
                   </div>
                   <button 
                     onClick={() => handlePay(debt.id, debt.amount_cents)}
@@ -99,24 +99,24 @@ export default function DebtsView({ onBack }: { onBack: () => void }) {
               <p className="text-gray-400 text-center mt-10">Nadie te debe dinero</p>
             ) : (
               debtsOwedToMe.map(debt => (
-                <div key={debt.id} className="bg-white p-4 rounded-[20px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-gray-50 flex flex-col gap-3">
+                <div key={debt.id} className="bg-white p-4 rounded-[20px] shadow-sm border border-[#EBE3F5] flex flex-col gap-4">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-[12px] text-gray-500 font-medium">Te debe</p>
                       <p className="text-[16px] font-bold text-[#1a1a1a]">{debt.debtor_name}</p>
                     </div>
-                    <span className="text-[20px] font-black text-green-500">{formatMoney(debt.amount_cents)}</span>
+                    <span className="text-[20px] font-black text-[#1a1a1a]">{formatMoney(debt.amount_cents)}</span>
                   </div>
                   <div className="flex gap-2">
                     <button 
                       onClick={() => alert('Simulación: Notificación enviada a ' + debt.debtor_name)}
-                      className="flex-1 py-3 bg-[#EAF3DE] text-[#3B6D11] rounded-[14px] font-bold text-[15px] active:scale-95 transition-transform"
+                      className="flex-1 py-3 bg-[#F8F5FB] text-[#4C1D80] rounded-[14px] font-bold text-[15px] active:scale-95 transition-transform"
                     >
                       Recordar
                     </button>
                     <button 
                       onClick={() => handleForgive(debt.id)}
-                      className="px-4 py-3 bg-gray-100 text-gray-500 rounded-[14px] font-bold text-[14px] active:scale-95 transition-transform"
+                      className="px-4 py-3 bg-[#FCEBEB] text-[#A32D2D] rounded-[14px] font-bold text-[14px] active:scale-95 transition-transform"
                     >
                       Perdonar
                     </button>

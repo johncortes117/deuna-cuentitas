@@ -452,9 +452,10 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
         {!isHost && (isLocked || isConfirming) && hasConfirmed && (
           <button
             disabled
-            className="w-full py-4 rounded-[14px] text-[16px] font-bold bg-[#EAF3DE] text-[#3B6D11]"
+            className="w-full py-4 rounded-[14px] text-[16px] font-bold bg-gray-200 text-gray-400 cursor-not-allowed flex justify-center items-center gap-2"
           >
-            ✅ Esperando al host...
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Esperando al host...
           </button>
         )}
 
