@@ -26,9 +26,9 @@ export default function LoanRequestCard({ participant, onLendMoney, myBalance }:
   const isValid = amountCents > 0 && amountCents <= participant.deficit_cents && amountCents <= myBalance;
 
   return (
-    <div className="ml-14 mr-4 mt-2 mb-4 bg-orange-50 border border-orange-100 rounded-[20px] p-4 relative overflow-hidden">
+    <div className="ml-14 mr-4 mt-2 mb-4 bg-[#F8F5FB] border border-[#EBE3F5] rounded-[20px] p-4 relative overflow-hidden">
       {/* Decorative pulse */}
-      <div className="absolute top-0 right-0 w-16 h-16 bg-orange-200 rounded-bl-[100px] opacity-30 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-16 h-16 bg-[#4C1D80] rounded-bl-[100px] opacity-[0.03] pointer-events-none" />
       
       <div className="flex items-start gap-3 relative z-10">
         <div className="mt-1 text-[20px]">💜</div>
@@ -37,8 +37,8 @@ export default function LoanRequestCard({ participant, onLendMoney, myBalance }:
             Le faltan {formatMoney(participant.deficit_cents)}
           </h4>
           
-          <div className="mt-3 flex items-center gap-2 bg-white rounded-[12px] p-1 border border-orange-200/50">
-            <span className="text-orange-500 font-bold pl-3">$</span>
+          <div className="mt-3 flex items-center gap-2 bg-white rounded-[12px] p-1 border border-[#EBE3F5]">
+            <span className="text-[#4C1D80] font-bold pl-3">$</span>
             <input
               type="text"
               inputMode="decimal"
@@ -51,7 +51,7 @@ export default function LoanRequestCard({ participant, onLendMoney, myBalance }:
               disabled={!isValid}
               className={`py-1.5 px-4 rounded-[10px] text-[14px] font-bold transition-all ${
                 isValid 
-                  ? 'bg-orange-500 text-white active:scale-95'
+                  ? 'bg-[#4C1D80] text-white active:scale-95'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
@@ -65,9 +65,9 @@ export default function LoanRequestCard({ participant, onLendMoney, myBalance }:
             </p>
           )}
           
-          <p className="text-gray-400 text-[11px] mt-2 ml-1 flex items-center gap-1">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Se registrará como deuda oficial
+          <p className="text-gray-500 text-[11px] mt-2 ml-1 flex items-center gap-1 font-medium">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Se registrará como deuda
           </p>
         </div>
       </div>
