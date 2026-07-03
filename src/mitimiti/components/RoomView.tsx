@@ -8,6 +8,13 @@ import ProcessingView from './ProcessingView';
 import SuccessView from './SuccessView';
 import ErrorView from './ErrorView';
 import { useRoom } from '../useRoom';
+import CustomSplitModal from './CustomSplitModal';
+import InsufficientFundsModal from './InsufficientFundsModal';
+import LoanRequestCard from './LoanRequestCard';
+import LoanWaitingView from './LoanWaitingView';
+import DebtBanner from './DebtBanner';
+import { useBalance } from '../useBalance';
+import { useDebts } from '../useDebts';
 
 interface RoomViewProps {
   roomId: string;
@@ -28,11 +35,20 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
     executePayment,
     leaveRoom,
     cancelRoom,
+    requestLoan,
+    lendMoney,
+    debts,
     clearError,
   } = useRoom(roomId);
 
+  const { balance, deduct } = useBalance();
+  const { debtsIOwe, settleDebt } = useDebts();
+
   const [showQR, setShowQR] = useState(true);
+  const [isCustomSplitOpen, setIsCustomSplitOpen] = useState(false);
+  const [isInsufficientFundsOpen, setIsInsufficientFundsOpen] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [dismissedDebts, setDismissedDebts] = useState<Set<string>>(new Set());
 
   const profile = getUserProfile();
   const userId = profile?.userId || '';
@@ -141,6 +157,9 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
   const canLock = isWaiting && participants.length >= 2;
   const hasConfirmed = myParticipant?.confirmation_status === 'confirmed';
 
+  const roomDebts = debtsIOwe.filter(d => participants.some(p => p.user_id === d.creditor_id));
+  const activeRoomDebt = roomDebts.find(d => !dismissedDebts.has(d.id));
+
   return (
     <div className="flex flex-col flex-1">
       {/* Header */}
@@ -175,6 +194,24 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
           <RoomTimer expiresAt={room.expires_at} onExpired={handleExpired} />
         </div>
       </div>
+
+      {activeRoomDebt && isWaiting && (
+        <div className="mt-4 shrink-0">
+          <DebtBanner 
+            debt={activeRoomDebt}
+            onDismiss={() => setDismissedDebts(prev => new Set(prev).add(activeRoomDebt.id))}
+            onPay={async () => {
+              if (balance < activeRoomDebt.amount_cents) {
+                alert('No tienes saldo suficiente');
+                return;
+              }
+              await settleDebt(activeRoomDebt.id);
+              deduct(activeRoomDebt.amount_cents);
+              alert('Deuda pagada');
+            }}
+          />
+        </div>
+      )}
 
       {/* Toggle QR / Participantes (solo host en waiting) */}
       {isHost && isWaiting && (
@@ -271,17 +308,25 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
 
             <div className="divide-y divide-gray-50">
               {participants.map((p, i) => (
-                <ParticipantCard
-                  key={p.id}
-                  participant={{
-                    ...p,
-                    // En waiting, mostrar monto estimado
-                    amount_cents: isWaiting ? (estimatedAmounts[i] || null) : p.amount_cents,
-                  }}
-                  isMe={p.user_id === userId}
-                  isRoomHost={p.role === 'host'}
-                  index={i}
-                />
+                <div key={p.id}>
+                  <ParticipantCard
+                    participant={{
+                      ...p,
+                      amount_cents: isWaiting ? (estimatedAmounts[i] || null) : p.amount_cents,
+                    }}
+                    isMe={p.user_id === userId}
+                    isRoomHost={p.role === 'host'}
+                    index={i}
+                    hasLoan={debts.some(d => d.debtor_id === p.user_id)}
+                  />
+                  {p.confirmation_status === 'requesting_loan' && p.user_id !== userId && (
+                    <LoanRequestCard
+                      participant={p}
+                      myBalance={balance}
+                      onLendMoney={(amount) => lendMoney(p.user_id, p.display_name, amount)}
+                    />
+                  )}
+                </div>
               ))}
 
               {/* Añadir de contactos (Sólo visible para host durante waiting) */}
@@ -306,6 +351,16 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
               <p className="text-[13px] text-gray-400 text-center mt-4">
                 Esperando que alguien se una...
               </p>
+            )}
+
+            {/* View para el deudor */}
+            {!isHost && myParticipant?.confirmation_status === 'requesting_loan' && (
+              <div className="w-full mt-2">
+                <LoanWaitingView 
+                  participant={myParticipant} 
+                  debts={debts}
+                />
+              </div>
             )}
 
             {/* Conteo de confirmaciones */}
@@ -335,7 +390,7 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
         {/* HOST: Waiting → "Listo" */}
         {isHost && isWaiting && (
           <button
-            onClick={lockRoom}
+            onClick={() => setIsCustomSplitOpen(true)}
             disabled={!canLock}
             className={`w-full py-4 rounded-[14px] text-[16px] font-bold transition-all ${
               canLock
@@ -377,9 +432,16 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
         )}
 
         {/* PARTICIPANTE: Locked + pendiente → "Acepto" */}
-        {!isHost && isLocked && !hasConfirmed && myParticipant && (
+        {!isHost && isLocked && !hasConfirmed && myParticipant?.confirmation_status !== 'requesting_loan' && myParticipant && (
           <button
-            onClick={confirmPayment}
+            onClick={() => {
+              const myAmount = myParticipant.amount_cents || 0;
+              if (myAmount > balance) {
+                setIsInsufficientFundsOpen(true);
+              } else {
+                confirmPayment();
+              }
+            }}
             className="w-full py-4 rounded-[14px] text-[16px] font-bold bg-[#4C1D80] text-white active:scale-[0.98] transition-transform"
           >
             Acepto {formatMoney(myParticipant.amount_cents || 0)}
@@ -396,8 +458,8 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
           </button>
         )}
 
-        {/* PARTICIPANTE: Waiting → "Salir" */}
-        {!isHost && isWaiting && (
+        {/* PARTICIPANTE: Waiting o Requesting Loan → "Salir" */}
+        {!isHost && (isWaiting || myParticipant?.confirmation_status === 'requesting_loan') && (
           <button
             onClick={async () => { await leaveRoom(); onExit(); }}
             className="w-full py-4 rounded-[14px] text-[16px] font-bold bg-gray-100 text-gray-500 active:scale-[0.98] transition-transform"
@@ -406,6 +468,28 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
           </button>
         )}
       </div>
+      
+      <CustomSplitModal
+        isOpen={isCustomSplitOpen}
+        onClose={() => setIsCustomSplitOpen(false)}
+        participants={participants}
+        totalCents={room.total_cents + room.tip_cents}
+        onConfirm={(mode, amounts) => {
+          setIsCustomSplitOpen(false);
+          lockRoom(mode, amounts);
+        }}
+      />
+
+      <InsufficientFundsModal
+        isOpen={isInsufficientFundsOpen}
+        onClose={() => setIsInsufficientFundsOpen(false)}
+        amountCents={myParticipant?.amount_cents || 0}
+        balanceCents={balance}
+        onRequestLoan={() => {
+          setIsInsufficientFundsOpen(false);
+          requestLoan((myParticipant?.amount_cents || 0) - balance);
+        }}
+      />
     </div>
   );
 }

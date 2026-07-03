@@ -7,6 +7,7 @@ interface ParticipantCardProps {
   isMe: boolean;
   isRoomHost: boolean; // si este participant es el host de la sala
   index: number;
+  hasLoan?: boolean;
 }
 
 export default function ParticipantCard({
@@ -14,6 +15,7 @@ export default function ParticipantCard({
   isMe,
   isRoomHost,
   index,
+  hasLoan,
 }: ParticipantCardProps) {
   const color = getAvatarColor(participant.display_name);
   const initials = getInitials(participant.display_name);
@@ -22,6 +24,7 @@ export default function ParticipantCard({
     pending: { icon: '⏳', label: 'Pendiente', textColor: '#9ca3af', bg: '#F4F4F6' },
     confirmed: { icon: '✅', label: 'Listo', textColor: '#3B6D11', bg: '#EAF3DE' },
     declined: { icon: '❌', label: 'Rechazó', textColor: '#A32D2D', bg: '#FCEBEB' },
+    requesting_loan: { icon: '🙏', label: 'Necesita ayuda', textColor: '#C2410C', bg: '#FFEDD5' },
   };
 
   const status = statusConfig[participant.confirmation_status];
@@ -58,14 +61,22 @@ export default function ParticipantCard({
         </div>
 
         {/* Status chip */}
-        {participant.amount_cents !== null && (
-          <span
-            className="text-[11px] font-medium px-2 py-0.5 rounded-full inline-block mt-0.5"
-            style={{ backgroundColor: status.bg, color: status.textColor }}
-          >
-            {status.icon} {status.label}
-          </span>
-        )}
+        <div className="flex items-center gap-1 mt-0.5">
+          {participant.amount_cents !== null && (
+            <span
+              className="text-[11px] font-medium px-2 py-0.5 rounded-full inline-block"
+              style={{ backgroundColor: status.bg, color: status.textColor }}
+            >
+              {status.icon} {status.label}
+            </span>
+          )}
+          
+          {hasLoan && participant.confirmation_status === 'confirmed' && (
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full inline-block bg-orange-50 text-orange-600 border border-orange-100">
+              💳 Le prestaron
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Monto */}

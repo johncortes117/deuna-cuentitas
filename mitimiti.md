@@ -54,16 +54,12 @@ La V2 transformará este prototipo validado en una característica lista para pr
 - No todas las cuentas se dividen en partes iguales. La V2 permitirá que el anfitrión, o cada usuario individual, asigne su monto exacto a pagar de la factura (ideal para restaurantes donde alguien consumió más).
 
 ### 4.2. Integración Nativa de Contactos y Notificaciones Push
-- Conectar MitiMiti con el API de libreta de contactos del teléfono o los amigos de DeUna.
-- Al añadir a alguien de contactos, el backend enviará una notificación Push inmediata al teléfono del amigo para que ingrese a la sala con un toque, eliminando la dependencia de enviar links externos por WhatsApp.
+- Conectar MitiMiti con los amigos de DeUna.
 
-### 4.3. Conexión al Core Bancario
-- Reemplazar las transacciones simuladas por llamadas a la API de compensación real.
-- Congelamiento temporal de fondos en las cuentas de los invitados, y una vez que todos aportan, se lanza la transferencia atómica final a la cuenta del comercio.
 
 ### 4.4. Pagos Asíncronos ("Te pago luego")
 - Opción para que el anfitrión asuma el 100% del pago en el comercio para no hacer esperar al cajero, y que MitiMiti envíe automáticamente "solicitudes de cobro pendientes" recurrentes a los amigos hasta que liquiden su deuda en la app.
 
 ### 4.5. Historial, Split Bills Fijos y Exportación
-- **Descarga de Recibos:** Generación de un PDF formal con el detalle de la cuenta dividida.
+- **Descarga de Recibos:** Generación del comprobante con el detalle de la cuenta dividida.
 - **Salas Recurrentes:** Capacidad de crear un grupo de MitiMiti fijo para personas que viven juntas y dividen gastos (renta, servicios) todos los meses.

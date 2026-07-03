@@ -1,5 +1,6 @@
 // ─── CreateRoomView: Crear sala con monto ────────────────────
 import { useState } from 'react';
+import { useDebts } from '../useDebts';
 
 interface CreateRoomViewProps {
   initialCommerceName?: string;
@@ -16,6 +17,7 @@ export default function CreateRoomView({
 }: CreateRoomViewProps) {
   const [commerceName, setCommerceName] = useState(initialCommerceName);
   const [amount, setAmount] = useState(initialAmount);
+  const { debtsIOwe } = useDebts();
 
   const handleKey = (key: string) => {
     if (key === 'del') {
@@ -103,6 +105,25 @@ export default function CreateRoomView({
         >
           Crear sala
         </button>
+        
+        {debtsIOwe.length > 0 && (
+          <button
+            onClick={() => window.location.hash = '#/mitimiti/debts'}
+            className="w-full mt-4 py-4 rounded-[14px] flex items-center justify-center gap-2 bg-orange-50 text-orange-600 font-bold active:scale-[0.98] transition-transform border border-orange-100"
+          >
+            <span className="text-[18px]">🔴</span>
+            Tienes {debtsIOwe.length} {debtsIOwe.length === 1 ? 'deuda' : 'deudas'} por pagar
+          </button>
+        )}
+        
+        {debtsIOwe.length === 0 && (
+          <button
+            onClick={() => window.location.hash = '#/mitimiti/debts'}
+            className="w-full mt-4 py-4 rounded-[14px] flex items-center justify-center gap-2 bg-[#F8F8FA] text-[#1a1a1a] font-bold active:scale-[0.98] transition-transform"
+          >
+            Ver mis deudas
+          </button>
+        )}
       </div>
     </div>
   );

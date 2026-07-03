@@ -6,6 +6,7 @@ import { createRoom } from './supabase';
 import CreateRoomView from './components/CreateRoomView';
 import RoomView from './components/RoomView';
 import JoinRoomView from './components/JoinRoomView';
+import DebtsView from './components/DebtsView';
 import './MitiMiti.css';
 
 // ─── MitiMitiApp (Router principal) ──────────────────────────
@@ -20,6 +21,8 @@ export default function MitiMitiApp() {
       const joinMatch = hash.match(/#\/mitimiti\/join\/([A-Za-z0-9]+)/);
       if (joinMatch) {
         setRoute({ page: 'join', token: joinMatch[1] });
+      } else if (hash === '#/mitimiti/debts') {
+        setRoute({ page: 'debts' });
       } else if (hash === '#/mitimiti/create' || hash === '#/mitimiti') {
         setRoute({ page: 'create' });
       }
@@ -91,6 +94,14 @@ export default function MitiMitiApp() {
           onJoined={(roomId) => setRoute({ page: 'room', roomId })}
           onBack={() => {
             window.location.hash = '#/';
+          }}
+        />
+      )}
+
+      {route.page === 'debts' && (
+        <DebtsView
+          onBack={() => {
+            window.location.hash = '#/mitimiti/create';
           }}
         />
       )}

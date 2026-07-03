@@ -22,6 +22,7 @@ export interface Room {
   paid_at: string | null;
   created_at: string;
   expires_at: string;
+  split_mode: 'equal' | 'custom';
 }
 
 export interface Participant {
@@ -32,9 +33,24 @@ export interface Participant {
   role: 'host' | 'member';
   amount_cents: number | null;
   has_extra_cent: boolean;
-  confirmation_status: 'pending' | 'confirmed' | 'declined';
+  deficit_cents: number;
+  confirmation_status: 'pending' | 'confirmed' | 'declined' | 'requesting_loan';
   joined_at: string;
   confirmed_at: string | null;
+}
+
+export interface Debt {
+  id: string;
+  room_id: string;
+  debtor_id: string;
+  debtor_name: string;
+  creditor_id: string;
+  creditor_name: string;
+  amount_cents: number;
+  status: 'active' | 'paid' | 'forgiven';
+  created_at: string;
+  paid_at: string | null;
+  forgiven_at: string | null;
 }
 
 export interface Assignment {
@@ -63,6 +79,7 @@ export type QRData = PersonalQRData | InviteQRData;
 export interface UserProfile {
   userId: string;
   displayName: string;
+  balanceCents: number;
 }
 
 // Rutas del módulo MitiMiti
@@ -71,4 +88,5 @@ export type MitiMitiRoute =
   | { page: 'room'; roomId: string }
   | { page: 'join'; token: string }
   | { page: 'success'; roomId: string }
-  | { page: 'error'; roomId: string; message: string };
+  | { page: 'error'; roomId: string; message: string }
+  | { page: 'debts' };

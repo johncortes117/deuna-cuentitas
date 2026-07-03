@@ -1,6 +1,6 @@
 // ─── Supabase Client + MitiMiti CRUD ─────────────────────────
 import { createClient } from '@supabase/supabase-js';
-import type { Room, Participant, RoomStatus } from './types';
+import type { Room, Participant, RoomStatus, Debt } from './types';
 import { generateId, generateInviteToken, dividirMonto } from './utils';
 
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || 'https://placeholder.supabase.co';
@@ -34,6 +34,7 @@ export async function createRoom(
     locked_at: null,
     paid_at: null,
     expires_at: expiresAt.toISOString(),
+    split_mode: 'equal',
   };
 
   const { data, error } = await supabase
@@ -203,7 +204,12 @@ export async function getParticipants(roomId: string): Promise<Participant[]> {
 /**
  * El host cierra la sala. Calcula la división y asigna montos.
  */
-export async function lockRoom(roomId: string, hostId: string): Promise<void> {
+export async function lockRoom(
+  roomId: string, 
+  hostId: string, 
+  splitMode: 'equal' | 'custom' = 'equal',
+  customAmounts?: { userId: string, amountCents: number }[]
+): Promise<void> {
   const room = await getRoom(roomId);
   if (!room) throw new Error('Sala no encontrada');
   if (room.host_id !== hostId) throw new Error('Solo el host puede cerrar la sala');
@@ -214,14 +220,30 @@ export async function lockRoom(roomId: string, hostId: string): Promise<void> {
 
   // Calcular división
   const totalCents = room.total_cents + room.tip_cents;
-  const amounts = dividirMonto(totalCents, participants.length);
+  
+  let updates: {id: string, amount_cents: number, has_extra_cent: boolean}[] = [];
 
-  // Asignar montos a cada participante (orden aleatorio ya viene del dividirMonto)
-  const updates = participants.map((p, i) => ({
-    id: p.id,
-    amount_cents: amounts[i],
-    has_extra_cent: amounts[i] > Math.floor(totalCents / participants.length),
-  }));
+  if (splitMode === 'equal') {
+    const amounts = dividirMonto(totalCents, participants.length);
+    updates = participants.map((p, i) => ({
+      id: p.id,
+      amount_cents: amounts[i],
+      has_extra_cent: amounts[i] > Math.floor(totalCents / participants.length),
+    }));
+  } else {
+    if (!customAmounts) throw new Error('Faltan montos personalizados');
+    const sum = customAmounts.reduce((acc, curr) => acc + curr.amountCents, 0);
+    if (sum !== totalCents) throw new Error('La suma de montos no coincide con el total');
+    
+    updates = participants.map(p => {
+      const custom = customAmounts.find(c => c.userId === p.user_id);
+      return {
+        id: p.id,
+        amount_cents: custom ? custom.amountCents : 0,
+        has_extra_cent: false,
+      };
+    });
+  }
 
   // Actualizar cada participante
   for (const update of updates) {
@@ -246,6 +268,7 @@ export async function lockRoom(roomId: string, hostId: string): Promise<void> {
 
   await updateRoomStatus(roomId, 'locked', {
     locked_at: new Date().toISOString(),
+    split_mode: splitMode,
   });
 }
 
@@ -316,11 +339,114 @@ export async function cancelRoom(roomId: string, hostId: string): Promise<void> 
   await updateRoomStatus(roomId, 'cancelled');
 }
 
+// ─── Debts & Loans CRUD ─────────────────────────────────────
+
+/**
+ * Un participante solicita un préstamo porque no le alcanza.
+ */
+export async function requestLoan(roomId: string, userId: string, deficitCents: number): Promise<void> {
+  const { error } = await supabase
+    .from('mitimiti_participants')
+    .update({
+      confirmation_status: 'requesting_loan',
+      deficit_cents: deficitCents,
+    })
+    .eq('room_id', roomId)
+    .eq('user_id', userId);
+
+  if (error) throw new Error(`Error solicitando préstamo: ${error.message}`);
+}
+
+/**
+ * Otro participante presta dinero al que lo solicitó.
+ */
+export async function lendMoney(
+  roomId: string,
+  lenderId: string,
+  lenderName: string,
+  borrowerId: string,
+  borrowerName: string,
+  amountCents: number
+): Promise<void> {
+  // Crear deuda
+  const { error: debtError } = await supabase
+    .from('mitimiti_debts')
+    .insert({
+      room_id: roomId,
+      debtor_id: borrowerId,
+      debtor_name: borrowerName,
+      creditor_id: lenderId,
+      creditor_name: lenderName,
+      amount_cents: amountCents,
+    });
+  if (debtError) throw new Error(`Error creando deuda: ${debtError.message}`);
+
+  // Obtener déficit actual del deudor
+  const { data: borrower, error: getError } = await supabase
+    .from('mitimiti_participants')
+    .select('deficit_cents')
+    .eq('room_id', roomId)
+    .eq('user_id', borrowerId)
+    .single();
+  if (getError) throw new Error(`Error obteniendo participante: ${getError.message}`);
+
+  const newDeficit = Math.max(0, (borrower.deficit_cents || 0) - amountCents);
+  const isConfirmed = newDeficit === 0;
+
+  // Actualizar déficit y status si ya cubrió
+  const { error: updateError } = await supabase
+    .from('mitimiti_participants')
+    .update({
+      deficit_cents: newDeficit,
+      ...(isConfirmed ? { confirmation_status: 'confirmed', confirmed_at: new Date().toISOString() } : {})
+    })
+    .eq('room_id', roomId)
+    .eq('user_id', borrowerId);
+  if (updateError) throw new Error(`Error actualizando déficit: ${updateError.message}`);
+  
+  if (isConfirmed) {
+    // Si todos están confirmados, pasar a confirming
+    const participants = await getParticipants(roomId);
+    const allConfirmed = participants.every(p => p.confirmation_status === 'confirmed');
+    if (allConfirmed) {
+      await updateRoomStatus(roomId, 'confirming');
+    }
+  }
+}
+
+export async function getMyDebts(userId: string): Promise<Debt[]> {
+  const { data, error } = await supabase
+    .from('mitimiti_debts')
+    .select('*')
+    .or(`debtor_id.eq.${userId},creditor_id.eq.${userId}`)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(`Error obteniendo deudas: ${error.message}`);
+  return (data || []) as Debt[];
+}
+
+export async function settleDebt(debtId: string): Promise<void> {
+  const { error } = await supabase
+    .from('mitimiti_debts')
+    .update({ status: 'paid', paid_at: new Date().toISOString() })
+    .eq('id', debtId);
+  if (error) throw new Error(`Error pagando deuda: ${error.message}`);
+}
+
+export async function forgiveDebt(debtId: string): Promise<void> {
+  const { error } = await supabase
+    .from('mitimiti_debts')
+    .update({ status: 'forgiven', forgiven_at: new Date().toISOString() })
+    .eq('id', debtId);
+  if (error) throw new Error(`Error perdonando deuda: ${error.message}`);
+}
+
 // ─── Realtime Subscriptions ─────────────────────────────────
 
 export interface RoomSubscriptionCallbacks {
   onRoomChange: (room: Room) => void;
   onParticipantsChange: (participants: Participant[]) => void;
+  onDebtsChange?: (debts: Debt[]) => void;
 }
 
 /**
@@ -358,6 +484,21 @@ export function subscribeToRoom(
       async () => {
         const participants = await getParticipants(roomId);
         callbacks.onParticipantsChange(participants);
+      },
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'mitimiti_debts',
+        filter: `room_id=eq.${roomId}`,
+      },
+      async () => {
+        if (callbacks.onDebtsChange) {
+          const { data } = await supabase.from('mitimiti_debts').select('*').eq('room_id', roomId);
+          if (data) callbacks.onDebtsChange(data as Debt[]);
+        }
       },
     )
     .subscribe();

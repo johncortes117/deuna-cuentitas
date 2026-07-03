@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import MitiMitiApp from './mitimiti/MitiMitiApp';
-import { getUserProfile, createUserProfile, decodeQR } from './mitimiti/utils';
+import { getUserProfile, createUserProfile, decodeQR, formatMoney } from './mitimiti/utils';
 import type { UserProfile } from './mitimiti/types';
 import QRScanner from './mitimiti/components/QRScanner';
 import PaymentModeModal from './mitimiti/components/PaymentModeModal';
@@ -162,8 +162,8 @@ function App() {
             }} />
           )}
 
-          {screen === 'dashboard' && (
-            <DashboardScreen onScanQR={() => setScreen('scanner')} />
+          {screen === 'dashboard' && profile && (
+            <DashboardScreen profile={profile} onScanQR={() => setScreen('scanner')} />
           )}
         </div>
       </div>
@@ -306,7 +306,7 @@ function SetupScreen({ onComplete }: { onComplete: (profile: UserProfile) => voi
 // ═══════════════════════════════════════════════════════════════
 // Dashboard Screen (Consumer)
 // ═══════════════════════════════════════════════════════════════
-function DashboardScreen({ onScanQR }: { onScanQR: () => void }) {
+function DashboardScreen({ profile, onScanQR }: { profile: UserProfile, onScanQR: () => void }) {
   const [showSaldo, setShowSaldo] = useState(true);
   const [bottomTab, setBottomTab] = useState<BottomTab>('inicio');
 
@@ -332,7 +332,7 @@ function DashboardScreen({ onScanQR }: { onScanQR: () => void }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h2 className="text-[34px] font-bold text-[#1a1a1a] tracking-tight">
-              {showSaldo ? '$1,18' : '••••'}
+              {showSaldo ? formatMoney(profile.balanceCents) : '••••'}
             </h2>
             <button onClick={() => setShowSaldo(!showSaldo)} className="text-[#1a1a1a]">
               {showSaldo ? <EyeIcon /> : <EyeOffIcon />}

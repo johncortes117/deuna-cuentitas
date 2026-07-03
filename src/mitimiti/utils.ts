@@ -131,12 +131,38 @@ export function saveUserProfile(profile: UserProfile): void {
 }
 
 /**
- * Crea un nuevo perfil con ID autogenerado.
+ * Genera un saldo simulado aleatorio entre $2.00 y $10.00 (200 - 1000 centavos)
+ */
+export function generateRandomBalance(): number {
+  return 200 + Math.floor(Math.random() * 801);
+}
+
+/**
+ * Valida un split personalizado. La suma debe ser exactamente igual al total.
+ */
+export function validateCustomSplit(amounts: number[], totalCents: number): { valid: boolean; difference: number } {
+  const sum = amounts.reduce((a, b) => a + b, 0);
+  return {
+    valid: sum === totalCents,
+    difference: totalCents - sum, // > 0 faltan, < 0 sobran
+  };
+}
+
+/**
+ * Calcula cuánto le falta a un participante para pagar su parte.
+ */
+export function calculateDeficit(amountCents: number, balanceCents: number): number {
+  return Math.max(0, amountCents - balanceCents);
+}
+
+/**
+ * Crea un nuevo perfil con ID autogenerado y saldo simulado.
  */
 export function createUserProfile(displayName: string): UserProfile {
   const profile: UserProfile = {
     userId: generateId(),
     displayName,
+    balanceCents: generateRandomBalance(),
   };
   saveUserProfile(profile);
   return profile;

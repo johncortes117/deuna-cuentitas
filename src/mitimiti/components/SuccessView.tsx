@@ -100,9 +100,16 @@ export default function SuccessView({ room, participants, myUserId, onDone }: Su
       <div className="px-6 pb-4 shrink-0">
         <button
           onClick={onDone}
-          className="w-full py-4 rounded-[14px] bg-[#4C1D80] text-white text-[16px] font-bold active:scale-[0.98] transition-transform"
+          className="w-full py-4 rounded-[14px] bg-[#4C1D80] text-white text-[16px] font-bold active:scale-[0.98] transition-transform mb-3"
         >
           Listo
+        </button>
+        
+        <button
+          onClick={() => window.location.hash = '#/mitimiti/debts'}
+          className="w-full py-2 text-[#4C1D80] text-[14px] font-bold underline"
+        >
+          Ver mis deudas
         </button>
       </div>
     </div>

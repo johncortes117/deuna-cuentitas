@@ -1,6 +1,7 @@
 // ─── useRoom: Hook de estado real-time de una sala MitiMiti ──
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Room, Participant } from './types';
+import type { Room, Participant, Debt } from './types';
+import { supabase } from './supabase';
 import {
   getRoom,
   getParticipants,
@@ -10,6 +11,8 @@ import {
   executePayment as executePaymentAPI,
   leaveRoom as leaveRoomAPI,
   cancelRoom as cancelRoomAPI,
+  requestLoan as requestLoanAPI,
+  lendMoney as lendMoneyAPI,
 } from './supabase';
 import { dividirMonto, getUserProfile } from './utils';
 
@@ -21,19 +24,23 @@ export interface UseRoomReturn {
   isLoading: boolean;
   error: string | null;
   amountPerPerson: number; // cálculo live en centavos
+  debts: Debt[];
 
   // Acciones
-  lockRoom: () => Promise<void>;
+  lockRoom: (splitMode?: 'equal' | 'custom', customAmounts?: {userId: string, amountCents: number}[]) => Promise<void>;
   confirmPayment: () => Promise<void>;
   executePayment: (simulateFailure?: boolean) => Promise<void>;
   leaveRoom: () => Promise<void>;
   cancelRoom: () => Promise<void>;
+  requestLoan: (deficitCents: number) => Promise<void>;
+  lendMoney: (borrowerId: string, borrowerName: string, amountCents: number) => Promise<void>;
   clearError: () => void;
 }
 
 export function useRoom(roomId: string | null): UseRoomReturn {
   const [room, setRoom] = useState<Room | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const unsubRef = useRef<(() => void) | null>(null);
@@ -60,9 +67,10 @@ export function useRoom(roomId: string | null): UseRoomReturn {
 
     async function load() {
       try {
-        const [roomData, participantsData] = await Promise.all([
+        const [roomData, participantsData, debtsData] = await Promise.all([
           getRoom(roomId!),
           getParticipants(roomId!),
+          supabase.from('mitimiti_debts').select('*').eq('room_id', roomId!)
         ]);
 
         if (!mounted) return;
@@ -75,6 +83,7 @@ export function useRoom(roomId: string | null): UseRoomReturn {
 
         setRoom(roomData);
         setParticipants(participantsData);
+        if (debtsData.data) setDebts(debtsData.data as Debt[]);
         setIsLoading(false);
 
         // Suscribirse a cambios en tiempo real
@@ -85,6 +94,9 @@ export function useRoom(roomId: string | null): UseRoomReturn {
           onParticipantsChange: (updatedParticipants) => {
             if (mounted) setParticipants(updatedParticipants);
           },
+          onDebtsChange: (updatedDebts) => {
+            if (mounted) setDebts(updatedDebts);
+          }
         });
       } catch (err) {
         if (mounted) {
@@ -105,11 +117,11 @@ export function useRoom(roomId: string | null): UseRoomReturn {
     };
   }, [roomId]);
 
-  const lockRoom = useCallback(async () => {
+  const lockRoom = useCallback(async (splitMode: 'equal' | 'custom' = 'equal', customAmounts?: {userId: string, amountCents: number}[]) => {
     if (!roomId || !userId) return;
     try {
       setError(null);
-      await lockRoomAPI(roomId, userId);
+      await lockRoomAPI(roomId, userId, splitMode, customAmounts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error cerrando sala');
     }
@@ -155,6 +167,26 @@ export function useRoom(roomId: string | null): UseRoomReturn {
     }
   }, [roomId, userId]);
 
+  const requestLoan = useCallback(async (deficitCents: number) => {
+    if (!roomId || !userId) return;
+    try {
+      setError(null);
+      await requestLoanAPI(roomId, userId, deficitCents);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error solicitando préstamo');
+    }
+  }, [roomId, userId]);
+
+  const lendMoney = useCallback(async (borrowerId: string, borrowerName: string, amountCents: number) => {
+    if (!roomId || !userId) return;
+    try {
+      setError(null);
+      await lendMoneyAPI(roomId, userId, profile?.displayName || 'Desconocido', borrowerId, borrowerName, amountCents);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error prestando dinero');
+    }
+  }, [roomId, userId, profile]);
+
   const clearError = useCallback(() => setError(null), []);
 
   return {
@@ -165,11 +197,14 @@ export function useRoom(roomId: string | null): UseRoomReturn {
     isLoading,
     error,
     amountPerPerson,
+    debts,
     lockRoom,
     confirmPayment,
     executePayment,
     leaveRoom,
     cancelRoom,
+    requestLoan,
+    lendMoney,
     clearError,
   };
 }
