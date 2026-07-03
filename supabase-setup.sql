@@ -3,9 +3,7 @@
 -- Ejecutar este SQL en el SQL Editor de Supabase
 -- ═══════════════════════════════════════════════════════════════
 
--- 1. Tabla de salas (y actualizaciones)
-ALTER TABLE IF EXISTS mitimiti_rooms ADD COLUMN IF NOT EXISTS split_mode TEXT NOT NULL DEFAULT 'equal';
-
+-- 1. Tabla de salas
 CREATE TABLE IF NOT EXISTS mitimiti_rooms (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   host_id         TEXT NOT NULL,
@@ -24,9 +22,10 @@ CREATE TABLE IF NOT EXISTS mitimiti_rooms (
     CHECK (split_mode IN ('equal', 'custom'))
 );
 
--- 2. Tabla de participantes (y actualizaciones)
-ALTER TABLE IF EXISTS mitimiti_participants ADD COLUMN IF NOT EXISTS deficit_cents INTEGER DEFAULT 0;
+-- Asegurarse de que las columnas nuevas existan si la tabla ya había sido creada antes
+ALTER TABLE mitimiti_rooms ADD COLUMN IF NOT EXISTS split_mode TEXT NOT NULL DEFAULT 'equal';
 
+-- 2. Tabla de participantes
 CREATE TABLE IF NOT EXISTS mitimiti_participants (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   room_id             UUID NOT NULL REFERENCES mitimiti_rooms(id) ON DELETE CASCADE,
@@ -45,25 +44,8 @@ CREATE TABLE IF NOT EXISTS mitimiti_participants (
   UNIQUE(room_id, user_id)
 );
 
--- Actualizar constraints (ignoramos errores si ya existen)
-DO $$
-BEGIN
-  -- Actualizar check de estado en rooms
-  ALTER TABLE mitimiti_rooms DROP CONSTRAINT IF EXISTS mitimiti_rooms_status_check;
-  ALTER TABLE mitimiti_rooms ADD CONSTRAINT mitimiti_rooms_status_check 
-    CHECK (status IN ('waiting', 'locked', 'confirming', 'processing', 'completed', 'failed', 'cancelled'));
-
-  -- Actualizar check de split_mode
-  ALTER TABLE mitimiti_rooms DROP CONSTRAINT IF EXISTS mitimiti_rooms_split_mode_check;
-  ALTER TABLE mitimiti_rooms ADD CONSTRAINT mitimiti_rooms_split_mode_check 
-    CHECK (split_mode IN ('equal', 'custom'));
-
-  -- Actualizar check de estado en participants
-  ALTER TABLE mitimiti_participants DROP CONSTRAINT IF EXISTS mitimiti_participants_confirmation_status_check;
-  ALTER TABLE mitimiti_participants ADD CONSTRAINT mitimiti_participants_confirmation_status_check 
-    CHECK (confirmation_status IN ('pending', 'confirmed', 'declined', 'requesting_loan'));
-END
-$$;
+-- Asegurarse de que las columnas nuevas existan si la tabla ya había sido creada antes
+ALTER TABLE mitimiti_participants ADD COLUMN IF NOT EXISTS deficit_cents INTEGER DEFAULT 0;
 
 -- 3. Índices para performance
 CREATE INDEX IF NOT EXISTS idx_rooms_invite_token ON mitimiti_rooms(invite_token);
@@ -162,6 +144,7 @@ CREATE POLICY "Cualquiera puede salir" ON mitimiti_participants
 -- Permisos tabla de deudas
 ALTER TABLE mitimiti_debts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Deudas visibles" ON mitimiti_debts;
 CREATE POLICY "Deudas visibles" ON mitimiti_debts 
   FOR SELECT USING (true);
 
@@ -172,6 +155,3 @@ CREATE POLICY "Crear deudas" ON mitimiti_debts
 DROP POLICY IF EXISTS "Actualizar deudas" ON mitimiti_debts;
 CREATE POLICY "Actualizar deudas" ON mitimiti_debts 
   FOR UPDATE USING (true);
-
--- 6. Recargar caché del esquema para la API REST (PostgREST)
-NOTIFY pgrst, 'reload schema';
