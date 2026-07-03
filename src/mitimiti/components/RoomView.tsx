@@ -204,45 +204,35 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
             <div className="my-3">
               <QRInvite inviteToken={room.invite_token} size={200} />
             </div>
-            <p className="text-[13px] text-gray-400 text-center mt-2 mb-3">
+            <p className="text-[13px] text-gray-400 text-center mt-2 mb-1">
               Escanea para unirte a la sala
             </p>
 
-            {/* Compartir link al estilo DeUna (lista) */}
-            <div className="mt-4 w-full">
-              <button
-                onClick={async () => {
-                  const shareUrl = `${window.location.origin}/#/mitimiti/join/${room.invite_token}`;
-                  if (navigator.share) {
-                    await navigator.share({
-                      title: 'MitiMiti',
-                      text: `Únete a la sala de pago: ${room.commerce_name}`,
-                      url: shareUrl,
-                    }).catch(console.error);
-                  } else {
-                    await navigator.clipboard.writeText(shareUrl);
-                    alert('Link de invitación copiado');
-                  }
-                }}
-                className="w-full flex items-center justify-between py-3 px-1 active:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-[42px] h-[42px] rounded-full bg-[#F8F8FA] flex items-center justify-center shrink-0">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-[14px] font-bold text-[#1a1a1a] mb-0.5">Envía un link de cobro</p>
-                    <p className="text-[12px] text-gray-500 font-medium leading-tight">Genera un link y compártelo</p>
-                  </div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
+            {/* Compartir link centrado */}
+            <button
+              onClick={async () => {
+                const shareUrl = `${window.location.origin}/#/mitimiti/join/${room.invite_token}`;
+                if (navigator.share) {
+                  await navigator.share({
+                    title: 'MitiMiti',
+                    text: `Únete a la sala de pago: ${room.commerce_name}`,
+                    url: shareUrl,
+                  }).catch(console.error);
+                } else {
+                  await navigator.clipboard.writeText(shareUrl);
+                  alert('Link de invitación copiado');
+                }
+              }}
+              className="flex items-center justify-center gap-2 active:opacity-70 transition-opacity mb-4"
+            >
+              <div className="w-[34px] h-[34px] rounded-full bg-[#F8F8FA] flex items-center justify-center shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                 </svg>
-              </button>
-            </div>
+              </div>
+              <span className="text-[13px] text-gray-500 font-medium">Genera un link y compártelo</span>
+            </button>
 
             {/* Mini lista de participantes debajo del QR */}
             <div className="w-full mt-4">
