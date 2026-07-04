@@ -1,11 +1,14 @@
-// ─── CreateRoomView: Crear sala con monto ────────────────────
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDebts } from '../useDebts';
+import { getActiveRoomForUser } from '../supabase';
+import { getUserProfile } from '../utils';
+import type { Room } from '../types';
 
 interface CreateRoomViewProps {
   initialCommerceName?: string;
   initialAmount?: string; // "48,00"
   onCreateRoom: (commerceName: string, amountStr: string) => void;
+  onRejoinRoom: (roomId: string) => void;
   onBack: () => void;
 }
 
@@ -13,11 +16,23 @@ export default function CreateRoomView({
   initialCommerceName = '',
   initialAmount = '0',
   onCreateRoom,
+  onRejoinRoom,
   onBack,
 }: CreateRoomViewProps) {
   const [commerceName, setCommerceName] = useState(initialCommerceName);
   const [amount, setAmount] = useState(initialAmount);
+  const [activeRoom, setActiveRoom] = useState<Room | null>(null);
   const { debtsIOwe } = useDebts();
+
+  useEffect(() => {
+    async function fetchActiveRoom() {
+      const profile = getUserProfile();
+      if (!profile) return;
+      const room = await getActiveRoomForUser(profile.userId);
+      setActiveRoom(room);
+    }
+    fetchActiveRoom();
+  }, []);
 
   const handleKey = (key: string) => {
     if (key === 'del') {
@@ -51,6 +66,27 @@ export default function CreateRoomView({
         </button>
         <h1 className="text-[17px] font-bold text-[#1a1a1a]">MitiMiti</h1>
       </div>
+
+      {/* Session Recovery Banner */}
+      {activeRoom && (
+        <div className="mx-5 mb-4 p-4 rounded-2xl bg-[#F8F5FB] border border-[#EBE3F5] flex flex-col gap-3 shadow-sm animate-fadeIn">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[12px] font-bold text-[#4C1D80] uppercase tracking-wide mb-0.5">Sala Activa</p>
+              <p className="text-[16px] font-bold text-[#1a1a1a]">{activeRoom.commerce_name}</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-[#4C1D80]/10 flex items-center justify-center">
+              <span className="animate-pulse w-2.5 h-2.5 bg-[#4C1D80] rounded-full"></span>
+            </div>
+          </div>
+          <button 
+            onClick={() => onRejoinRoom(activeRoom.id)}
+            className="w-full py-3 bg-[#4C1D80] text-white rounded-[12px] font-bold text-[14px] active:scale-95 transition-transform"
+          >
+            Volver a la sala
+          </button>
+        </div>
+      )}
 
       {/* Input nombre */}
       <div className="px-5 mb-2 shrink-0">

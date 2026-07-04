@@ -70,6 +70,7 @@ export default function MitiMitiApp() {
           initialCommerceName={route.commerceName}
           initialAmount={route.totalCents ? fromCents(route.totalCents) : undefined}
           onCreateRoom={handleCreateRoom}
+          onRejoinRoom={(roomId) => setRoute({ page: 'room', roomId })}
           onBack={() => {
             window.location.hash = '#/';
           }}

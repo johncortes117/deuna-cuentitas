@@ -80,6 +80,30 @@ export async function getRoomByToken(token: string): Promise<Room | null> {
 }
 
 /**
+ * Busca si el usuario está en una sala que aún no haya finalizado.
+ */
+export async function getActiveRoomForUser(userId: string): Promise<Room | null> {
+  const { data: parts, error: partsError } = await supabase
+    .from('mitimiti_participants')
+    .select('room_id')
+    .eq('user_id', userId);
+
+  if (partsError || !parts || parts.length === 0) return null;
+
+  const roomIds = parts.map(p => p.room_id);
+  const { data: rooms, error: roomsError } = await supabase
+    .from('mitimiti_rooms')
+    .select('*')
+    .in('id', roomIds)
+    .in('status', ['waiting', 'locked', 'confirming'])
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (roomsError || !rooms || rooms.length === 0) return null;
+  return rooms[0] as Room;
+}
+
+/**
  * Actualiza el status de una sala.
  */
 export async function updateRoomStatus(
