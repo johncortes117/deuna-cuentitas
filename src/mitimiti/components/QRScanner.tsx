@@ -1,6 +1,7 @@
 // ─── QRScanner: Escáner QR in-app con cámara ─────────────────
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import ShowMyQRModal from './ShowMyQRModal';
 
 interface QRScannerProps {
   onScan: (data: string) => void;
@@ -10,6 +11,7 @@ interface QRScannerProps {
 export default function QRScanner({ onScan, onBack }: QRScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showMyQR, setShowMyQR] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScanned = useRef(false);
 
@@ -126,11 +128,16 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
 
       {/* Botón Flotante Inferior */}
       <div className="absolute bottom-10 left-5 right-5 z-20">
-        <button className="w-full bg-white/20 backdrop-blur-md border border-white/20 text-white py-[18px] rounded-[18px] text-[16px] font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-transform">
-          <span className="text-[13px] font-black tracking-widest bg-white/20 px-2 py-0.5 rounded">123</span>
-          Código único de pago
+        <button 
+          onClick={() => setShowMyQR(true)}
+          className="w-full bg-white/20 backdrop-blur-md border border-white/20 text-white py-[18px] rounded-[18px] text-[16px] font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-transform"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/><path d="M21 14h-3v3"/><path d="M21 21h-3v-3"/></svg>
+          Mostrar Mi QR
         </button>
       </div>
+
+      {showMyQR && <ShowMyQRModal onClose={() => setShowMyQR(false)} />}
     </div>
   );
 }

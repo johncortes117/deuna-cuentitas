@@ -1,5 +1,5 @@
 // ─── RoomView: Sala MitiMiti (Host + Participante) ───────────
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { formatMoney, dividirMonto, getUserProfile } from '../utils';
 import QRInvite from './QRInvite';
 import ParticipantCard from './ParticipantCard';
@@ -15,6 +15,7 @@ import LoanWaitingView from './LoanWaitingView';
 import DebtBanner from './DebtBanner';
 import { useBalance } from '../useBalance';
 import { useDebts } from '../useDebts';
+import { trackEvent } from '../analytics';
 
 interface RoomViewProps {
   roomId: string;
@@ -57,6 +58,18 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
   const estimatedAmounts = room && participants.length > 0
     ? dividirMonto(room.total_cents + room.tip_cents, participants.length)
     : [];
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && room?.status === 'processing') {
+        trackEvent(`VISIBILITY_HIDDEN_${room.status.toUpperCase()}`, room.id, userId);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [room?.status, room?.id, userId]);
 
   const handleExpired = useCallback(async () => {
     if (isHost && room?.status === 'waiting') {

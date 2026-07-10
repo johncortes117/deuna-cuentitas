@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { MitiMitiRoute, UserProfile } from './types';
 import { getUserProfile, toCents, fromCents } from './utils';
 import { createRoom } from './supabase';
+import ScannerBeforeCreate from './components/ScannerBeforeCreate';
 import CreateRoomView from './components/CreateRoomView';
 import RoomView from './components/RoomView';
 import JoinRoomView from './components/JoinRoomView';
@@ -12,7 +13,7 @@ import './MitiMiti.css';
 // ─── MitiMitiApp (Router principal) ──────────────────────────
 export default function MitiMitiApp() {
   const [profile] = useState<UserProfile | null>(() => getUserProfile());
-  const [route, setRoute] = useState<MitiMitiRoute>({ page: 'create' });
+  const [route, setRoute] = useState<MitiMitiRoute>({ page: 'scan_before_create' });
 
   // Escuchar hash changes para deep links
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function MitiMitiApp() {
       } else if (hash === '#/mitimiti/debts') {
         setRoute({ page: 'debts' });
       } else if (hash === '#/mitimiti/create' || hash === '#/mitimiti') {
-        setRoute({ page: 'create' });
+        setRoute({ page: 'scan_before_create' });
       }
     }
 
@@ -65,6 +66,15 @@ export default function MitiMitiApp() {
   return (
     <div className="flex flex-col flex-1 relative bg-white h-full w-full">
       {/* Router */}
+      {route.page === 'scan_before_create' && (
+        <ScannerBeforeCreate
+          onScanComplete={(commerceName) => setRoute({ page: 'create', commerceName })}
+          onBack={() => {
+            window.location.hash = '#/';
+          }}
+        />
+      )}
+
       {route.page === 'create' && (
         <CreateRoomView
           initialCommerceName={route.commerceName}

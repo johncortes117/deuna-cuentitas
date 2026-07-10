@@ -1,12 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDebts } from '../useDebts';
 import { useBalance } from '../useBalance';
-import { formatMoney } from '../utils';
+import { formatMoney, getUserProfile } from '../utils';
+import { trackEvent } from '../analytics';
 
 export default function DebtsView({ onBack }: { onBack: () => void }) {
   const { debtsIOwe, debtsOwedToMe, history, settleDebt, forgiveDebt } = useDebts();
   const { balance, deduct } = useBalance();
   const [tab, setTab] = useState<'owe' | 'owed' | 'history'>('owe');
+
+  useEffect(() => {
+    const profile = getUserProfile();
+    trackEvent('DEBTS_VIEW_OPENED', undefined, profile?.userId);
+  }, []);
 
   const handlePay = async (debtId: string, amount: number) => {
     if (balance < amount) {
@@ -109,7 +115,10 @@ export default function DebtsView({ onBack }: { onBack: () => void }) {
                   </div>
                   <div className="flex gap-2">
                     <button 
-                      onClick={() => alert('Simulación: Notificación enviada a ' + debt.debtor_name)}
+                      onClick={() => {
+                        trackEvent('DEBT_REMINDER_SENT', debt.room_id, undefined, { debtId: debt.id, debtorId: debt.debtor_id });
+                        alert('Simulación: Notificación enviada a ' + debt.debtor_name);
+                      }}
                       className="flex-1 py-3 bg-[#F8F5FB] text-[#4C1D80] rounded-[14px] font-bold text-[15px] active:scale-95 transition-transform"
                     >
                       Recordar

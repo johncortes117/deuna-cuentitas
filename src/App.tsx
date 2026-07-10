@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import MitiMitiApp from './mitimiti/MitiMitiApp';
-import { getUserProfile, createUserProfile, decodeQR, formatMoney } from './mitimiti/utils';
+import { getUserProfile, createUserProfile, saveUserProfile, decodeQR, formatMoney, toCents } from './mitimiti/utils';
 import type { UserProfile } from './mitimiti/types';
 import QRScanner from './mitimiti/components/QRScanner';
-import PaymentModeModal from './mitimiti/components/PaymentModeModal';
+import SimulatedPaymentView from './mitimiti/components/SimulatedPaymentView';
+import { createRoom } from './mitimiti/supabase';
 
 type Screen = 'home' | 'setup' | 'dashboard' | 'mitimiti' | 'scanner';
 type BottomTab = 'inicio' | 'beneficios' | 'billetera' | 'tu';
@@ -112,18 +113,25 @@ function App() {
               }
 
               return (
-                <PaymentModeModal
+                <SimulatedPaymentView
                   targetName={data.displayName || 'Comercio'}
-                  amount="0,00" // We don't have an amount yet in personal QRs
                   onClose={() => setScannedData(null)}
-                  onPayAlone={() => {
-                    alert('Simulación: Pago directo realizado.');
+                  onPayAlone={(amountStr) => {
+                    alert(`Simulación: Pago directo realizado por $${amountStr}.`);
                     setScannedData(null);
                     setScreen('dashboard');
                   }}
-                  onMitiMiti={() => {
+                  onPayMitiMiti={async (roomName, amountStr) => {
                     setScannedData(null);
-                    window.location.hash = '#/mitimiti/create';
+                    try {
+                      if (!profile) return;
+                      const cents = toCents(amountStr);
+                      const room = await createRoom(profile.userId, profile.displayName, roomName, cents);
+                      window.location.hash = `#/mitimiti/room/${room.id}`;
+                    } catch (err) {
+                      console.error("Error creando sala:", err);
+                      window.location.hash = '#/mitimiti';
+                    }
                   }}
                 />
               );
@@ -163,7 +171,7 @@ function App() {
           )}
 
           {screen === 'dashboard' && profile && (
-            <DashboardScreen profile={profile} onScanQR={() => setScreen('scanner')} />
+            <DashboardScreen profile={profile} onScanQR={() => setScreen('scanner')} onUpdateProfile={setProfile} />
           )}
         </div>
       </div>
@@ -306,7 +314,7 @@ function SetupScreen({ onComplete }: { onComplete: (profile: UserProfile) => voi
 // ═══════════════════════════════════════════════════════════════
 // Dashboard Screen (Consumer)
 // ═══════════════════════════════════════════════════════════════
-function DashboardScreen({ profile, onScanQR }: { profile: UserProfile, onScanQR: () => void }) {
+function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: UserProfile, onScanQR: () => void, onUpdateProfile: (p: UserProfile) => void }) {
   const [showSaldo, setShowSaldo] = useState(true);
   const [bottomTab, setBottomTab] = useState<BottomTab>('inicio');
 
@@ -349,13 +357,21 @@ function DashboardScreen({ profile, onScanQR }: { profile: UserProfile, onScanQR
       </div>
 
       {/* Recargar Card */}
-      <div className="mx-5 border border-gray-100 rounded-[20px] p-4 flex items-center justify-between shadow-sm mb-6">
+      <div 
+        onClick={() => {
+          const addedAmount = Math.floor(Math.random() * 401) + 200;
+          const newProfile = { ...profile, balanceCents: profile.balanceCents + addedAmount };
+          saveUserProfile(newProfile);
+          onUpdateProfile(newProfile);
+        }}
+        className="mx-5 border border-gray-100 rounded-[20px] p-4 flex items-center justify-between shadow-sm mb-6 cursor-pointer active:scale-95 transition-transform"
+      >
         <div>
           <p className="text-gray-500 text-[14px]">Recargar desde</p>
           <p className="text-[#1a1a1a] font-bold text-[14px]">Principal ******2213</p>
         </div>
-        <button className="border border-gray-200 rounded-full py-2 px-4 flex items-center gap-2">
-          <span className="text-[#4C1D80] font-bold text-[15px]">+ $20</span>
+        <button className="border border-gray-200 rounded-full py-2 px-4 flex items-center gap-2 pointer-events-none">
+          <span className="text-[#4C1D80] font-bold text-[15px]">Aleatorio</span>
           <span className="text-gray-300">»</span>
           <span className="text-[#4C1D80] font-black italic text-[16px]">d!</span>
         </button>

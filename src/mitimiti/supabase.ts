@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Room, Participant, RoomStatus, Debt } from './types';
 import { generateId, generateInviteToken, dividirMonto } from './utils';
+import { trackEvent } from './analytics';
 
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || 'https://placeholder.supabase.co';
 const supabaseKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || 'placeholder';
@@ -44,6 +45,8 @@ export async function createRoom(
     .single();
 
   if (error) throw new Error(`Error creando sala: ${error.message}`);
+
+  trackEvent('ROOM_CREATED', data.id, hostId, { commerceName, totalCents });
 
   // Agregar al host como participante
   await addParticipant(data.id, hostId, hostName, 'host');
@@ -164,6 +167,9 @@ async function addParticipant(
     .single();
 
   if (error) throw new Error(`Error agregando participante: ${error.message}`);
+  
+  trackEvent('USER_JOINED', roomId, userId, { role });
+  
   return data as Participant;
 }
 
@@ -309,6 +315,7 @@ export async function lockRoom(
     locked_at: new Date().toISOString(),
     split_mode: splitMode,
   });
+  trackEvent('ROOM_LOCKED', roomId, hostId, { splitMode });
 }
 
 /**
@@ -326,6 +333,8 @@ export async function confirmPayment(roomId: string, userId: string): Promise<vo
     .eq('user_id', userId);
 
   if (error) throw new Error(`Error confirmando: ${error.message}`);
+  
+  trackEvent('USER_CONFIRMED', roomId, userId);
 
   // Verificar si todos confirmaron
   const participants = await getParticipants(roomId);
@@ -365,6 +374,7 @@ export async function executePayment(
   await updateRoomStatus(roomId, 'completed', {
     paid_at: new Date().toISOString(),
   });
+  trackEvent('PAYMENT_EXECUTED', roomId, hostId);
 }
 
 /**
@@ -394,6 +404,8 @@ export async function requestLoan(roomId: string, userId: string, deficitCents: 
     .eq('user_id', userId);
 
   if (error) throw new Error(`Error solicitando préstamo: ${error.message}`);
+  
+  trackEvent('LOAN_REQUESTED', roomId, userId, { deficitCents });
 }
 
 /**
@@ -469,6 +481,8 @@ export async function lendMoney(
       await updateRoomStatus(roomId, 'confirming');
     }
   }
+  
+  trackEvent('LOAN_GRANTED', roomId, lenderId, { borrowerId, amountCents });
 }
 
 export async function getMyDebts(userId: string): Promise<Debt[]> {

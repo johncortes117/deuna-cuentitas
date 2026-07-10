@@ -1,65 +1,93 @@
-# MitiMiti - Documentación de Producto y Arquitectura
-
-## 1. Visión General
-**MitiMiti** es una funcionalidad integrada orgánicamente dentro de la aplicación Consumer de DeUna. Permite a los usuarios dividir cuentas y realizar pagos grupales de manera rápida, transparente y sin fricciones. 
-
-Pensada para situaciones cotidianas (como dividir la cuenta de un restaurante, comprar un regalo grupal o hacer colectas), MitiMiti elimina la incomodidad de cobrar dinero uno por uno y automatiza la distribución y el seguimiento de los pagos en tiempo real.
+# MitiMiti — Divide cuentas, no amistades.
 
 ---
 
-## 2. Flujo de Usuario (Versión Actual V1)
+## El problema
 
-La V1 sirve como un prototipo robusto y completamente funcional del lado del cliente y manejo de estado en la nube, diseñado para sorprender a los stakeholders y validar el flujo UX.
+Todos lo hemos vivido. Llega la cuenta del restaurante y empieza la incomodidad: *"¿Quién pidió qué?"*, *"Yo solo tomé agua"*, *"Te transfiero luego"*... Y ese "luego" se convierte en nunca. 
 
-### 2.1. Creación de la Sala (El Anfitrión)
-1. **Descubrimiento:** El anfitrión escanea el código QR de cobro de un comercio usando el escáner nativo a pantalla completa de la app.
-2. **Intercepción inteligente:** Tras el escaneo, un modal interactivo intercepta la acción para preguntar: *"¿Deseas pagar solo o hacer MitiMiti?"*
-3. **Configuración inicial:** Al seleccionar MitiMiti, el anfitrión ingresa el monto total de la cuenta.
-4. **Sala de Espera (Waiting Room):** 
-   - Se crea una "sala de pago" protegida en tiempo real.
-   - El anfitrión cuenta con una interfaz limpia para invitar a amigos mediante:
-     - Mostrar el **Código QR de la sala** presencialmente (con diseño integrado DeUna: esquinas moradas, centro `d!`).
-     - Presionar **"Genera un link y compártelo"** para enviar la invitación por WhatsApp u otras redes.
-     - Presionar **"Añadir desde contactos"** (visual).
+Dividir una cuenta entre amigos es un problema social disfrazado de problema matemático. No es que sea difícil sacar la calculadora — es que **nadie quiere ser la persona que cobra**. Y cuando alguien se queda corto, pide prestado a otro y esa deuda se diluye entre mensajes de WhatsApp que nadie va a buscar.
 
-### 2.2. Unión a la Sala (Los Invitados)
-1. **Acceso Sin Fricción:** Los amigos escanean el QR de la sala o hacen clic en el link de invitación (Deep Linking).
-2. **Sincronización Mágica:** Ingresan de inmediato a la misma sala sin perder contexto. Ven quién es el anfitrión y quiénes ya están adentro.
-3. **División Dinámica:** A medida que ingresan más personas, el motor de MitiMiti divide el monto total equitativamente y en tiempo real en las pantallas de todos.
-
-### 2.3. Ejecución y Liquidación
-1. **Bloqueo (Lock):** Cuando todos están dentro, el anfitrión presiona "Bloquear sala y cobrar". Esto congela los montos y evita el ingreso de nuevos curiosos.
-2. **Confirmación de Pago:** Las pantallas de los invitados cambian instantáneamente al estado de cobro, mostrando exactamente cuánto deben aportar. Presionan "Pagar mi parte".
-3. **Actualización en Vivo:** Al ir pagando, los avatares de los participantes muestran un *check* verde. Todos ven quién ya pagó y a quién se está esperando.
-4. **Finalización:** Cuando el 100% de los participantes ha aportado su parte, la sala lanza un estado de éxito, y el pago se consolida y envía al comercio original.
+Hoy, la mayoría de los grupos resuelve esto con transferencias individuales, capturas de pantalla, y la memoria de alguien. Eso genera fricciones, olvidos, y a veces, resentimientos silenciosos.
 
 ---
 
-## 3. Arquitectura Técnica
+## La solución: MitiMiti
 
-- **Frontend:** `React` + `TypeScript` + `Vite` (Single Page Application).
-- **Diseño UI/UX:** `TailwindCSS`. Se ha replicado milimétricamente la guía de estilos *Consumer* de DeUna (Minimalismo, componentes de lista nativos iOS/Android, colores institucionales `#4C1D80` y `#2FD9A9`, experiencia sin bordes "App-like" con `100dvh` y `manifest` PWA).
-- **Estado Global & Tiempo Real:** `Supabase` (PostgreSQL + Realtime).
-  - Tabla `mitimiti_rooms`: Administra la metadatos de la sala (token, monto, estado `waiting | locked | completed`).
-  - Tabla `mitimiti_participants`: Lleva el control de concurrencia de quién está conectado y su estado de confirmación (`pending | confirmed`).
-  - **Suscripciones Websocket:** El frontend utiliza canales de Supabase para reflejar cambios en milisegundos en todos los dispositivos conectados simultáneamente, brindando un factor "Wow".
+**MitiMiti** es una funcionalidad dentro de DeUna que permite dividir cuentas grupales de forma instantánea, transparente y sin la incomodidad de cobrar o recordar deudas.
+
+Funciona como una "sala de pago" en tiempo real: el anfitrión crea la sala, los amigos se unen escaneando un QR o tocando un link, y la cuenta se divide automáticamente entre todos. Sin calculadora. Sin transferencias manuales. Sin capturas de pantalla.
+
+Y lo más importante: **si alguien no tiene saldo suficiente, otro puede prestarle ahí mismo y la deuda queda registrada formalmente en la app** — no en un chat que nadie va a volver a leer.
 
 ---
 
-## 4. Próximos Pasos y Roadmap (V2)
+## ¿Qué hace MitiMiti?
 
-La V2 transformará este prototipo validado en una característica lista para producción, interconectando la lógica de UI con los servicios Core de Banco Pichincha / DeUna.
+### 1. 🔀 División automática en tiempo real
 
-### 4.1. División Personalizada (Split Asimétrico)
-- No todas las cuentas se dividen en partes iguales. La V2 permitirá que el anfitrión, o cada usuario individual, asigne su monto exacto a pagar de la factura (ideal para restaurantes donde alguien consumió más).
+Creas una sala, pones el monto total, y a medida que tus amigos se van uniendo, **el monto se recalcula y divide automáticamente en partes iguales** en las pantallas de todos. Entra uno más, se actualiza solo. Sale alguien, también. Sin que nadie tenga que sacar la calculadora.
 
-### 4.2. Integración Nativa de Contactos y Notificaciones Push
-- Conectar MitiMiti con los amigos de DeUna.
+### 2. ✏️ División personalizable
 
+No todo se divide igual. Si alguien pidió solo una ensalada y otro se comió un asado con vino, el anfitrión puede **personalizar cuánto pone cada quien** antes de bloquear la sala. El sistema valida que la suma cuadre con el total y avisa si faltan centavos o sobran.
 
-### 4.4. Pagos Asíncronos ("Te pago luego")
-- Opción para que el anfitrión asuma el 100% del pago en el comercio para no hacer esperar al cajero, y que MitiMiti envíe automáticamente "solicitudes de cobro pendientes" recurrentes a los amigos hasta que liquiden su deuda en la app.
+### 3. 💸 Préstamos entre amigos con registro de deuda
 
-### 4.5. Historial, Split Bills Fijos y Exportación
-- **Descarga de Recibos:** Generación del comprobante con el detalle de la cuenta dividida.
-- **Salas Recurrentes:** Capacidad de crear un grupo de MitiMiti fijo para personas que viven juntas y dividen gastos (renta, servicios) todos los meses.
+Este es el diferenciador real. Cuando un participante intenta confirmar su pago y **no le alcanza el saldo**, MitiMiti no lo deja afuera — le ofrece pedir que alguien de la sala le preste. Los demás participantes ven la solicitud y pueden prestar el monto exacto (o un parcial). 
+
+Esa deuda **queda registrada formalmente** en la app:
+- El que debe, la ve en su sección **"Debes"** con un botón para pagarla.
+- El que prestó, la ve en su sección **"Te deben"** con opciones de **recordar** (enviar una notificación) o **perdonar** la deuda.
+- Todo queda en un **historial** auditable: cuándo se creó, cuánto fue, y si se pagó o se perdonó.
+
+**Ya no existe el "te pago luego" que se olvida.** La deuda vive en la app hasta que se resuelva.
+
+---
+
+## ¿Cómo funciona? (Flujo simplificado)
+
+**El anfitrión:**
+1. Abre MitiMiti y crea una sala con el nombre del evento y el monto total.
+2. Comparte la sala mostrando un **código QR** o enviando un **link de invitación** por WhatsApp.
+3. Ve en tiempo real quiénes se van uniendo y cuánto le toca a cada uno.
+4. Cuando todos están adentro, presiona **"Listo"**, elige cómo dividir (igual o personalizado), y bloquea la sala.
+
+**Los amigos:**
+1. Escanean el QR o tocan el link y entran a la sala en un segundo.
+2. Ven cuánto les toca y confirman con un botón.
+3. Si no les alcanza, piden un préstamo y alguien de la sala los cubre.
+
+**El cierre:**
+- Cuando todos confirman, el anfitrión ejecuta el pago consolidado.
+- Pantalla de éxito con confetti, resumen visual de quién pagó cuánto, y acceso directo al registro de deudas.
+
+---
+
+## ¿Qué dolor resuelve?
+
+| Dolor | Cómo lo resuelve MitiMiti |
+|---|---|
+| "Nadie quiere ser el que cobra" | La app cobra por ti. Cada persona ve su monto y confirma sola. |
+| "No sé cuánto me toca" | División automática y en tiempo real. |
+| "Yo consumí menos" | División personalizable por persona. |
+| "No me alcanza, te pago después" | Préstamo dentro de la sala con deuda registrada. |
+| "Me dijeron que me iban a pagar y nunca lo hicieron" | Registro formal de deudas con opción de recordar o perdonar. |
+| "Ya no sé quién me debe qué" | Historial completo de deudas: pendientes, pagadas y perdonadas. |
+
+---
+
+## ¿Por qué dentro de DeUna?
+
+MitiMiti no es una app separada — vive **dentro del ecosistema DeUna**, donde los usuarios ya tienen saldo, identidad y método de pago. Eso significa:
+
+- **Cero fricción de registro:** no hay que crear cuenta nueva.
+- **Pagos reales:** se descuenta del saldo DeUna, no es solo una calculadora.
+- **Contexto social natural:** los amigos ya están en DeUna, la invitación es un QR o un link.
+- **Deudas vinculadas a identidad:** no son notas en un chat grupal, son registros reales asociados a usuarios reales.
+
+MitiMiti convierte un momento incómodo — dividir la cuenta — en una experiencia rápida, clara y hasta divertida. Y lo que antes era un "te transfiero luego" olvidado, ahora es una deuda formal que no se pierde.
+
+---
+
+*MitiMiti. Divide cuentas, no amistades.*
