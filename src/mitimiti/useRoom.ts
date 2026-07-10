@@ -14,7 +14,7 @@ import {
   requestLoan as requestLoanAPI,
   lendMoney as lendMoneyAPI,
 } from './supabase';
-import { dividirMonto, getUserProfile } from './utils';
+import { dividirMonto, getUserProfile, saveUserProfile } from './utils';
 
 export interface UseRoomReturn {
   room: Room | null;
@@ -55,6 +55,23 @@ export function useRoom(roomId: string | null): UseRoomReturn {
   const amountPerPerson = room && participants.length > 0
     ? dividirMonto(room.total_cents + room.tip_cents, participants.length)[0]
     : 0;
+
+  // Debitar saldo cuando la sala se completa
+  useEffect(() => {
+    if (room?.status === 'completed' && myParticipant) {
+      const storageKey = `debited_room_${room.id}`;
+      if (!localStorage.getItem(storageKey)) {
+        localStorage.setItem(storageKey, 'true');
+        const currentProfile = getUserProfile();
+        if (currentProfile) {
+          saveUserProfile({
+            ...currentProfile,
+            balanceCents: currentProfile.balanceCents - (myParticipant.amount_cents || 0)
+          });
+        }
+      }
+    }
+  }, [room?.status, myParticipant, room?.id]);
 
   // Cargar datos iniciales + suscribirse a Realtime
   useEffect(() => {
