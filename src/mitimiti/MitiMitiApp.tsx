@@ -20,7 +20,11 @@ export default function MitiMitiApp() {
     function handleHash() {
       const hash = window.location.hash;
       const joinMatch = hash.match(/#\/mitimiti\/join\/([A-Za-z0-9]+)/);
-      if (joinMatch) {
+      const roomMatch = hash.match(/#\/mitimiti\/room\/([A-Za-z0-9-]+)/);
+      
+      if (roomMatch) {
+        setRoute({ page: 'room', roomId: roomMatch[1] });
+      } else if (joinMatch) {
         setRoute({ page: 'join', token: joinMatch[1] });
       } else if (hash === '#/mitimiti/debts') {
         setRoute({ page: 'debts' });
