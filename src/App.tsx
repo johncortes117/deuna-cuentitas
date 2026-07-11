@@ -23,6 +23,20 @@ function getFullscreenElement(): Element | null {
   );
 }
 
+// Surface the real reason a fullscreen request failed so we can debug on-device.
+function reportFullscreenError(msg: string): void {
+  try {
+    window.dispatchEvent(new CustomEvent('fs-error', { detail: msg }));
+  } catch {
+    /* noop */
+  }
+}
+
+function describeError(err: any): string {
+  if (!err) return 'error desconocido';
+  return err.name ? `${err.name}: ${err.message || ''}`.trim() : String(err.message || err);
+}
+
 function requestFullscreen(): void {
   if (getFullscreenElement()) return;
   const el = document.documentElement as any;
@@ -31,12 +45,19 @@ function requestFullscreen(): void {
     el.webkitRequestFullscreen ||
     el.mozRequestFullScreen ||
     el.msRequestFullscreen;
-  if (!fn) return;
+  if (!fn) {
+    reportFullscreenError('Este navegador no soporta pantalla completa aquí (iOS Safari no lo permite fuera de video).');
+    return;
+  }
   try {
+    // navigator.keyboard/orientation aside, this must run synchronously inside
+    // the user gesture; awaiting the promise afterwards is fine.
     const result = fn.call(el);
-    if (result && typeof result.catch === 'function') result.catch(() => {});
-  } catch {
-    // Ignore — fullscreen can be rejected by the browser (no activation, etc.)
+    if (result && typeof result.catch === 'function') {
+      result.catch((err: any) => reportFullscreenError(describeError(err)));
+    }
+  } catch (err) {
+    reportFullscreenError(describeError(err));
   }
 }
 
@@ -68,6 +89,22 @@ function App() {
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [scannedData, setScannedData] = useState<string | null>(null);
+  const [fsError, setFsError] = useState<string | null>(null);
+
+  // Show the real fullscreen failure reason (helps diagnose mobile quirks).
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const onErr = (e: Event) => {
+      setFsError((e as CustomEvent<string>).detail);
+      clearTimeout(timer);
+      timer = setTimeout(() => setFsError(null), 5000);
+    };
+    window.addEventListener('fs-error', onErr as EventListener);
+    return () => {
+      window.removeEventListener('fs-error', onErr as EventListener);
+      clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     setProfile(getUserProfile());
@@ -138,6 +175,7 @@ function App() {
               <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
             </div>
             <FullscreenButton />
+            <FullscreenErrorToast message={fsError} />
             <MitiMitiApp />
           </div>
         </div>
@@ -158,6 +196,7 @@ function App() {
               <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
             </div>
             <FullscreenButton />
+            <FullscreenErrorToast message={fsError} />
             {/* Unmount the scanner once a QR is captured so the camera stream is
                 fully released — a live camera keeps the browser from re-entering
                 fullscreen on Android. */}
@@ -225,6 +264,7 @@ function App() {
             <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
           </div>
           <FullscreenButton />
+          <FullscreenErrorToast message={fsError} />
 
           {screen === 'home' && (
             <ConsumerHomeScreen onEnter={() => setScreen(profile ? 'dashboard' : 'setup')} />
@@ -529,6 +569,16 @@ const UserIcon = ({active}:{active:boolean}) => <svg width="24" height="24" view
 // ═══════════════════════════════════════════════════════════════
 // Fullscreen Toggle Button (For Demos)
 // ═══════════════════════════════════════════════════════════════
+// Small, auto-dismissing toast that reveals why fullscreen failed on-device.
+function FullscreenErrorToast({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[10000] max-w-[90vw] px-4 py-2 rounded-xl bg-black/85 text-white text-[12px] font-medium shadow-lg text-center pointer-events-none md:hidden">
+      Pantalla completa: {message}
+    </div>
+  );
+}
+
 function FullscreenButton() {
   return (
     <button

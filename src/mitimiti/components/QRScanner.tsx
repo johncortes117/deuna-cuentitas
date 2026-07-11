@@ -10,6 +10,7 @@ interface QRScannerProps {
 
 export default function QRScanner({ onScan, onBack }: QRScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -17,6 +18,26 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
 
   useEffect(() => {
     const scannerId = 'mitimiti-qr-reader';
+
+    // Forzar la liberación del hardware de cámara. No confiamos únicamente en
+    // scanner.stop() porque en Chrome mobile suele fallar y deja el MediaStream
+    // vivo — y una cámara activa impide volver a pantalla completa en Android.
+    const releaseCamera = () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => {
+          try { track.stop(); } catch { /* noop */ }
+        });
+        streamRef.current = null;
+      }
+      // Por si acaso, también detenemos cualquier <video> con stream que quedara.
+      const video = document.querySelector<HTMLVideoElement>(`#${scannerId} video`);
+      const src = video?.srcObject;
+      if (src instanceof MediaStream) {
+        src.getTracks().forEach((track) => {
+          try { track.stop(); } catch { /* noop */ }
+        });
+      }
+    };
 
     // Esperar a que el DOM esté listo
     const timeout = setTimeout(async () => {
@@ -32,18 +53,27 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
           (decodedText) => {
             if (!hasScanned.current) {
               hasScanned.current = true;
-              onScan(decodedText);
+              // Liberamos la cámara de inmediato antes de pasar a la vista de pago.
+              releaseCamera();
               try {
                 scanner.stop().catch(() => {});
               } catch (e) {
                 // Ignorar error síncrono si ya está detenido o no ha iniciado completamente
               }
+              onScan(decodedText);
             }
           },
           () => {
             // QR no detectado, continuar escaneando
           },
         );
+
+        // Guardamos la referencia al MediaStream real que abrió la librería,
+        // para poder cerrarlo nosotros mismos con total garantía.
+        const video = document.querySelector<HTMLVideoElement>(`#${scannerId} video`);
+        if (video?.srcObject instanceof MediaStream) {
+          streamRef.current = video.srcObject;
+        }
       } catch (err) {
         console.error('Error starting scanner:', err);
         setError('No se pudo acceder a la cámara. Permite el acceso e intenta de nuevo.');
@@ -54,11 +84,13 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
       clearTimeout(timeout);
       if (scannerRef.current) {
         try {
-          scannerRef.current.stop().catch(() => {});
+          scannerRef.current.stop().then(releaseCamera).catch(releaseCamera);
         } catch (e) {
-          // Ignorar error al desmontar
+          releaseCamera();
         }
         scannerRef.current = null;
+      } else {
+        releaseCamera();
       }
     };
   }, [onScan]);

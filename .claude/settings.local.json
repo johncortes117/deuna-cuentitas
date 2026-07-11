@@ -13,7 +13,9 @@
       "Bash(python3 -m json.tool)",
       "Bash(curl -s -X POST http://localhost:3000/chat/message -H 'Content-Type: application/json' -d '{\"sessionId\":\"e0bae67f-1855-439d-9d91-2957f0575d44\",\"actionId\":\"PEAK_HOURS\"}')",
       "Bash(npx prisma *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "WebSearch",
+      "Bash(npx eslint *)"
     ]
   }
 }
