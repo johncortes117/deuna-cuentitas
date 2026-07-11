@@ -10,6 +10,54 @@ type Screen = 'home' | 'setup' | 'dashboard' | 'mitimiti' | 'scanner';
 type BottomTab = 'inicio' | 'beneficios' | 'billetera' | 'tu';
 
 // ═══════════════════════════════════════════════════════════════
+// Cross-browser Fullscreen helpers (Android Chrome, Safari, etc.)
+// ═══════════════════════════════════════════════════════════════
+function getFullscreenElement(): Element | null {
+  const doc = document as any;
+  return (
+    doc.fullscreenElement ||
+    doc.webkitFullscreenElement ||
+    doc.mozFullScreenElement ||
+    doc.msFullscreenElement ||
+    null
+  );
+}
+
+function requestFullscreen(): void {
+  if (getFullscreenElement()) return;
+  const el = document.documentElement as any;
+  const fn =
+    el.requestFullscreen ||
+    el.webkitRequestFullscreen ||
+    el.mozRequestFullScreen ||
+    el.msRequestFullscreen;
+  if (!fn) return;
+  try {
+    const result = fn.call(el);
+    if (result && typeof result.catch === 'function') result.catch(() => {});
+  } catch {
+    // Ignore — fullscreen can be rejected by the browser (no activation, etc.)
+  }
+}
+
+function exitFullscreen(): void {
+  if (!getFullscreenElement()) return;
+  const doc = document as any;
+  const fn =
+    doc.exitFullscreen ||
+    doc.webkitExitFullscreen ||
+    doc.mozCancelFullScreen ||
+    doc.msExitFullscreen;
+  if (!fn) return;
+  try {
+    const result = fn.call(doc);
+    if (result && typeof result.catch === 'function') result.catch(() => {});
+  } catch {
+    // Ignore
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Main App Component
 // ═══════════════════════════════════════════════════════════════
 function App() {
@@ -25,24 +73,31 @@ function App() {
     setProfile(getUserProfile());
 
     // Ensure fullscreen on user interactions to recover from keyboard breaks
+    // and from the browser exiting fullscreen (e.g. after the camera permission prompt).
     const ensureFullscreen = (e: Event) => {
       try {
         // If we are already in fullscreen, or it's not a small screen, do nothing
-        const isFS = document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement;
-        if (isFS || window.innerWidth >= 768) return;
-        
+        if (getFullscreenElement() || window.innerWidth >= 768) return;
+
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+
+        // The manual fullscreen button toggles fullscreen itself. If we also
+        // react to its tap here we enter fullscreen on `touchstart` and then the
+        // button exits it on `click`, cancelling each other out. Let it be.
+        if (target.closest('[data-fullscreen-toggle]')) return;
+
         // If the user is tapping on an input to type, do not force fullscreen right now
         // as forcing it can cause the keyboard to glitch in some Android browsers.
-        const target = e.target as HTMLElement;
-        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        if (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.closest('input, textarea')
+        ) {
           return;
         }
 
-        const docEl = document.documentElement as any;
-        const requestFS = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
-        if (requestFS) {
-          requestFS.call(docEl).catch(() => {});
-        }
+        requestFullscreen();
       } catch (err) {
         // Ignore errors
       }
@@ -103,12 +158,17 @@ function App() {
               <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
             </div>
             <FullscreenButton />
-            <QRScanner 
-              onScan={(data) => {
-                setScannedData(data);
-              }} 
-              onBack={() => setScreen('dashboard')} 
-            />
+            {/* Unmount the scanner once a QR is captured so the camera stream is
+                fully released — a live camera keeps the browser from re-entering
+                fullscreen on Android. */}
+            {!scannedData && (
+              <QRScanner
+                onScan={(data) => {
+                  setScannedData(data);
+                }}
+                onBack={() => setScreen('dashboard')}
+              />
+            )}
             {scannedData && (() => {
               const data = decodeQR(scannedData);
               if (!data) return null;
@@ -472,22 +532,15 @@ const UserIcon = ({active}:{active:boolean}) => <svg width="24" height="24" view
 function FullscreenButton() {
   return (
     <button
+      data-fullscreen-toggle
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        try {
-          const isFS = document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement;
-          
-          if (!isFS) {
-            const docEl = document.documentElement as any;
-            const requestFS = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
-            if (requestFS) requestFS.call(docEl).catch(() => {});
-          } else {
-            const doc = document as any;
-            const exitFS = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
-            if (exitFS) exitFS.call(doc).catch(() => {});
-          }
-        } catch (err) {}
+        if (getFullscreenElement()) {
+          exitFullscreen();
+        } else {
+          requestFullscreen();
+        }
       }}
       className="absolute top-4 right-4 z-[9999] p-[10px] bg-black/20 backdrop-blur-md rounded-full text-white/90 hover:bg-black/40 transition-all shadow-md md:hidden"
       title="Pantalla completa"
