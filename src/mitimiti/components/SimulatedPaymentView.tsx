@@ -13,7 +13,6 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
   const [roomName, setRoomName] = useState(targetName);
 
   const handleKey = (key: string) => {
-    requestFS();
     if (key === 'del') {
       setAmount(prev => (prev.length <= 1 ? '0' : prev.slice(0, -1)));
       return;
@@ -42,19 +41,8 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
     }
   };
 
-  const requestFS = () => {
-    try {
-      const el = document.documentElement as any;
-      const doc = document as any;
-      const isFs = doc.fullscreenElement || doc.webkitFullscreenElement;
-      if (isFs) return;
-      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-      if (req) req.call(el).catch(() => {});
-    } catch(e) {}
-  };
-
   return (
-    <div className="flex flex-col flex-1 h-full bg-white absolute inset-0 z-50" onClick={requestFS}>
+    <div className="flex flex-col flex-1 h-full bg-white absolute inset-0 z-50">
       {/* Header */}
       <div className="flex items-center px-5 pt-14 pb-3 shrink-0 border-b border-gray-100">
         <button onClick={onClose} className="mr-3">
@@ -125,44 +113,32 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
         </button>
       </div>
 
-      {/* Modal para Nombre de Sala centrado */}
+      {/* Modal para Nombre de Sala */}
       {showRoomModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-5 animate-fadeIn" onClick={() => setShowRoomModal(false)}>
-          <div className="bg-white w-full max-w-[340px] rounded-[24px] p-6 shadow-2xl flex flex-col transform transition-all" onClick={e => e.stopPropagation()}>
-            <h3 className="text-[20px] font-bold text-[#1a1a1a] mb-2 text-center">Nombra tu sala</h3>
-            <p className="text-[14px] text-gray-500 mb-5 text-center leading-snug">
-              Identifica este pago grupal (ej. {targetName})
-            </p>
+        <div className="absolute inset-0 bg-black/60 z-50 flex items-start justify-center pt-[8vh] sm:pt-[15vh] animate-fadeIn px-5" onClick={() => setShowRoomModal(false)}>
+          <div className="bg-white w-full max-w-[400px] rounded-[24px] p-6 shadow-2xl animate-slideDown" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[22px] font-bold text-[#1a1a1a] mb-2 text-center">Nombra tu sala</h3>
+            <p className="text-[15px] text-gray-500 mb-6 text-center leading-tight">Para crear la sala de pago grupal, ponle un nombre (ej. {targetName})</p>
             
             <input
               type="text"
               value={roomName}
               onChange={(e) => setRoomName(e.target.value)}
               placeholder="Nombre de la sala"
-              className="w-full bg-[#F8F8FA] border border-gray-200 rounded-[14px] py-3.5 px-4 text-[16px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:bg-white transition-colors mb-5 shadow-sm"
+              className="w-full bg-[#F8F8FA] border border-gray-100 rounded-2xl py-4 px-5 text-[16px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors mb-6"
               autoFocus
             />
 
             <button
-              onClick={() => {
-                requestFS();
-                handleCreateRoom();
-              }}
+              onClick={handleCreateRoom}
               disabled={!roomName.trim()}
-              className={`w-full py-3.5 rounded-[14px] text-[15px] font-bold transition-all shadow-sm ${
+              className={`w-full py-4 rounded-[16px] text-[16px] font-bold transition-all ${
                 roomName.trim()
                   ? 'bg-[#4C1D80] text-white active:scale-[0.98]'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
               Crear sala y Pagar
-            </button>
-            
-            <button
-              onClick={() => setShowRoomModal(false)}
-              className="w-full py-3 mt-2 rounded-[14px] text-[15px] font-bold text-gray-500 bg-white active:bg-gray-50 transition-colors"
-            >
-              Cancelar
             </button>
           </div>
         </div>
