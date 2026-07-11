@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import ShowMyQRModal from './ShowMyQRModal';
+import { exitFullscreenSafe, getFullscreenElement } from '../../fullscreen';
 
 interface QRScannerProps {
   onScan: (data: string) => void;
@@ -66,6 +67,21 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
     // Esperar a que el DOM esté listo
     const timeout = setTimeout(async () => {
       try {
+        // CRÍTICO: salir de pantalla completa ANTES de encender la cámara.
+        // Si la cámara arranca estando en fullscreen, Android Chrome sale
+        // visualmente pero deja `fullscreenElement` seteado — un estado
+        // "zombi" irrecuperable desde JS (exit se cuelga, requests son
+        // no-ops que consumen la activación del usuario). Al salir limpio
+        // aquí, el estado queda consistente y la vista de pago puede volver
+        // a pantalla completa sin problema. Reintentamos por si el tap que
+        // abrió el escáner dejó una transición de fullscreen a medio camino.
+        for (let attempt = 0; attempt < 3 && !cancelled; attempt++) {
+          await exitFullscreenSafe(400);
+          if (!getFullscreenElement()) break;
+          await new Promise((r) => setTimeout(r, 150));
+        }
+        if (cancelled) return;
+
         const scanner = new Html5Qrcode(scannerId);
         scannerRef.current = scanner;
 

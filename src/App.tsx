@@ -5,139 +5,16 @@ import type { UserProfile } from './mitimiti/types';
 import QRScanner from './mitimiti/components/QRScanner';
 import SimulatedPaymentView from './mitimiti/components/SimulatedPaymentView';
 import { createRoom } from './mitimiti/supabase';
+import {
+  getFullscreenElement,
+  isVisuallyFullscreen,
+  isCameraActive,
+  exitFullscreen,
+  forceFullscreen,
+} from './fullscreen';
 
 type Screen = 'home' | 'setup' | 'dashboard' | 'mitimiti' | 'scanner';
 type BottomTab = 'inicio' | 'beneficios' | 'billetera' | 'tu';
-
-// ═══════════════════════════════════════════════════════════════
-// Cross-browser Fullscreen helpers (Android Chrome, Safari, etc.)
-// ═══════════════════════════════════════════════════════════════
-function getFullscreenElement(): Element | null {
-  const doc = document as any;
-  return (
-    doc.fullscreenElement ||
-    doc.webkitFullscreenElement ||
-    doc.mozFullScreenElement ||
-    doc.msFullscreenElement ||
-    null
-  );
-}
-
-// Surface the real reason a fullscreen request failed so we can debug on-device.
-function reportFullscreenError(msg: string): void {
-  try {
-    window.dispatchEvent(new CustomEvent('fs-error', { detail: msg }));
-  } catch {
-    /* noop */
-  }
-}
-
-function describeError(err: any): string {
-  if (!err) return 'error desconocido';
-  return err.name ? `${err.name}: ${err.message || ''}`.trim() : String(err.message || err);
-}
-
-function requestFullscreenOn(target: Element): void {
-  const el = target as any;
-  const fn =
-    el.requestFullscreen ||
-    el.webkitRequestFullscreen ||
-    el.mozRequestFullScreen ||
-    el.msRequestFullscreen;
-  if (!fn) {
-    reportFullscreenError('Este navegador no soporta pantalla completa aquí (iOS Safari no lo permite fuera de video).');
-    return;
-  }
-  try {
-    const result = fn.call(el);
-    if (result && typeof result.catch === 'function') {
-      result.catch((err: any) => reportFullscreenError(describeError(err)));
-    }
-  } catch (err) {
-    reportFullscreenError(describeError(err));
-  }
-}
-
-function requestFullscreen(): void {
-  requestFullscreenOn(document.documentElement);
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-// Compact state snapshot for on-device debugging.
-function fsSnapshot(): string {
-  const el = getFullscreenElement();
-  return `${el ? el.tagName.toLowerCase() : 'nada'}·${window.innerHeight}/${screen.height}`;
-}
-
-function exitFullscreen(): Promise<void> {
-  if (!getFullscreenElement()) return Promise.resolve();
-  const doc = document as any;
-  const fn =
-    doc.exitFullscreen ||
-    doc.webkitExitFullscreen ||
-    doc.mozCancelFullScreen ||
-    doc.msExitFullscreen;
-  if (!fn) return Promise.resolve();
-  try {
-    const result = fn.call(doc);
-    if (result && typeof result.then === 'function') {
-      return result.catch(() => {});
-    }
-  } catch {
-    // Ignore
-  }
-  return Promise.resolve();
-}
-
-// Android Chrome quirk: after the camera permission prompt (or the soft
-// keyboard) the browser shows its own UI again, BUT `fullscreenElement` can
-// stay set. The document *thinks* it is still fullscreen, so a plain
-// re-request is a silent no-op and a "toggle" button wrongly calls exit.
-// Detect *real* fullscreen by comparing the viewport to the physical screen.
-function isVisuallyFullscreen(): boolean {
-  return window.innerHeight >= screen.height - 80;
-}
-
-// Recover into fullscreen regardless of what state the document is stuck in.
-// Layered strategy, because the zombie state fights back:
-//  1. Try to exit the stale fullscreen — but NEVER trust its promise: on
-//     Android Chrome exitFullscreen() can hang forever in this state, so we
-//     race it against a timeout.
-//  2. Re-request on <html>.
-//  3. If still not visually fullscreen, request on <body> instead — asking
-//     for a *different* element forces the browser to run a brand-new
-//     fullscreen transition even when it thinks it is already fullscreen.
-//  4. If everything failed, show a compact trace of what happened.
-async function forceFullscreen(): Promise<void> {
-  if (getFullscreenElement() && isVisuallyFullscreen()) return;
-  const steps: string[] = [fsSnapshot()];
-
-  if (getFullscreenElement()) {
-    const exited = await Promise.race([
-      exitFullscreen().then(() => true),
-      delay(350).then(() => false),
-    ]);
-    steps.push(`exit:${exited ? 'ok' : 'colgado'}`);
-    await delay(60);
-  }
-
-  requestFullscreen();
-  await delay(350);
-
-  if (!isVisuallyFullscreen()) {
-    steps.push(`html:no·${fsSnapshot()}`);
-    requestFullscreenOn(document.body);
-    await delay(350);
-  }
-
-  if (!isVisuallyFullscreen()) {
-    steps.push(`body:no·${fsSnapshot()}`);
-    reportFullscreenError(`no se logró (${steps.join(' → ')})`);
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Main App Component
@@ -175,6 +52,10 @@ function App() {
     const ensureFullscreen = (e: Event) => {
       try {
         if (window.innerWidth >= 768) return;
+        // NUNCA forzar fullscreen mientras la cámara del escáner está viva:
+        // entrar en fullscreen con la cámara encendida es lo que crea el
+        // estado "zombi" irrecuperable en Android Chrome.
+        if (isCameraActive()) return;
         // Only skip when we are REALLY fullscreen. `fullscreenElement` alone
         // lies after the camera permission prompt (stale fullscreen state).
         if (getFullscreenElement() && isVisuallyFullscreen()) return;
@@ -649,6 +530,9 @@ function FullscreenButton() {
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
+        // Con la cámara encendida NO se puede entrar a fullscreen sin crear
+        // el estado zombi de Android Chrome. El escáner ya es inmersivo.
+        if (isCameraActive()) return;
         // Decide by the VISUAL state, not by `fullscreenElement` — that flag
         // can stay stale ("zombie fullscreen") after the camera permission
         // prompt, which made this button call exit when the user wanted enter.
