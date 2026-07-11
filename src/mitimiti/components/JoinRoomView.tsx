@@ -70,12 +70,6 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
     }
   };
 
-  // Calcular monto estimado incluyéndose a sí mismo
-  const estimatedCount = participants.length + 1;
-  const estimatedAmount = room
-    ? dividirMonto(room.total_cents, estimatedCount)[0]
-    : 0;
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center flex-1">
@@ -147,21 +141,6 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
               <span className="text-[13px] text-gray-400">Total</span>
               <span className="text-[14px] font-bold text-[#1a1a1a]">
                 {room && formatMoney(room.total_cents)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[13px] text-gray-400">Personas</span>
-              <span className="text-[14px] font-semibold text-[#1a1a1a]">
-                {estimatedCount}
-              </span>
-            </div>
-
-            <div className="h-px bg-gray-200 my-1" />
-
-            <div className="flex justify-between items-center">
-              <span className="text-[14px] font-semibold text-[#4C1D80]">Tu parte</span>
-              <span className="text-[22px] font-bold text-[#4C1D80]">
-                ~{formatMoney(estimatedAmount)}
               </span>
             </div>
           </div>
