@@ -79,6 +79,7 @@ function App() {
             <div className="hidden md:flex absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 items-center justify-end px-3">
               <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
             </div>
+            <FullscreenButton />
             <MitiMitiApp />
           </div>
         </div>
@@ -98,6 +99,7 @@ function App() {
             <div className="hidden md:flex absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 items-center justify-end px-3">
               <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
             </div>
+            <FullscreenButton />
             <QRScanner 
               onScan={(data) => {
                 setScannedData(data);
@@ -159,6 +161,7 @@ function App() {
           <div className="hidden md:flex absolute top-[11px] left-1/2 -translate-x-1/2 w-[122px] h-[34px] bg-[#0a0a0a] rounded-[24px] z-50 items-center justify-end px-3">
             <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
           </div>
+          <FullscreenButton />
 
           {screen === 'home' && (
             <ConsumerHomeScreen onEnter={() => setScreen(profile ? 'dashboard' : 'setup')} />
@@ -459,5 +462,32 @@ const BottomHomeIcon = ({active}:{active:boolean}) => <svg width="24" height="24
 const GiftNavIcon = ({active}:{active:boolean}) => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active?"#4C1D80":"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>;
 const WalletIcon = ({active}:{active:boolean}) => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active?"#4C1D80":"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>;
 const UserIcon = ({active}:{active:boolean}) => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active?"#4C1D80":"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+
+// ═══════════════════════════════════════════════════════════════
+// Fullscreen Toggle Button (For Demos)
+// ═══════════════════════════════════════════════════════════════
+function FullscreenButton() {
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        } catch (err) {}
+      }}
+      className="absolute top-4 right-4 z-[9999] p-[10px] bg-black/20 backdrop-blur-md rounded-full text-white/90 hover:bg-black/40 transition-all shadow-md md:hidden"
+      title="Pantalla completa"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+      </svg>
+    </button>
+  );
+}
 
 export default App;
