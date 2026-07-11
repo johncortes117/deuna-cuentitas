@@ -44,20 +44,20 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
   return (
     <div className="flex flex-col flex-1 h-full bg-white absolute inset-0 z-50">
       {/* Header */}
-      <div className="flex items-center px-5 pt-14 pb-3 shrink-0 border-b border-gray-100">
+      <div className="flex items-center px-5 pt-8 pb-3 shrink-0 border-b border-gray-100">
         <button onClick={onClose} className="mr-3">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
         <div className="flex-1 text-center pr-8">
-          <p className="text-[14px] text-gray-500 font-medium">Pagar a</p>
-          <h1 className="text-[17px] font-bold text-[#1a1a1a]">{targetName}</h1>
+          <p className="text-[13px] text-gray-500 font-medium">Pagar a</p>
+          <h1 className="text-[16px] font-bold text-[#1a1a1a]">{targetName}</h1>
         </div>
       </div>
 
       {/* Monto */}
-      <div className="text-center mt-8 mb-6 shrink-0">
+      <div className="text-center mt-4 mb-4 shrink-0">
         <p className="text-[#4C1D80] text-[13px] font-medium mb-1">
           Ingresa el valor a pagar
         </p>
@@ -67,12 +67,12 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
       </div>
 
       {/* Teclado numérico */}
-      <div className="grid grid-cols-3 gap-y-3 px-5 flex-1 content-center">
+      <div className="grid grid-cols-3 gap-y-2 px-5 flex-1 content-center">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', 'del'].map(key => (
           <button
             key={key}
             onClick={() => handleKey(key)}
-            className="flex items-center justify-center py-4 rounded-xl text-[32px] font-semibold text-[#4C1D80] active:bg-gray-100 transition-colors"
+            className="flex items-center justify-center py-3 rounded-xl text-[28px] font-semibold text-[#4C1D80] active:bg-gray-100 transition-colors"
           >
             {key === 'del' ? (
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4C1D80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -86,7 +86,7 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
       </div>
 
       {/* Acciones */}
-      <div className="px-5 pb-8 shrink-0 flex gap-3">
+      <div className="px-5 pb-5 shrink-0 flex gap-3">
         <button
           onClick={() => onPayAlone(amount)}
           disabled={!hasAmount}
@@ -115,17 +115,18 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
 
       {/* Modal para Nombre de Sala */}
       {showRoomModal && (
-        <div className="absolute inset-0 bg-black/60 z-50 flex items-start justify-center pt-[8vh] sm:pt-[15vh] animate-fadeIn px-5" onClick={() => setShowRoomModal(false)}>
-          <div className="bg-white w-full max-w-[400px] rounded-[24px] p-6 shadow-2xl animate-slideDown" onClick={e => e.stopPropagation()}>
+        <div className="absolute inset-0 bg-black/60 z-50 flex items-start justify-center pt-4 px-4 animate-fadeIn" onClick={() => setShowRoomModal(false)}>
+          <div className="bg-white w-full rounded-3xl p-6 shadow-2xl animate-slideDown" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
             <h3 className="text-[22px] font-bold text-[#1a1a1a] mb-2 text-center">Nombra tu sala</h3>
-            <p className="text-[15px] text-gray-500 mb-6 text-center leading-tight">Para crear la sala de pago grupal, ponle un nombre (ej. {targetName})</p>
+            <p className="text-[15px] text-gray-500 mb-6 text-center">Para crear la sala de pago grupal, ponle un nombre (ej. {targetName})</p>
             
             <input
               type="text"
               value={roomName}
               onChange={(e) => setRoomName(e.target.value)}
               placeholder="Nombre de la sala"
-              className="w-full bg-[#F8F8FA] border border-gray-100 rounded-2xl py-4 px-5 text-[16px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors mb-6"
+              className="w-full bg-[#F8F8FA] border border-gray-100 rounded-2xl py-3 px-4 text-[16px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors mb-5"
               autoFocus
             />
 
