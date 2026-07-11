@@ -27,30 +27,32 @@ function App() {
     // Ensure fullscreen on user interactions to recover from keyboard breaks
     const ensureFullscreen = (e: Event) => {
       try {
-        // If we are already in fullscreen, or it's not a small screen, do nothing
-        if (document.fullscreenElement || window.innerWidth >= 768) return;
+        const doc = document as any;
+        const isFullscreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+        if (isFullscreen || window.innerWidth >= 768) return;
         
-        // If the user is tapping on an input to type, do not force fullscreen right now
-        // as forcing it can cause the keyboard to glitch in some Android browsers.
+        // Si el usuario toca un input, no forzamos fullscreen para no romper el teclado virtual.
         const target = e.target as HTMLElement;
         if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
           return;
         }
 
-        if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen().catch(() => {});
+        const el = document.documentElement as any;
+        const requestFS = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (requestFS) {
+          requestFS.call(el).catch(() => {});
         }
       } catch (err) {
         // Ignore errors
       }
     };
 
-    window.addEventListener('click', ensureFullscreen);
-    window.addEventListener('touchstart', ensureFullscreen, { passive: true });
+    window.addEventListener('click', ensureFullscreen, true);
+    window.addEventListener('touchend', ensureFullscreen, true);
 
     return () => {
-      window.removeEventListener('click', ensureFullscreen);
-      window.removeEventListener('touchstart', ensureFullscreen);
+      window.removeEventListener('click', ensureFullscreen, true);
+      window.removeEventListener('touchend', ensureFullscreen, true);
     };
   }, []);
 

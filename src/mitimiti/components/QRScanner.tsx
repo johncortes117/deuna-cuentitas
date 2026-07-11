@@ -12,17 +12,8 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScanned = useRef(false);
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
 
   useEffect(() => {
     const scannerId = 'mitimiti-qr-reader';
@@ -132,12 +123,6 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
         </p>
         {error && (
           <p className="text-red-400 text-[13px] mt-4 font-medium bg-black/50 py-1 px-3 rounded-lg inline-block">{error}</p>
-        )}
-        
-        {!isFullscreen && window.innerWidth < 768 && !error && (
-          <p className="text-white/60 text-[12px] font-medium mt-4 animate-pulse">
-            Toca cualquier parte de la pantalla para recuperar la pantalla completa
-          </p>
         )}
       </div>
 
