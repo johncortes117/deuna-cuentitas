@@ -16,12 +16,21 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScanned = useRef(false);
 
+  // Mantener la última versión de onScan sin que sea dependencia del efecto:
+  // con `[onScan]` (arrow inline en App) el efecto se destruía y recreaba en
+  // CADA re-render del padre, reiniciando la cámara y dejando streams huérfanos.
+  const onScanRef = useRef(onScan);
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
+
   useEffect(() => {
     const scannerId = 'mitimiti-qr-reader';
+    let cancelled = false;
 
     // Forzar la liberación del hardware de cámara. No confiamos únicamente en
     // scanner.stop() porque en Chrome mobile suele fallar y deja el MediaStream
-    // vivo — y una cámara activa impide volver a pantalla completa en Android.
+    // vivo — y una cámara activa interfiere con la pantalla completa en Android.
     const releaseCamera = () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => {
@@ -36,6 +45,21 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
         src.getTracks().forEach((track) => {
           try { track.stop(); } catch { /* noop */ }
         });
+      }
+    };
+
+    const stopScanner = () => {
+      const scanner = scannerRef.current;
+      scannerRef.current = null;
+      // Primero matamos los tracks (libera el hardware YA), luego dejamos que
+      // la librería limpie su estado/DOM; sus errores no nos importan.
+      releaseCamera();
+      if (scanner) {
+        try {
+          scanner.stop().then(releaseCamera).catch(releaseCamera);
+        } catch {
+          releaseCamera();
+        }
       }
     };
 
@@ -54,13 +78,8 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
             if (!hasScanned.current) {
               hasScanned.current = true;
               // Liberamos la cámara de inmediato antes de pasar a la vista de pago.
-              releaseCamera();
-              try {
-                scanner.stop().catch(() => {});
-              } catch (e) {
-                // Ignorar error síncrono si ya está detenido o no ha iniciado completamente
-              }
-              onScan(decodedText);
+              stopScanner();
+              onScanRef.current(decodedText);
             }
           },
           () => {
@@ -74,26 +93,27 @@ export default function QRScanner({ onScan, onBack }: QRScannerProps) {
         if (video?.srcObject instanceof MediaStream) {
           streamRef.current = video.srcObject;
         }
+
+        // Carrera de desmontaje: si el componente se desmontó mientras start()
+        // seguía pendiente, la limpieza ya corrió y nadie apagará esta cámara.
+        // La apagamos aquí mismo.
+        if (cancelled) {
+          stopScanner();
+        }
       } catch (err) {
         console.error('Error starting scanner:', err);
-        setError('No se pudo acceder a la cámara. Permite el acceso e intenta de nuevo.');
+        if (!cancelled) {
+          setError('No se pudo acceder a la cámara. Permite el acceso e intenta de nuevo.');
+        }
       }
     }, 100);
 
     return () => {
+      cancelled = true;
       clearTimeout(timeout);
-      if (scannerRef.current) {
-        try {
-          scannerRef.current.stop().then(releaseCamera).catch(releaseCamera);
-        } catch (e) {
-          releaseCamera();
-        }
-        scannerRef.current = null;
-      } else {
-        releaseCamera();
-      }
+      stopScanner();
     };
-  }, [onScan]);
+  }, []);
 
   return (
     <div className="flex flex-col flex-1 bg-black relative" ref={containerRef}>

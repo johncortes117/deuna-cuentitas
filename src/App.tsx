@@ -38,7 +38,6 @@ function describeError(err: any): string {
 }
 
 function requestFullscreen(): void {
-  if (getFullscreenElement()) return;
   const el = document.documentElement as any;
   const fn =
     el.requestFullscreen ||
@@ -61,21 +60,47 @@ function requestFullscreen(): void {
   }
 }
 
-function exitFullscreen(): void {
-  if (!getFullscreenElement()) return;
+function exitFullscreen(): Promise<void> {
+  if (!getFullscreenElement()) return Promise.resolve();
   const doc = document as any;
   const fn =
     doc.exitFullscreen ||
     doc.webkitExitFullscreen ||
     doc.mozCancelFullScreen ||
     doc.msExitFullscreen;
-  if (!fn) return;
+  if (!fn) return Promise.resolve();
   try {
     const result = fn.call(doc);
-    if (result && typeof result.catch === 'function') result.catch(() => {});
+    if (result && typeof result.then === 'function') {
+      return result.catch(() => {});
+    }
   } catch {
     // Ignore
   }
+  return Promise.resolve();
+}
+
+// Android Chrome quirk: after the camera permission prompt (or the soft
+// keyboard) the browser shows its own UI again, BUT `fullscreenElement` can
+// stay set. The document *thinks* it is still fullscreen, so a plain
+// re-request is a silent no-op and a "toggle" button wrongly calls exit.
+// Detect *real* fullscreen by comparing the viewport to the physical screen.
+function isVisuallyFullscreen(): boolean {
+  return window.innerHeight >= screen.height - 80;
+}
+
+// Recover into fullscreen regardless of what state the document is stuck in.
+// When the fullscreen state is stale (element set but browser UI visible) we
+// must exit first — only then does a new request actually re-engage.
+async function forceFullscreen(): Promise<void> {
+  if (getFullscreenElement()) {
+    if (isVisuallyFullscreen()) return; // already truly fullscreen
+    // Diagnóstico temporal: confirma en pantalla que detectamos estado zombi.
+    reportFullscreenError('estado atascado detectado, reiniciando…');
+    await exitFullscreen();
+    await new Promise((r) => setTimeout(r, 80));
+  }
+  requestFullscreen();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -113,8 +138,10 @@ function App() {
     // and from the browser exiting fullscreen (e.g. after the camera permission prompt).
     const ensureFullscreen = (e: Event) => {
       try {
-        // If we are already in fullscreen, or it's not a small screen, do nothing
-        if (getFullscreenElement() || window.innerWidth >= 768) return;
+        if (window.innerWidth >= 768) return;
+        // Only skip when we are REALLY fullscreen. `fullscreenElement` alone
+        // lies after the camera permission prompt (stale fullscreen state).
+        if (getFullscreenElement() && isVisuallyFullscreen()) return;
 
         const target = e.target as HTMLElement | null;
         if (!target) return;
@@ -134,7 +161,7 @@ function App() {
           return;
         }
 
-        requestFullscreen();
+        void forceFullscreen();
       } catch (err) {
         // Ignore errors
       }
@@ -586,10 +613,13 @@ function FullscreenButton() {
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (getFullscreenElement()) {
-          exitFullscreen();
+        // Decide by the VISUAL state, not by `fullscreenElement` — that flag
+        // can stay stale ("zombie fullscreen") after the camera permission
+        // prompt, which made this button call exit when the user wanted enter.
+        if (getFullscreenElement() && isVisuallyFullscreen()) {
+          void exitFullscreen();
         } else {
-          requestFullscreen();
+          void forceFullscreen();
         }
       }}
       className="absolute top-4 right-4 z-[9999] p-[10px] bg-black/20 backdrop-blur-md rounded-full text-white/90 hover:bg-black/40 transition-all shadow-md md:hidden"
