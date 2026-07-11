@@ -37,8 +37,8 @@ function describeError(err: any): string {
   return err.name ? `${err.name}: ${err.message || ''}`.trim() : String(err.message || err);
 }
 
-function requestFullscreen(): void {
-  const el = document.documentElement as any;
+function requestFullscreenOn(target: Element): void {
+  const el = target as any;
   const fn =
     el.requestFullscreen ||
     el.webkitRequestFullscreen ||
@@ -49,8 +49,6 @@ function requestFullscreen(): void {
     return;
   }
   try {
-    // navigator.keyboard/orientation aside, this must run synchronously inside
-    // the user gesture; awaiting the promise afterwards is fine.
     const result = fn.call(el);
     if (result && typeof result.catch === 'function') {
       result.catch((err: any) => reportFullscreenError(describeError(err)));
@@ -58,6 +56,20 @@ function requestFullscreen(): void {
   } catch (err) {
     reportFullscreenError(describeError(err));
   }
+}
+
+function requestFullscreen(): void {
+  requestFullscreenOn(document.documentElement);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// Compact state snapshot for on-device debugging.
+function fsSnapshot(): string {
+  const el = getFullscreenElement();
+  return `${el ? el.tagName.toLowerCase() : 'nada'}·${window.innerHeight}/${screen.height}`;
 }
 
 function exitFullscreen(): Promise<void> {
@@ -90,17 +102,41 @@ function isVisuallyFullscreen(): boolean {
 }
 
 // Recover into fullscreen regardless of what state the document is stuck in.
-// When the fullscreen state is stale (element set but browser UI visible) we
-// must exit first — only then does a new request actually re-engage.
+// Layered strategy, because the zombie state fights back:
+//  1. Try to exit the stale fullscreen — but NEVER trust its promise: on
+//     Android Chrome exitFullscreen() can hang forever in this state, so we
+//     race it against a timeout.
+//  2. Re-request on <html>.
+//  3. If still not visually fullscreen, request on <body> instead — asking
+//     for a *different* element forces the browser to run a brand-new
+//     fullscreen transition even when it thinks it is already fullscreen.
+//  4. If everything failed, show a compact trace of what happened.
 async function forceFullscreen(): Promise<void> {
+  if (getFullscreenElement() && isVisuallyFullscreen()) return;
+  const steps: string[] = [fsSnapshot()];
+
   if (getFullscreenElement()) {
-    if (isVisuallyFullscreen()) return; // already truly fullscreen
-    // Diagnóstico temporal: confirma en pantalla que detectamos estado zombi.
-    reportFullscreenError('estado atascado detectado, reiniciando…');
-    await exitFullscreen();
-    await new Promise((r) => setTimeout(r, 80));
+    const exited = await Promise.race([
+      exitFullscreen().then(() => true),
+      delay(350).then(() => false),
+    ]);
+    steps.push(`exit:${exited ? 'ok' : 'colgado'}`);
+    await delay(60);
   }
+
   requestFullscreen();
+  await delay(350);
+
+  if (!isVisuallyFullscreen()) {
+    steps.push(`html:no·${fsSnapshot()}`);
+    requestFullscreenOn(document.body);
+    await delay(350);
+  }
+
+  if (!isVisuallyFullscreen()) {
+    steps.push(`body:no·${fsSnapshot()}`);
+    reportFullscreenError(`no se logró (${steps.join(' → ')})`);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -122,7 +158,7 @@ function App() {
     const onErr = (e: Event) => {
       setFsError((e as CustomEvent<string>).detail);
       clearTimeout(timer);
-      timer = setTimeout(() => setFsError(null), 5000);
+      timer = setTimeout(() => setFsError(null), 8000);
     };
     window.addEventListener('fs-error', onErr as EventListener);
     return () => {
