@@ -1,8 +1,8 @@
 // ─── JoinRoomView: Unirse a una sala MitiMiti ────────────────
 import { useState, useEffect } from 'react';
-import type { Room, Participant } from '../types';
+import type { Room } from '../types';
 import { getRoomByToken, getParticipants, joinRoom } from '../supabase';
-import { formatMoney, dividirMonto, getUserProfile } from '../utils';
+import { formatMoney, getUserProfile } from '../utils';
 
 interface JoinRoomViewProps {
   inviteToken: string;
@@ -12,7 +12,6 @@ interface JoinRoomViewProps {
 
 export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoomViewProps) {
   const [room, setRoom] = useState<Room | null>(null);
-  const [participants, setParticipants] = useState<Participant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +43,6 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
         }
 
         setRoom(roomData);
-        setParticipants(parts);
         setIsLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error cargando sala');
