@@ -24,32 +24,33 @@ function App() {
   useEffect(() => {
     setProfile(getUserProfile());
 
-    // Request fullscreen on first user interaction to provide a native app feel
-    const handleFirstTouch = () => {
+    // Ensure fullscreen on user interactions to recover from keyboard breaks
+    const ensureFullscreen = (e: Event) => {
       try {
-        if (
-          document.documentElement.requestFullscreen &&
-          !document.fullscreenElement &&
-          // Only attempt fullscreen on mobile devices (simple heuristic: small screen width or touch capability)
-          window.innerWidth < 768
-        ) {
+        // If we are already in fullscreen, or it's not a small screen, do nothing
+        if (document.fullscreenElement || window.innerWidth >= 768) return;
+        
+        // If the user is tapping on an input to type, do not force fullscreen right now
+        // as forcing it can cause the keyboard to glitch in some Android browsers.
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+          return;
+        }
+
+        if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen().catch(() => {});
         }
-      } catch (e) {
-        // Ignore errors if fullscreen is not supported or blocked
+      } catch (err) {
+        // Ignore errors
       }
-      
-      // Remove listeners after first interaction
-      window.removeEventListener('click', handleFirstTouch);
-      window.removeEventListener('touchstart', handleFirstTouch);
     };
 
-    window.addEventListener('click', handleFirstTouch);
-    window.addEventListener('touchstart', handleFirstTouch, { passive: true });
+    window.addEventListener('click', ensureFullscreen);
+    window.addEventListener('touchstart', ensureFullscreen, { passive: true });
 
     return () => {
-      window.removeEventListener('click', handleFirstTouch);
-      window.removeEventListener('touchstart', handleFirstTouch);
+      window.removeEventListener('click', ensureFullscreen);
+      window.removeEventListener('touchstart', ensureFullscreen);
     };
   }, []);
 
