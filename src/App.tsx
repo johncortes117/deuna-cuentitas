@@ -28,7 +28,8 @@ function App() {
     const ensureFullscreen = (e: Event) => {
       try {
         // If we are already in fullscreen, or it's not a small screen, do nothing
-        if (document.fullscreenElement || window.innerWidth >= 768) return;
+        const isFS = document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement;
+        if (isFS || window.innerWidth >= 768) return;
         
         // If the user is tapping on an input to type, do not force fullscreen right now
         // as forcing it can cause the keyboard to glitch in some Android browsers.
@@ -37,8 +38,10 @@ function App() {
           return;
         }
 
-        if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen().catch(() => {});
+        const docEl = document.documentElement as any;
+        const requestFS = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+        if (requestFS) {
+          requestFS.call(docEl).catch(() => {});
         }
       } catch (err) {
         // Ignore errors
@@ -473,10 +476,16 @@ function FullscreenButton() {
         e.preventDefault();
         e.stopPropagation();
         try {
-          if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {});
+          const isFS = document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement;
+          
+          if (!isFS) {
+            const docEl = document.documentElement as any;
+            const requestFS = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+            if (requestFS) requestFS.call(docEl).catch(() => {});
           } else {
-            document.exitFullscreen().catch(() => {});
+            const doc = document as any;
+            const exitFS = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
+            if (exitFS) exitFS.call(doc).catch(() => {});
           }
         } catch (err) {}
       }}
