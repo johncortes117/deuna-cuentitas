@@ -492,6 +492,23 @@ export async function lendMoney(
   trackEvent('LOAN_GRANTED', roomId, lenderId, { borrowerId, amountCents });
 }
 
+/**
+ * Devuelve un mapa room_id → nombre de la sala, para dar contexto de origen
+ * a las deudas (en qué sala/comercio nació cada una).
+ */
+export async function getRoomNames(roomIds: string[]): Promise<Record<string, string>> {
+  if (roomIds.length === 0) return {};
+  const { data } = await supabase
+    .from('mitimiti_rooms')
+    .select('id, commerce_name')
+    .in('id', roomIds);
+  const map: Record<string, string> = {};
+  (data || []).forEach((r: { id: string; commerce_name: string }) => {
+    map[r.id] = r.commerce_name;
+  });
+  return map;
+}
+
 export async function getMyDebts(userId: string): Promise<Debt[]> {
   const { data, error } = await supabase
     .from('mitimiti_debts')
