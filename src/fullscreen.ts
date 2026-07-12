@@ -29,20 +29,6 @@ export function getFullscreenElement(): Element | null {
   );
 }
 
-// Surface the real reason a fullscreen request failed so we can debug on-device.
-export function reportFullscreenError(msg: string): void {
-  try {
-    window.dispatchEvent(new CustomEvent('fs-error', { detail: msg }));
-  } catch {
-    /* noop */
-  }
-}
-
-function describeError(err: any): string {
-  if (!err) return 'error desconocido';
-  return err.name ? `${err.name}: ${err.message || ''}`.trim() : String(err.message || err);
-}
-
 export function requestFullscreenOn(target: Element): void {
   const el = target as any;
   const fn =
@@ -50,17 +36,14 @@ export function requestFullscreenOn(target: Element): void {
     el.webkitRequestFullscreen ||
     el.mozRequestFullScreen ||
     el.msRequestFullscreen;
-  if (!fn) {
-    reportFullscreenError('Este navegador no soporta pantalla completa aquí (iOS Safari no lo permite fuera de video).');
-    return;
-  }
+  if (!fn) return;
   try {
     const result = fn.call(el);
     if (result && typeof result.catch === 'function') {
-      result.catch((err: any) => reportFullscreenError(describeError(err)));
+      result.catch(() => {});
     }
-  } catch (err) {
-    reportFullscreenError(describeError(err));
+  } catch {
+    // Ignore — fullscreen can be rejected by the browser (no activation, etc.)
   }
 }
 
@@ -70,12 +53,6 @@ export function requestFullscreen(): void {
 
 export function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-// Compact state snapshot for on-device debugging.
-function fsSnapshot(): string {
-  const el = getFullscreenElement();
-  return `${el ? el.tagName.toLowerCase() : 'nada'}·${window.innerHeight}/${screen.height}`;
 }
 
 export function exitFullscreen(): Promise<void> {
@@ -127,28 +104,22 @@ export function isCameraActive(): boolean {
 // Recover into fullscreen regardless of what state the document is in.
 // Best effort: with a clean state (the normal case now that we exit before
 // the camera starts) this is just a plain request; the layered fallbacks
-// remain for resilience, reporting a step trace if everything fails.
+// (exit stale state, then retry on <html>, then on <body>) remain for
+// resilience against the zombie state described above.
 export async function forceFullscreen(): Promise<void> {
   if (getFullscreenElement() && isVisuallyFullscreen()) return;
-  const steps: string[] = [fsSnapshot()];
 
   if (getFullscreenElement()) {
-    const exited = await exitFullscreenSafe(350);
-    steps.push(`exit:${exited ? 'ok' : 'colgado'}`);
+    await exitFullscreenSafe(350);
     await delay(60);
   }
 
   requestFullscreen();
   await delay(350);
 
+  // Requesting on a *different* element forces a fresh fullscreen transition
+  // even when the browser still thinks it is already fullscreen.
   if (!isVisuallyFullscreen()) {
-    steps.push(`html:no·${fsSnapshot()}`);
     requestFullscreenOn(document.body);
-    await delay(350);
-  }
-
-  if (!isVisuallyFullscreen()) {
-    steps.push(`body:no·${fsSnapshot()}`);
-    reportFullscreenError(`no se logró (${steps.join(' → ')})`);
   }
 }

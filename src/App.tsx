@@ -28,22 +28,6 @@ function App() {
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [scannedData, setScannedData] = useState<string | null>(null);
-  const [fsError, setFsError] = useState<string | null>(null);
-
-  // Show the real fullscreen failure reason (helps diagnose mobile quirks).
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    const onErr = (e: Event) => {
-      setFsError((e as CustomEvent<string>).detail);
-      clearTimeout(timer);
-      timer = setTimeout(() => setFsError(null), 8000);
-    };
-    window.addEventListener('fs-error', onErr as EventListener);
-    return () => {
-      window.removeEventListener('fs-error', onErr as EventListener);
-      clearTimeout(timer);
-    };
-  }, []);
 
   useEffect(() => {
     setProfile(getUserProfile());
@@ -129,7 +113,6 @@ function App() {
               <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
             </div>
             <FullscreenButton />
-            <FullscreenErrorToast message={fsError} />
             <MitiMitiApp />
           </div>
         </div>
@@ -150,7 +133,6 @@ function App() {
               <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
             </div>
             <FullscreenButton />
-            <FullscreenErrorToast message={fsError} />
             {/* Unmount the scanner once a QR is captured so the camera stream is
                 fully released — a live camera keeps the browser from re-entering
                 fullscreen on Android. */}
@@ -227,7 +209,6 @@ function App() {
             <div className="w-3 h-3 rounded-full bg-[#111] shadow-inner" />
           </div>
           <FullscreenButton />
-          <FullscreenErrorToast message={fsError} />
 
           {screen === 'home' && (
             <ConsumerHomeScreen onEnter={() => setScreen(profile ? 'dashboard' : 'setup')} />
@@ -260,7 +241,7 @@ function ConsumerHomeScreen({ onEnter }: { onEnter: () => void }) {
     : `******${accountNumber.slice(-4)}`;
 
   return (
-    <div className="flex flex-col flex-1 px-6 pt-16 pb-[calc(3.75rem+env(safe-area-inset-bottom))] bg-white">
+    <div className="flex flex-col flex-1 px-6 pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] bg-white">
       {/* Logo */}
       <div className="flex justify-center mb-10">
         <h1 className="text-[44px] font-black text-[#4C1D80] tracking-[-2.5px] italic">
@@ -576,16 +557,6 @@ const UserIcon = ({active}:{active:boolean}) => <svg width="24" height="24" view
 // ═══════════════════════════════════════════════════════════════
 // Fullscreen Toggle Button (For Demos)
 // ═══════════════════════════════════════════════════════════════
-// Small, auto-dismissing toast that reveals why fullscreen failed on-device.
-function FullscreenErrorToast({ message }: { message: string | null }) {
-  if (!message) return null;
-  return (
-    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[10000] max-w-[90vw] px-4 py-2 rounded-xl bg-black/85 text-white text-[12px] font-medium shadow-lg text-center pointer-events-none md:hidden">
-      Pantalla completa: {message}
-    </div>
-  );
-}
-
 function FullscreenButton() {
   return (
     <button
