@@ -3,7 +3,7 @@ import { useState } from 'react';
 interface SimulatedPaymentViewProps {
   targetName: string;
   onPayAlone: (amountStr: string) => void;
-  onPayMitiMiti: (roomName: string, amountStr: string) => void;
+  onPayMitiMiti: (roomName: string, amountStr: string) => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -11,6 +11,7 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
   const [amount, setAmount] = useState('0');
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [roomName, setRoomName] = useState(targetName);
+  const [creating, setCreating] = useState(false);
 
   const handleKey = (key: string) => {
     if (key === 'del') {
@@ -35,9 +36,15 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
     setShowRoomModal(true);
   };
 
-  const handleCreateRoom = () => {
-    if (roomName.trim()) {
-      onPayMitiMiti(roomName.trim(), amount);
+  const handleCreateRoom = async () => {
+    if (!roomName.trim() || creating) return;
+    // Mostrar estado de carga mientras se crea la sala: la vista permanece
+    // montada durante el await (el padre solo navega cuando la sala existe).
+    setCreating(true);
+    try {
+      await onPayMitiMiti(roomName.trim(), amount);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -115,7 +122,7 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
 
       {/* Modal para Nombre de Sala */}
       {showRoomModal && (
-        <div className="absolute inset-0 bg-black/60 z-50 flex items-start justify-center pt-4 px-4 animate-fadeIn" onClick={() => setShowRoomModal(false)}>
+        <div className="absolute inset-0 bg-black/60 z-50 flex items-start justify-center pt-4 px-4 animate-fadeIn" onClick={() => !creating && setShowRoomModal(false)}>
           <div className="bg-white w-full rounded-3xl p-6 shadow-2xl animate-slideDown" onClick={e => e.stopPropagation()}>
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
             <h3 className="text-[22px] font-bold text-[#1a1a1a] mb-2 text-center">Nombra tu sala</h3>
@@ -126,20 +133,28 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
               value={roomName}
               onChange={(e) => setRoomName(e.target.value)}
               placeholder="Nombre de la sala"
-              className="w-full bg-[#F8F8FA] border border-gray-100 rounded-2xl py-3 px-4 text-[16px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors mb-5"
+              disabled={creating}
+              className="w-full bg-[#F8F8FA] border border-gray-100 rounded-2xl py-3 px-4 text-[16px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors mb-5 disabled:opacity-60"
               autoFocus
             />
 
             <button
               onClick={handleCreateRoom}
-              disabled={!roomName.trim()}
-              className={`w-full py-4 rounded-[16px] text-[16px] font-bold transition-all ${
-                roomName.trim()
+              disabled={!roomName.trim() || creating}
+              className={`w-full py-4 rounded-[16px] text-[16px] font-bold transition-all flex items-center justify-center gap-2 ${
+                roomName.trim() && !creating
                   ? 'bg-[#4C1D80] text-white active:scale-[0.98]'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : creating
+                    ? 'bg-[#4C1D80]/70 text-white cursor-wait'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
-              Crear sala y Pagar
+              {creating && (
+                <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+              )}
+              {creating ? 'Creando sala…' : 'Crear sala y Pagar'}
             </button>
           </div>
         </div>

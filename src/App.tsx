@@ -171,14 +171,23 @@ function App() {
                     setScreen('dashboard');
                   }}
                   onPayMitiMiti={async (roomName, amountStr) => {
-                    setScannedData(null);
+                    // OJO: no limpiar scannedData ANTES de crear la sala.
+                    // Mientras sigamos en la pantalla 'scanner', limpiar
+                    // scannedData remonta el QRScanner (cámara incluida)
+                    // durante toda la espera de createRoom.
                     try {
                       if (!profile) return;
                       const cents = toCents(amountStr);
                       const room = await createRoom(profile.userId, profile.displayName, roomName, cents);
+                      // Cambiar pantalla y limpiar estado en el mismo lote:
+                      // así nunca hay un render intermedio en 'scanner' sin datos.
+                      setScannedData(null);
+                      setScreen('mitimiti');
                       window.location.hash = `#/mitimiti/room/${room.id}`;
                     } catch (err) {
                       console.error("Error creando sala:", err);
+                      setScannedData(null);
+                      setScreen('mitimiti');
                       window.location.hash = '#/mitimiti';
                     }
                   }}
