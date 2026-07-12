@@ -56,7 +56,10 @@ export function useRoom(roomId: string | null): UseRoomReturn {
     ? dividirMonto(room.total_cents + room.tip_cents, participants.length)[0]
     : 0;
 
-  // Debitar saldo cuando la sala se completa
+  // Debitar saldo cuando la sala se completa.
+  // El débito real considera los préstamos de la sala: si te prestaron,
+  // pagas tu parte MENOS lo prestado (esa parte la cubre el prestamista y
+  // queda como deuda); si prestaste, pagas tu parte MÁS lo que prestaste.
   useEffect(() => {
     if (room?.status === 'completed' && myParticipant) {
       const storageKey = `debited_room_${room.id}`;
@@ -64,14 +67,21 @@ export function useRoom(roomId: string | null): UseRoomReturn {
         localStorage.setItem(storageKey, 'true');
         const currentProfile = getUserProfile();
         if (currentProfile) {
+          const borrowed = debts
+            .filter(d => d.debtor_id === userId)
+            .reduce((acc, d) => acc + d.amount_cents, 0);
+          const lent = debts
+            .filter(d => d.creditor_id === userId)
+            .reduce((acc, d) => acc + d.amount_cents, 0);
+          const netDebit = Math.max(0, (myParticipant.amount_cents || 0) - borrowed + lent);
           saveUserProfile({
             ...currentProfile,
-            balanceCents: currentProfile.balanceCents - (myParticipant.amount_cents || 0)
+            balanceCents: Math.max(0, currentProfile.balanceCents - netDebit),
           });
         }
       }
     }
-  }, [room?.status, myParticipant, room?.id]);
+  }, [room?.status, myParticipant, room?.id, debts, userId]);
 
   // Cargar datos iniciales + suscribirse a Realtime
   useEffect(() => {

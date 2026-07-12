@@ -308,16 +308,9 @@ export async function lockRoom(
       .eq('id', update.id);
   }
 
-  // Auto-confirmar al host
-  await supabase
-    .from('mitimiti_participants')
-    .update({
-      confirmation_status: 'confirmed',
-      confirmed_at: new Date().toISOString(),
-    })
-    .eq('room_id', roomId)
-    .eq('user_id', hostId);
-
+  // NOTA: el host ya NO se auto-confirma. Debe aceptar su parte como
+  // cualquier participante — así también pasa por el chequeo de saldo y
+  // puede pedir un préstamo si no le alcanza.
   await updateRoomStatus(roomId, 'locked', {
     locked_at: new Date().toISOString(),
     split_mode: splitMode,

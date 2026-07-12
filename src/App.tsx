@@ -106,6 +106,15 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHash);
   }, [profile, screen]);
 
+  // Re-leer el perfil al volver al dashboard: el saldo puede haber cambiado
+  // dentro de MitiMiti (débito al pagar una sala, pagar una deuda, etc.) y
+  // este estado local quedaba desactualizado hasta recargar la página.
+  useEffect(() => {
+    if (screen === 'dashboard') {
+      setProfile(getUserProfile());
+    }
+  }, [screen]);
+
   // Fullscreen components (No iPhone frame for MitiMiti and Scanner)
   if (screen === 'mitimiti') {
     return (

@@ -373,8 +373,8 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
               </p>
             )}
 
-            {/* View para el deudor */}
-            {!isHost && myParticipant?.confirmation_status === 'requesting_loan' && (
+            {/* View para el deudor (host incluido) */}
+            {myParticipant?.confirmation_status === 'requesting_loan' && (
               <div className="w-full mt-2">
                 <LoanWaitingView 
                   participant={myParticipant} 
@@ -422,8 +422,8 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
           </button>
         )}
 
-        {/* HOST: Locked → "Esperando..." */}
-        {isHost && isLocked && (
+        {/* HOST: Locked + ya confirmó → "Esperando..." */}
+        {isHost && isLocked && hasConfirmed && (
           <button
             disabled
             className="w-full py-4 rounded-[14px] text-[16px] font-bold bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -451,8 +451,9 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
           </button>
         )}
 
-        {/* PARTICIPANTE: Locked + pendiente → "Acepto" */}
-        {!isHost && isLocked && !hasConfirmed && myParticipant?.confirmation_status !== 'requesting_loan' && myParticipant && (
+        {/* TODOS (host incluido): Locked + pendiente → "Acepto" con chequeo
+            de saldo. El host también puede quedarse corto y pedir préstamo. */}
+        {isLocked && !hasConfirmed && myParticipant?.confirmation_status !== 'requesting_loan' && myParticipant && (
           <button
             onClick={() => {
               const myAmount = myParticipant.amount_cents || 0;
