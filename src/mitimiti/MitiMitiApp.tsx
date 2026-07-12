@@ -116,7 +116,9 @@ export default function MitiMitiApp() {
       {route.page === 'debts' && (
         <DebtsView
           onBack={() => {
-            window.location.hash = '#/mitimiti/create';
+            // Volver al inicio: la vista de deudas se abre desde el banner del
+            // dashboard, así que "atrás" debe regresar ahí, no al escáner.
+            window.location.hash = '#/';
           }}
         />
       )}

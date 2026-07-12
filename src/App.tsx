@@ -6,6 +6,7 @@ import { getActiveRoomForUser } from './mitimiti/supabase';
 import QRScanner from './mitimiti/components/QRScanner';
 import SimulatedPaymentView from './mitimiti/components/SimulatedPaymentView';
 import { createRoom } from './mitimiti/supabase';
+import { useDebts } from './mitimiti/useDebts';
 import {
   getFullscreenElement,
   isVisuallyFullscreen,
@@ -370,6 +371,12 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
   const [bottomTab, setBottomTab] = useState<BottomTab>('inicio');
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
 
+  // Deudas MitiMiti pendientes: hay que poder verlas desde el inicio, sobre
+  // todo después de pagar una sala con préstamo (si no, quedan invisibles).
+  const { debtsIOwe, debtsOwedToMe } = useDebts();
+  const totalOwe = debtsIOwe.reduce((acc, d) => acc + d.amount_cents, 0);
+  const totalOwed = debtsOwedToMe.reduce((acc, d) => acc + d.amount_cents, 0);
+
   // Detectar si el usuario tiene una sala MitiMiti activa: si salió de la
   // sala con el botón '<' necesita una forma clara de volver a ella.
   useEffect(() => {
@@ -444,6 +451,51 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
           </svg>
         </div>
       )}
+
+      {/* Banner Deudas MitiMiti — acceso a la vista de deudas desde el inicio */}
+      {debtsIOwe.length > 0 ? (
+        <button
+          onClick={() => { window.location.hash = '#/mitimiti/debts'; }}
+          className="mx-5 mb-4 p-4 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform text-left"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+              <span className="text-[20px]">🧾</span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-orange-600 uppercase tracking-wide mb-0.5">Deudas por pagar</p>
+              <p className="text-[15px] font-bold text-[#1a1a1a] leading-tight">Debes {formatMoney(totalOwe)}</p>
+              <p className="text-[12px] text-gray-500">
+                {debtsIOwe.length} {debtsIOwe.length === 1 ? 'préstamo' : 'préstamos'} · Toca para pagar
+              </p>
+            </div>
+          </div>
+          <svg className="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EA7B1C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      ) : debtsOwedToMe.length > 0 ? (
+        <button
+          onClick={() => { window.location.hash = '#/mitimiti/debts'; }}
+          className="mx-5 mb-4 p-4 rounded-2xl bg-[#EAF3DE] border border-[#3B6D11]/15 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform text-left"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-full bg-[#3B6D11]/10 flex items-center justify-center shrink-0">
+              <span className="text-[20px]">💰</span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-[#3B6D11] uppercase tracking-wide mb-0.5">Te deben</p>
+              <p className="text-[15px] font-bold text-[#1a1a1a] leading-tight">{formatMoney(totalOwed)} a favor</p>
+              <p className="text-[12px] text-gray-500">
+                {debtsOwedToMe.length} {debtsOwedToMe.length === 1 ? 'persona' : 'personas'} · Toca para ver
+              </p>
+            </div>
+          </div>
+          <svg className="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      ) : null}
 
       {/* Banner Gastos */}
       <div className="bg-[#F6F0FE] px-5 py-3 flex items-center gap-2 mb-4 cursor-pointer">
