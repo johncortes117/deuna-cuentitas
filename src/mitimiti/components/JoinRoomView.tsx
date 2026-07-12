@@ -158,7 +158,7 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
       </div>
 
       {/* CTA */}
-      <div className="px-6 pb-4 shrink-0">
+      <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shrink-0">
         <button
           onClick={handleJoin}
           disabled={isJoining || !profile}

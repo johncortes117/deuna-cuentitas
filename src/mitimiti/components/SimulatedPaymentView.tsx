@@ -93,7 +93,7 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
       </div>
 
       {/* Acciones */}
-      <div className="px-5 pb-5 shrink-0 flex gap-3">
+      <div className="px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] shrink-0 flex gap-3">
         <button
           onClick={() => onPayAlone(amount)}
           disabled={!hasAmount}

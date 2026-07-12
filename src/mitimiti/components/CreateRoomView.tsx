@@ -129,7 +129,7 @@ export default function CreateRoomView({
       </div>
 
       {/* CTA */}
-      <div className="px-5 pb-4 shrink-0">
+      <div className="px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shrink-0">
         <button
           onClick={() => onCreateRoom(commerceName, amount)}
           disabled={!hasAmount || !hasName}

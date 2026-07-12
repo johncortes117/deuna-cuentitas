@@ -260,7 +260,7 @@ function ConsumerHomeScreen({ onEnter }: { onEnter: () => void }) {
     : `******${accountNumber.slice(-4)}`;
 
   return (
-    <div className="flex flex-col flex-1 px-6 pt-16 pb-10 bg-white">
+    <div className="flex flex-col flex-1 px-6 pt-16 pb-[calc(3rem+env(safe-area-inset-bottom))] bg-white">
       {/* Logo */}
       <div className="flex justify-center mb-10">
         <h1 className="text-[44px] font-black text-[#4C1D80] tracking-[-2.5px] italic">
@@ -326,7 +326,7 @@ function ConsumerHomeScreen({ onEnter }: { onEnter: () => void }) {
         onClick={onEnter}
         className="w-full bg-[#4C1D80] text-white py-[18px] rounded-[20px] text-[18px] font-bold active:scale-[0.98] transition-all tracking-wide"
       >
-        Ingresar a Deuna
+        Ingresar
       </button>
     </div>
   );
@@ -345,7 +345,7 @@ function SetupScreen({ onComplete }: { onComplete: (profile: UserProfile) => voi
   };
 
   return (
-    <div className="flex flex-col flex-1 px-6 pt-24 pb-10 bg-white">
+    <div className="flex flex-col flex-1 px-6 pt-24 pb-[calc(3rem+env(safe-area-inset-bottom))] bg-white">
       <div className="flex flex-col items-center mb-10">
         <h1 className="text-[44px] font-black text-[#4C1D80] leading-none tracking-[-2px] italic">
           deuna!

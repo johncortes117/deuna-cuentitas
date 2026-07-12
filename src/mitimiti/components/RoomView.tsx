@@ -414,7 +414,7 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
       )}
 
       {/* CTA (botón de acción principal) */}
-      <div className="px-5 pb-4 shrink-0">
+      <div className="px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shrink-0">
         {/* HOST: Waiting → "Listo" */}
         {isHost && isWaiting && (
           <button
