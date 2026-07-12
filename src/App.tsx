@@ -260,7 +260,7 @@ function ConsumerHomeScreen({ onEnter }: { onEnter: () => void }) {
     : `******${accountNumber.slice(-4)}`;
 
   return (
-    <div className="flex flex-col flex-1 px-6 pt-16 pb-[calc(3rem+env(safe-area-inset-bottom))] bg-white">
+    <div className="flex flex-col flex-1 px-6 pt-16 pb-[calc(3.75rem+env(safe-area-inset-bottom))] bg-white">
       {/* Logo */}
       <div className="flex justify-center mb-10">
         <h1 className="text-[44px] font-black text-[#4C1D80] tracking-[-2.5px] italic">

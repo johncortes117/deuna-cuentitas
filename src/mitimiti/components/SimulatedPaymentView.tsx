@@ -51,7 +51,7 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
   return (
     <div className="flex flex-col flex-1 h-full bg-white absolute inset-0 z-50">
       {/* Header */}
-      <div className="flex items-center px-5 pt-8 pb-3 shrink-0 border-b border-gray-100">
+      <div className="flex items-center px-5 pt-14 pb-3 shrink-0 border-b border-gray-100">
         <button onClick={onClose} className="mr-3">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
@@ -64,22 +64,22 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
       </div>
 
       {/* Monto */}
-      <div className="text-center mt-4 mb-4 shrink-0">
+      <div className="text-center mt-3 mb-2 shrink-0">
         <p className="text-[#4C1D80] text-[13px] font-medium mb-1">
           Ingresa el valor a pagar
         </p>
-        <p className="text-[54px] font-bold text-[#1a1a1a] leading-none tracking-tight">
+        <p className="text-[46px] font-bold text-[#1a1a1a] leading-none tracking-tight">
           $ {amount}
         </p>
       </div>
 
       {/* Teclado numérico */}
-      <div className="grid grid-cols-3 gap-y-2 px-5 flex-1 content-center">
+      <div className="grid grid-cols-3 gap-y-1 px-5 flex-1 content-center">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', 'del'].map(key => (
           <button
             key={key}
             onClick={() => handleKey(key)}
-            className="flex items-center justify-center py-3 rounded-xl text-[28px] font-semibold text-[#4C1D80] active:bg-gray-100 transition-colors"
+            className="flex items-center justify-center py-2.5 rounded-xl text-[28px] font-semibold text-[#4C1D80] active:bg-gray-100 transition-colors"
           >
             {key === 'del' ? (
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4C1D80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -93,7 +93,7 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
       </div>
 
       {/* Acciones */}
-      <div className="px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] shrink-0 flex gap-3">
+      <div className="px-5 pt-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] shrink-0 flex gap-3">
         <button
           onClick={() => onPayAlone(amount)}
           disabled={!hasAmount}
