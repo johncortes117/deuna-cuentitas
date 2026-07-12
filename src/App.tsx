@@ -241,16 +241,16 @@ function ConsumerHomeScreen({ onEnter }: { onEnter: () => void }) {
     : `******${accountNumber.slice(-4)}`;
 
   return (
-    <div className="flex flex-col flex-1 px-6 pt-16 pb-[calc(5rem+env(safe-area-inset-bottom))] bg-white">
+    <div className="flex flex-col flex-1 px-6 pt-10 pb-[calc(3rem+env(safe-area-inset-bottom))] bg-white">
       {/* Logo */}
-      <div className="flex justify-center mb-10">
+      <div className="flex justify-center mb-6">
         <h1 className="text-[44px] font-black text-[#4C1D80] tracking-[-2.5px] italic">
           deuna!
         </h1>
       </div>
 
       {/* QR Code central */}
-      <div className="flex justify-center mb-6">
+      <div className="flex justify-center mb-4">
         <div className="relative p-6">
           {/* Esquinas moradas */}
           <div className="absolute top-0 left-0 w-8 h-8 border-t-[4px] border-l-[4px] border-[#4C1D80]" />
@@ -259,22 +259,22 @@ function ConsumerHomeScreen({ onEnter }: { onEnter: () => void }) {
           <div className="absolute bottom-0 right-0 w-8 h-8 border-b-[4px] border-r-[4px] border-[#4C1D80]" />
           
           <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://deuna.com/pay&color=000000&bgcolor=ffffff&margin=0"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https://deuna.com/pay&color=000000&bgcolor=ffffff&margin=0"
             alt="QR Code"
-            className="w-[200px] h-[200px]"
+            className="w-[160px] h-[160px]"
           />
           
           {/* Círculo central con d! */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="bg-white rounded-full w-14 h-14 flex items-center justify-center shadow-[0_0_0_4px_white]">
-              <span className="text-[#2FD9A9] font-black text-2xl italic tracking-tighter">d!</span>
+            <div className="bg-white rounded-full w-12 h-12 flex items-center justify-center shadow-[0_0_0_4px_white]">
+              <span className="text-[#2FD9A9] font-black text-xl italic tracking-tighter">d!</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Nro de cuenta */}
-      <div className="text-center mb-16">
+      <div className="text-center mb-8">
         <p className="text-gray-500 text-[15px] mb-1">Usa este QR o Nro de cuenta para cobrar</p>
         <div className="flex items-center justify-center gap-2">
           <span className="text-[#1a1a1a] text-[18px]">
@@ -287,18 +287,18 @@ function ConsumerHomeScreen({ onEnter }: { onEnter: () => void }) {
       </div>
 
       {/* Botones secundarios */}
-      <div className="flex justify-center gap-12 mb-auto">
-        <button className="flex flex-col items-center gap-3">
-          <div className="w-[72px] h-[72px] bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center justify-center">
+      <div className="flex justify-center gap-8 mb-auto">
+        <button className="flex flex-col items-center gap-2">
+          <div className="w-[60px] h-[60px] bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center justify-center">
             <TrainIcon />
           </div>
-          <span className="text-[14px] text-gray-700 font-medium">Metro UIO</span>
+          <span className="text-[13px] text-gray-700 font-medium">Metro UIO</span>
         </button>
-        <button className="flex flex-col items-center gap-3">
-          <div className="w-[72px] h-[72px] bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center justify-center text-[#4C1D80]">
-            <QrSmallIcon size={32} />
+        <button className="flex flex-col items-center gap-2">
+          <div className="w-[60px] h-[60px] bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center justify-center text-[#4C1D80]">
+            <QrSmallIcon size={28} />
           </div>
-          <span className="text-[14px] text-gray-700 font-medium">Escanear QR</span>
+          <span className="text-[13px] text-gray-700 font-medium">Escanear QR</span>
         </button>
       </div>
 
