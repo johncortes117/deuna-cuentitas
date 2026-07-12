@@ -180,6 +180,14 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
   const roomDebts = debtsIOwe.filter(d => participants.some(p => p.user_id === d.creditor_id));
   const activeRoomDebt = roomDebts.find(d => !dismissedDebts.has(d.id));
 
+  // Cuánto puedo prestar de verdad: mi saldo, menos mi propia parte, menos
+  // lo que YA presté en esta sala. Nunca debo comprometer mi parte.
+  const myShareCents = myParticipant?.amount_cents || 0;
+  const myLentInRoom = debts
+    .filter(d => d.creditor_id === userId)
+    .reduce((acc, d) => acc + d.amount_cents, 0);
+  const mySpareCents = Math.max(0, balance - myShareCents - myLentInRoom);
+
   return (
     <div className="flex flex-col flex-1">
       {/* Header */}
@@ -342,7 +350,7 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
                   {p.confirmation_status === 'requesting_loan' && p.user_id !== userId && (
                     <LoanRequestCard
                       participant={p}
-                      myBalance={balance}
+                      spareCents={mySpareCents}
                       onLendMoney={(amount) => lendMoney(p.user_id, p.display_name, amount)}
                     />
                   )}
