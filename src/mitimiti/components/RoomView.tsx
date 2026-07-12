@@ -50,6 +50,7 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
   const [isInsufficientFundsOpen, setIsInsufficientFundsOpen] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [dismissedDebts, setDismissedDebts] = useState<Set<string>>(new Set());
+  const [expiredLocally, setExpiredLocally] = useState(false);
 
   const profile = getUserProfile();
   const userId = profile?.userId || '';
@@ -72,6 +73,12 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
   }, [room?.status, room?.id, userId]);
 
   const handleExpired = useCallback(async () => {
+    // Marcar expiración localmente: si el host ya no está en la sala nadie
+    // ejecuta el cancel en la BD, y sin esto los participantes quedaban
+    // atrapados viendo el timer en 0:00 en una sala "activa" para siempre.
+    if (room?.status === 'waiting') {
+      setExpiredLocally(true);
+    }
     if (isHost && room?.status === 'waiting') {
       await cancelRoom();
     }
@@ -140,7 +147,7 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
     );
   }
 
-  if (room.status === 'cancelled') {
+  if (room.status === 'cancelled' || (room.status === 'waiting' && expiredLocally)) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 px-6">
         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">

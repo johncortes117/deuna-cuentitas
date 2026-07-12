@@ -104,7 +104,7 @@ export function useRoom(roomId: string | null): UseRoomReturn {
         setIsLoading(false);
 
         // Suscribirse a cambios en tiempo real
-        unsubRef.current = subscribeToRoom(roomId!, {
+        const unsub = subscribeToRoom(roomId!, {
           onRoomChange: (updatedRoom) => {
             if (mounted) setRoom(updatedRoom);
           },
@@ -115,6 +115,13 @@ export function useRoom(roomId: string | null): UseRoomReturn {
             if (mounted) setDebts(updatedDebts);
           }
         });
+        // Si nos desmontamos mientras cargaba, cerrar el canal de inmediato
+        // (antes quedaba suscrito para siempre — fuga de canales realtime).
+        if (!mounted) {
+          unsub();
+        } else {
+          unsubRef.current = unsub;
+        }
       } catch (err) {
         if (mounted) {
           setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -132,6 +139,31 @@ export function useRoom(roomId: string | null): UseRoomReturn {
         unsubRef.current = null;
       }
     };
+  }, [roomId]);
+
+  // Polling de respaldo: si algún evento realtime se pierde (canal caído,
+  // reconexión, etc.), esto re-sincroniza sala y participantes cada 5s.
+  // Garantiza que salidas/entradas/cambios de estado SIEMPRE se reflejen.
+  useEffect(() => {
+    if (!roomId) return;
+    let inFlight = false;
+    const interval = setInterval(async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const [roomData, participantsData] = await Promise.all([
+          getRoom(roomId),
+          getParticipants(roomId),
+        ]);
+        if (roomData) setRoom(roomData);
+        setParticipants(participantsData);
+      } catch {
+        // Sin conexión momentánea: se reintenta en el próximo tick.
+      } finally {
+        inFlight = false;
+      }
+    }, 5000);
+    return () => clearInterval(interval);
   }, [roomId]);
 
   const lockRoom = useCallback(async (splitMode: 'equal' | 'custom' = 'equal', customAmounts?: {userId: string, amountCents: number}[]) => {

@@ -100,10 +100,17 @@ export async function getActiveRoomForUser(userId: string): Promise<Room | null>
     .in('id', roomIds)
     .in('status', ['waiting', 'locked', 'confirming'])
     .order('created_at', { ascending: false })
-    .limit(1);
+    .limit(5);
 
   if (roomsError || !rooms || rooms.length === 0) return null;
-  return rooms[0] as Room;
+
+  // Ignorar salas 'waiting' cuyo timer ya expiró: si el host se fue sin
+  // cancelar quedan huérfanas en la BD y no tiene sentido "volver" a ellas.
+  const now = Date.now();
+  const active = (rooms as Room[]).find(
+    r => r.status !== 'waiting' || new Date(r.expires_at).getTime() > now,
+  );
+  return active || null;
 }
 
 /**
@@ -552,6 +559,23 @@ export function subscribeToRoom(
         schema: 'public',
         table: 'mitimiti_participants',
         filter: `room_id=eq.${roomId}`,
+      },
+      async () => {
+        const participants = await getParticipants(roomId);
+        callbacks.onParticipantsChange(participants);
+      },
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'mitimiti_participants',
+        // SIN filter, a propósito: Supabase Realtime NO puede filtrar
+        // eventos DELETE (el registro borrado solo trae su primary key,
+        // no room_id), así que el listener filtrado de arriba nunca se
+        // entera cuando alguien sale de la sala. Escuchamos todos los
+        // DELETE de la tabla y re-consultamos nuestra sala.
       },
       async () => {
         const participants = await getParticipants(roomId);

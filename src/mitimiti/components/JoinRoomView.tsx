@@ -1,5 +1,5 @@
 // ─── JoinRoomView: Unirse a una sala MitiMiti ────────────────
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Room } from '../types';
 import { getRoomByToken, getParticipants, joinRoom } from '../supabase';
 import { formatMoney, getUserProfile } from '../utils';
@@ -16,7 +16,13 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const profile = getUserProfile();
+  // Perfil estable: getUserProfile() crea un objeto NUEVO en cada render;
+  // tenerlo como dependencia del efecto causaba un loop infinito de fetches.
+  const [profile] = useState(() => getUserProfile());
+  const onJoinedRef = useRef(onJoined);
+  useEffect(() => {
+    onJoinedRef.current = onJoined;
+  }, [onJoined]);
 
   useEffect(() => {
     async function load() {
@@ -38,7 +44,7 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
 
         // Si ya estoy en la sala, ir directo a la room view
         if (profile && parts.some(p => p.user_id === profile.userId)) {
-          onJoined(roomData.id);
+          onJoinedRef.current(roomData.id);
           return;
         }
 
@@ -51,7 +57,7 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
     }
 
     load();
-  }, [inviteToken, profile, onJoined]);
+  }, [inviteToken, profile]);
 
   const handleJoin = async () => {
     if (!profile || !room) return;

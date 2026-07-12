@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import MitiMitiApp from './mitimiti/MitiMitiApp';
 import { getUserProfile, createUserProfile, saveUserProfile, decodeQR, formatMoney, toCents } from './mitimiti/utils';
-import type { UserProfile } from './mitimiti/types';
+import type { UserProfile, Room } from './mitimiti/types';
+import { getActiveRoomForUser } from './mitimiti/supabase';
 import QRScanner from './mitimiti/components/QRScanner';
 import SimulatedPaymentView from './mitimiti/components/SimulatedPaymentView';
 import { createRoom } from './mitimiti/supabase';
@@ -377,6 +378,27 @@ function SetupScreen({ onComplete }: { onComplete: (profile: UserProfile) => voi
 function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: UserProfile, onScanQR: () => void, onUpdateProfile: (p: UserProfile) => void }) {
   const [showSaldo, setShowSaldo] = useState(true);
   const [bottomTab, setBottomTab] = useState<BottomTab>('inicio');
+  const [activeRoom, setActiveRoom] = useState<Room | null>(null);
+
+  // Detectar si el usuario tiene una sala MitiMiti activa: si salió de la
+  // sala con el botón '<' necesita una forma clara de volver a ella.
+  useEffect(() => {
+    let mounted = true;
+    const check = async () => {
+      try {
+        const room = await getActiveRoomForUser(profile.userId);
+        if (mounted) setActiveRoom(room);
+      } catch {
+        // Sin conexión momentánea: se reintenta en el próximo tick.
+      }
+    };
+    check();
+    const interval = setInterval(check, 8000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [profile.userId]);
 
   const gridItems = [
     { label: 'Transferir', icon: <TransferIcon /> },
@@ -409,6 +431,29 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
           <ChevronRightIcon />
         </div>
       </div>
+
+      {/* Banner Sala MitiMiti Activa (para volver a la sala) */}
+      {activeRoom && (
+        <div
+          onClick={() => { window.location.hash = `#/mitimiti/room/${activeRoom.id}`; }}
+          className="mx-5 mb-4 p-4 rounded-2xl bg-[#F8F5FB] border border-[#EBE3F5] flex items-center justify-between shadow-sm cursor-pointer active:scale-[0.98] transition-transform"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-full bg-[#4C1D80]/10 flex items-center justify-center relative shrink-0">
+              <span className="text-[20px]">🤝</span>
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#2FD9A9] rounded-full border-2 border-white animate-pulse" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-[#4C1D80] uppercase tracking-wide mb-0.5">Sala activa</p>
+              <p className="text-[15px] font-bold text-[#1a1a1a] leading-tight truncate">{activeRoom.commerce_name}</p>
+              <p className="text-[12px] text-gray-500">Toca para volver a la sala</p>
+            </div>
+          </div>
+          <svg className="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4C1D80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </div>
+      )}
 
       {/* Banner Gastos */}
       <div className="bg-[#F6F0FE] px-5 py-3 flex items-center gap-2 mb-4 cursor-pointer">
