@@ -13,7 +13,7 @@ import './MitiMiti.css';
 // ─── MitiMitiApp (Router principal) ──────────────────────────
 export default function MitiMitiApp() {
   const [profile] = useState<UserProfile | null>(() => getUserProfile());
-  const [route, setRoute] = useState<MitiMitiRoute>({ page: 'scan_before_create' });
+  const [route, setRoute] = useState<MitiMitiRoute>({ page: 'create' });
 
   // Escuchar hash changes para deep links
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function MitiMitiApp() {
       } else if (hash === '#/mitimiti/debts') {
         setRoute({ page: 'debts' });
       } else if (hash === '#/mitimiti/create' || hash === '#/mitimiti') {
-        setRoute({ page: 'scan_before_create' });
+        setRoute({ page: 'create' });
       }
     }
 

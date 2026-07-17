@@ -22,6 +22,7 @@ export default function CreateRoomView({
   const [commerceName, setCommerceName] = useState(initialCommerceName);
   const [amount, setAmount] = useState(initialAmount);
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
+  const [showRoomModal, setShowRoomModal] = useState(false);
   const { debtsIOwe } = useDebts();
 
   useEffect(() => {
@@ -53,7 +54,6 @@ export default function CreateRoomView({
   };
 
   const hasAmount = amount !== '0' && amount !== '';
-  const hasName = commerceName.trim() !== '';
 
   return (
     <div className="flex flex-col flex-1">
@@ -88,17 +88,6 @@ export default function CreateRoomView({
         </div>
       )}
 
-      {/* Input nombre */}
-      <div className="px-5 mb-2 shrink-0">
-        <input
-          type="text"
-          placeholder="Nombre (ej. Almuerzo equipo)"
-          value={commerceName}
-          onChange={e => setCommerceName(e.target.value)}
-          className="w-full bg-[#F8F8FA] border border-gray-100 rounded-2xl py-3.5 px-4 text-[14px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors placeholder:text-gray-400"
-        />
-      </div>
-
       {/* Monto */}
       <div className="text-center mt-3 mb-3 shrink-0">
         <p className="text-[#4C1D80] text-[13px] font-medium mb-1">
@@ -131,15 +120,15 @@ export default function CreateRoomView({
       {/* CTA */}
       <div className="px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shrink-0">
         <button
-          onClick={() => onCreateRoom(commerceName, amount)}
-          disabled={!hasAmount || !hasName}
+          onClick={() => setShowRoomModal(true)}
+          disabled={!hasAmount}
           className={`w-full py-4 rounded-[14px] text-[16px] font-bold transition-all ${
-            hasAmount && hasName
+            hasAmount
               ? 'bg-[#4C1D80] text-white active:scale-[0.98]'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
-          Crear sala
+          Continuar
         </button>
         
         {debtsIOwe.length > 0 && (
@@ -161,6 +150,38 @@ export default function CreateRoomView({
           </button>
         )}
       </div>
+
+      {/* Modal para Nombre de Sala */}
+      {showRoomModal && (
+        <div className="absolute inset-0 bg-black/60 z-50 flex items-start justify-center pt-4 px-4 animate-fadeIn" onClick={() => setShowRoomModal(false)}>
+          <div className="bg-white w-full rounded-3xl p-6 shadow-2xl animate-slideDown" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
+            <h3 className="text-[22px] font-bold text-[#1a1a1a] mb-2 text-center">Nombra tu sala</h3>
+            <p className="text-[15px] text-gray-500 mb-6 text-center">Para crear la sala de pago grupal, ponle un nombre (ej. Almuerzo)</p>
+            
+            <input
+              type="text"
+              value={commerceName}
+              onChange={(e) => setCommerceName(e.target.value)}
+              placeholder="Nombre (ej. Almuerzo equipo)"
+              className="w-full bg-[#F8F8FA] border border-gray-100 rounded-2xl py-3 px-4 text-[16px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors mb-5"
+              autoFocus
+            />
+
+            <button
+              onClick={() => onCreateRoom(commerceName, amount)}
+              disabled={!commerceName.trim()}
+              className={`w-full py-4 rounded-[16px] text-[16px] font-bold transition-all ${
+                commerceName.trim()
+                  ? 'bg-[#4C1D80] text-white active:scale-[0.98]'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              Crear sala
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
