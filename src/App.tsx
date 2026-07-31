@@ -399,6 +399,7 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
 
   const gridItems = [
     { label: 'Transferir', icon: <TransferIcon /> },
+    { label: 'MitiMiti', icon: <MitiIcon /> },
     { label: 'Transferir a\notro banco', icon: <BankIcon /> },
     { label: 'Recargar', icon: <TopUpIcon /> },
     { label: 'Cobrar', icon: <ReceiveIcon /> },
@@ -408,7 +409,6 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
     { label: 'Metro de\nQuito', icon: <TrainIconSmall /> },
     { label: 'Deuna\nJóvenes', icon: <YouthIcon /> },
     { label: 'Invita y\nGana', icon: <GiftIcon /> },
-    { label: 'MitiMiti', icon: <MitiIcon /> },
   ];
 
   return (
