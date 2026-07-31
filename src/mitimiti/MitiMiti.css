@@ -244,6 +244,48 @@
   padding: 24px 20px 32px;
 }
 
+/* ─── Chips de nombres sugeridos para la sala ─────────────── */
+
+.mitimiti-chips-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mitimiti-chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+.mitimiti-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid #E7E5EC;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.mitimiti-chip:active {
+  transform: scale(0.95);
+}
+
+.mitimiti-chip.active {
+  background: #F3EDFB;
+  border-color: #4C1D80;
+  color: #4C1D80;
+}
+
 /* ─── Toggle switch for QR/Participants ──────────────────── */
 
 .mitimiti-toggle-container {

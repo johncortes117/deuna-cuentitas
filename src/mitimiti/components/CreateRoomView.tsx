@@ -4,6 +4,19 @@ import { getActiveRoomForUser } from '../supabase';
 import { getUserProfile } from '../utils';
 import type { Room } from '../types';
 
+// Nombres sugeridos para la sala: cubren los casos más comunes de un pago
+// compartido para que el usuario no tenga que escribir nada.
+const ROOM_NAME_SUGGESTIONS = [
+  { emoji: '🍔', label: 'Almuerzo' },
+  { emoji: '🍕', label: 'Pizza' },
+  { emoji: '🚕', label: 'Taxi' },
+  { emoji: '🎂', label: 'Cumpleaños' },
+  { emoji: '☕', label: 'Café' },
+  { emoji: '🎉', label: 'Salida' },
+  { emoji: '🛒', label: 'Mercado' },
+  { emoji: '🎬', label: 'Cine' },
+];
+
 interface CreateRoomViewProps {
   initialCommerceName?: string;
   initialAmount?: string; // "48,00"
@@ -54,6 +67,11 @@ export default function CreateRoomView({
   };
 
   const hasAmount = amount !== '0' && amount !== '';
+
+  // Tocar un chip llena el nombre; volver a tocarlo lo limpia.
+  const handleSuggestion = (label: string) => {
+    setCommerceName(prev => (prev.trim() === label ? '' : label));
+  };
 
   return (
     <div className="flex flex-col flex-1">
@@ -157,16 +175,31 @@ export default function CreateRoomView({
           <div className="bg-white w-full rounded-3xl p-6 shadow-2xl animate-slideDown" onClick={e => e.stopPropagation()}>
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
             <h3 className="text-[22px] font-bold text-[#1a1a1a] mb-2 text-center">Nombra tu sala</h3>
-            <p className="text-[15px] text-gray-500 mb-6 text-center">Para crear la sala de pago grupal, ponle un nombre (ej. Almuerzo)</p>
-            
+            <p className="text-[15px] text-gray-500 mb-5 text-center">Elige una sugerencia o escribe el nombre de tu sala</p>
+
             <input
               type="text"
               value={commerceName}
               onChange={(e) => setCommerceName(e.target.value)}
               placeholder="Nombre (ej. Almuerzo equipo)"
-              className="w-full bg-[#F8F8FA] border border-gray-100 rounded-2xl py-3 px-4 text-[16px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors mb-5"
+              className="w-full bg-[#F8F8FA] border border-gray-100 rounded-2xl py-3 px-4 text-[16px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors mb-4"
               autoFocus
             />
+
+            {/* Chips de nombres sugeridos (scroll horizontal, estilo Deuna) */}
+            <div className="mitimiti-chips-row -mx-6 px-6 mb-5">
+              {ROOM_NAME_SUGGESTIONS.map(({ emoji, label }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => handleSuggestion(label)}
+                  className={`mitimiti-chip ${commerceName.trim() === label ? 'active' : ''}`}
+                >
+                  <span className="text-[16px] leading-none">{emoji}</span>
+                  {label}
+                </button>
+              ))}
+            </div>
 
             <button
               onClick={() => onCreateRoom(commerceName, amount)}
