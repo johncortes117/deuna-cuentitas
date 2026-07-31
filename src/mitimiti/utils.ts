@@ -131,10 +131,10 @@ export function saveUserProfile(profile: UserProfile): void {
 }
 
 /**
- * Genera un saldo simulado aleatorio entre $2.00 y $10.00 (200 - 1000 centavos)
+ * Genera un saldo simulado aleatorio entre $2.00 y $6.00 (200 - 600 centavos)
  */
 export function generateRandomBalance(): number {
-  return 200 + Math.floor(Math.random() * 801);
+  return 200 + Math.floor(Math.random() * 401);
 }
 
 /**

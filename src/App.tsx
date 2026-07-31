@@ -506,8 +506,7 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
       {/* Recargar Card */}
       <div 
         onClick={() => {
-          const addedAmount = Math.floor(Math.random() * 401) + 200;
-          const newProfile = { ...profile, balanceCents: profile.balanceCents + addedAmount };
+          const newProfile = { ...profile, balanceCents: profile.balanceCents + 1000 };
           saveUserProfile(newProfile);
           onUpdateProfile(newProfile);
         }}
@@ -518,7 +517,7 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
           <p className="text-[#1a1a1a] font-bold text-[14px]">Principal ******2213</p>
         </div>
         <button className="border border-gray-200 rounded-full py-2 px-4 flex items-center gap-2 pointer-events-none">
-          <span className="text-[#4C1D80] font-bold text-[15px]">Aleatorio</span>
+          <span className="text-[#4C1D80] font-bold text-[15px]">Recargar $10</span>
           <span className="text-gray-300">»</span>
           <span className="text-[#4C1D80] font-black italic text-[16px]">d!</span>
         </button>
