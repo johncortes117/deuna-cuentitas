@@ -341,7 +341,7 @@ function SetupScreen({ onComplete }: { onComplete: (profile: UserProfile) => voi
       </p>
       <input
         type="text"
-        placeholder="Ej. María Andrade"
+        placeholder="Pedro"
         value={name}
         onChange={e => setName(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && handleSubmit()}
