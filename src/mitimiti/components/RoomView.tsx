@@ -1,5 +1,5 @@
 // ─── RoomView: Sala MitiMiti (Host + Participante) ───────────
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { formatMoney, dividirMonto, getUserProfile } from '../utils';
 import QRInvite from './QRInvite';
 import ParticipantCard from './ParticipantCard';
@@ -51,14 +51,54 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
   const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [dismissedDebts, setDismissedDebts] = useState<Set<string>>(new Set());
   const [expiredLocally, setExpiredLocally] = useState(false);
+  const [joinToast, setJoinToast] = useState<string | null>(null);
+  const knownUserIds = useRef<Set<string> | null>(null);
 
   const profile = getUserProfile();
   const userId = profile?.userId || '';
 
-  // Calcular monto estimado por persona (live)
-  const estimatedAmounts = room && participants.length > 0
-    ? dividirMonto(room.total_cents + room.tip_cents, participants.length)
-    : [];
+  // Monto estimado por persona (live). Va memoizado porque dividirMonto
+  // reparte el centavo sobrante al azar: sin esto se re-barajaba en cada
+  // render y los "~$16,67" de la lista bailaban solos en pantalla.
+  const hasRoom = room !== null;
+  const totalWithTip = room ? room.total_cents + room.tip_cents : 0;
+  const participantCount = participants.length;
+  const estimatedAmounts = useMemo(
+    () => (hasRoom && participantCount > 0 ? dividirMonto(totalWithTip, participantCount) : []),
+    [hasRoom, totalWithTip, participantCount],
+  );
+
+  // Aviso de llegada. El host casi siempre está mirando el QR esperando a que
+  // la gente escanee, así que un cambio silencioso en la lista de abajo se le
+  // pasa por completo: esto lo hace imposible de perder.
+  useEffect(() => {
+    if (participants.length === 0) return;
+
+    const ids = new Set(participants.map(p => p.user_id));
+
+    // Primera carga: solo tomamos la foto inicial, no anunciamos a nadie.
+    if (knownUserIds.current === null) {
+      knownUserIds.current = ids;
+      return;
+    }
+
+    const llegados = participants.filter(
+      p => !knownUserIds.current!.has(p.user_id) && p.user_id !== userId,
+    );
+    knownUserIds.current = ids;
+
+    if (llegados.length === 1) {
+      setJoinToast(`${llegados[0].display_name} se unió`);
+    } else if (llegados.length > 1) {
+      setJoinToast(`${llegados.length} personas se unieron`);
+    }
+  }, [participants, userId]);
+
+  useEffect(() => {
+    if (!joinToast) return;
+    const timer = setTimeout(() => setJoinToast(null), 2800);
+    return () => clearTimeout(timer);
+  }, [joinToast]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -189,7 +229,22 @@ export default function RoomView({ roomId, onBack, onExit }: RoomViewProps) {
   const mySpareCents = Math.max(0, balance - myShareCents - myLentInRoom);
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 relative">
+      {/* Alguien acaba de entrar */}
+      {joinToast && (
+        <div className="absolute top-[70px] left-0 right-0 z-40 flex justify-center px-5 pointer-events-none">
+          <div className="mitimiti-fade-in-up bg-[#4C1D80] text-white text-[14px] font-bold px-4 py-2.5 rounded-[14px] shadow-lg flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <line x1="19" y1="8" x2="19" y2="14" />
+              <line x1="22" y1="11" x2="16" y2="11" />
+            </svg>
+            {joinToast}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-14 pb-2 shrink-0">
         <button onClick={onBack}>

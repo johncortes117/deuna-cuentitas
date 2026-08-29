@@ -37,6 +37,19 @@ export interface UseRoomReturn {
   clearError: () => void;
 }
 
+/**
+ * Conserva la referencia anterior si el dato entrante es idéntico.
+ *
+ * El respaldo re-consulta cada pocos segundos y devolvía SIEMPRE un array
+ * nuevo, así que la sala se re-renderizaba de balde aunque nada hubiera
+ * cambiado. Eso además re-ejecutaba el cálculo por persona, que reparte el
+ * centavo sobrante al azar: los montos estimados se barajaban solos en
+ * pantalla cada tick.
+ */
+function keepIfSame<T>(prev: T, next: T): T {
+  return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
+}
+
 export function useRoom(roomId: string | null): UseRoomReturn {
   const [room, setRoom] = useState<Room | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -116,13 +129,13 @@ export function useRoom(roomId: string | null): UseRoomReturn {
         // Suscribirse a cambios en tiempo real
         const unsub = subscribeToRoom(roomId!, {
           onRoomChange: (updatedRoom) => {
-            if (mounted) setRoom(updatedRoom);
+            if (mounted) setRoom(prev => keepIfSame(prev, updatedRoom));
           },
           onParticipantsChange: (updatedParticipants) => {
-            if (mounted) setParticipants(updatedParticipants);
+            if (mounted) setParticipants(prev => keepIfSame(prev, updatedParticipants));
           },
           onDebtsChange: (updatedDebts) => {
-            if (mounted) setDebts(updatedDebts);
+            if (mounted) setDebts(prev => keepIfSame(prev, updatedDebts));
           }
         });
         // Si nos desmontamos mientras cargaba, cerrar el canal de inmediato
@@ -152,8 +165,15 @@ export function useRoom(roomId: string | null): UseRoomReturn {
   }, [roomId]);
 
   // Polling de respaldo: si algún evento realtime se pierde (canal caído,
-  // reconexión, etc.), esto re-sincroniza sala y participantes cada 5s.
+  // reconexión, etc.), esto re-sincroniza sala y participantes.
   // Garantiza que salidas/entradas/cambios de estado SIEMPRE se reflejen.
+  //
+  // En 'waiting' es cuando la gente va entrando y el host está mirando el QR
+  // esperando verlos aparecer. Si realtime falla, este respaldo es lo único
+  // que queda, y 5s de retraso se sienten como que la app no responde: en esa
+  // fase lo apretamos.
+  const pollMs = room?.status === 'waiting' ? 2000 : 5000;
+
   useEffect(() => {
     if (!roomId) return;
     let inFlight = false;
@@ -165,16 +185,16 @@ export function useRoom(roomId: string | null): UseRoomReturn {
           getRoom(roomId),
           getParticipants(roomId),
         ]);
-        if (roomData) setRoom(roomData);
-        setParticipants(participantsData);
+        if (roomData) setRoom(prev => keepIfSame(prev, roomData));
+        setParticipants(prev => keepIfSame(prev, participantsData));
       } catch {
         // Sin conexión momentánea: se reintenta en el próximo tick.
       } finally {
         inFlight = false;
       }
-    }, 5000);
+    }, pollMs);
     return () => clearInterval(interval);
-  }, [roomId]);
+  }, [roomId, pollMs]);
 
   const lockRoom = useCallback(async (splitMode: 'equal' | 'custom' = 'equal', customAmounts?: {userId: string, amountCents: number}[]) => {
     if (!roomId || !userId) return;

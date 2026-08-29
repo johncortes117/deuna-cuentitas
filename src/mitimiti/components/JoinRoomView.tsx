@@ -1,8 +1,7 @@
 // ─── JoinRoomView: Entrada directa a una sala MitiMiti ───────
 import { useState, useEffect, useRef } from 'react';
-import type { Room } from '../types';
-import { getRoomByToken, getParticipants, joinRoom } from '../supabase';
-import { formatMoney, getUserProfile } from '../utils';
+import { enterRoomByToken } from '../supabase';
+import { getUserProfile } from '../utils';
 
 interface JoinRoomViewProps {
   inviteToken: string;
@@ -10,9 +9,16 @@ interface JoinRoomViewProps {
   onBack: () => void;
 }
 
+// Cuánto esperamos antes de dibujar NADA. Entrar son dos consultas y casi
+// siempre termina antes de este umbral, así que el usuario pasa del escáner
+// a la sala sin ver ninguna pantalla intermedia. El spinner es solo el plan
+// B para una red lenta: sin esta espera aparecía y desaparecía de golpe, que
+// es el parpadeo que se veía.
+const LOADER_DELAY_MS = 450;
+
 export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoomViewProps) {
-  const [room, setRoom] = useState<Room | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showLoader, setShowLoader] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
   // Perfil estable: getUserProfile() crea un objeto NUEVO en cada render;
@@ -24,63 +30,35 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
   }, [onJoined]);
 
   // Escanear el QR YA es la aceptación: entramos solos, sin pedir un tap más.
-  // El ref evita un doble POST si el efecto se re-ejecuta (StrictMode en dev).
+  // El ref evita una segunda entrada si el efecto se re-ejecuta (StrictMode).
   const isEntering = useRef(false);
 
   useEffect(() => {
-    let roomId: string | null = null;
+    const timer = setTimeout(() => setShowLoader(true), LOADER_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [attempt]);
 
-    async function enterRoom() {
+  useEffect(() => {
+    async function enter() {
       if (isEntering.current) return;
       isEntering.current = true;
 
       try {
-        const roomData = await getRoomByToken(inviteToken);
-        if (!roomData) {
-          setError('Sala no encontrada');
-          return;
-        }
-
-        if (roomData.status !== 'waiting') {
-          setError('Esta sala ya está cerrada');
-          return;
-        }
-
         if (!profile) {
           setError('No encontramos tu perfil');
           return;
         }
 
-        // Mostramos los datos de la sala mientras entramos: el usuario ve a
-        // qué se une sin que eso lo detenga con una confirmación.
-        roomId = roomData.id;
-        setRoom(roomData);
-
-        const parts = await getParticipants(roomData.id);
-        if (parts.some(p => p.user_id === profile.userId)) {
-          onJoinedRef.current(roomData.id);
-          return;
-        }
-
-        await joinRoom(inviteToken, profile.userId, profile.displayName);
-        onJoinedRef.current(roomData.id);
+        const room = await enterRoomByToken(inviteToken, profile.userId, profile.displayName);
+        onJoinedRef.current(room.id);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Error al entrar a la sala';
-
-        // Carrera con otra pestaña o con un reintento de red: ya estamos
-        // dentro, así que esto no es un error para el usuario.
-        if (message === 'Ya estás en esta sala' && roomId) {
-          onJoinedRef.current(roomId);
-          return;
-        }
-
-        setError(message);
+        setError(err instanceof Error ? err.message : 'Error al entrar a la sala');
       } finally {
         isEntering.current = false;
       }
     }
 
-    enterRoom();
+    enter();
   }, [inviteToken, profile, attempt]);
 
   if (error) {
@@ -104,6 +82,7 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
           <button
             onClick={() => {
               setError(null);
+              setShowLoader(false);
               setAttempt(a => a + 1);
             }}
             className="px-6 py-3 rounded-[14px] bg-[#4C1D80] text-white text-[14px] font-bold active:scale-[0.98]"
@@ -115,9 +94,14 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
     );
   }
 
+  // Todavía entrando y aún dentro del umbral: no dibujamos nada, para que la
+  // transición escáner → sala sea directa y sin pantalla de por medio.
+  if (!showLoader) return null;
+
+  // Red lenta: recién aquí mostramos algo, con salida disponible por si se
+  // quedó colgado.
   return (
     <div className="flex flex-col flex-1">
-      {/* Header: salida disponible mientras entramos */}
       <div className="flex items-center px-5 pt-14 pb-3 shrink-0">
         <button onClick={onBack} className="mr-3">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -127,35 +111,9 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
         <h1 className="text-[17px] font-bold text-[#1a1a1a]">MitiMiti</h1>
       </div>
 
-      {/* Transición: entrando a la sala */}
-      <div className="flex flex-col items-center flex-1 px-6 pt-10">
-        <div className="mitimiti-spin w-10 h-10 border-3 border-gray-200 border-t-[#4C1D80] rounded-full mb-6" />
-
-        <h2 className="text-[20px] font-bold text-[#1a1a1a] mb-1 text-center">
-          {room ? `Entrando a la sala de ${room.host_name}` : 'Entrando a la sala'}
-        </h2>
-        <p className="text-[14px] text-gray-400 text-center">
-          Pago en grupo
-        </p>
-
-        {room && (
-          <div className="bg-[#F8F8FA] rounded-2xl p-5 w-full mt-6 border border-gray-100">
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-[13px] text-gray-400">Sala</span>
-                <span className="text-[14px] font-semibold text-[#1a1a1a]">
-                  {room.commerce_name}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[13px] text-gray-400">Total</span>
-                <span className="text-[14px] font-bold text-[#1a1a1a]">
-                  {formatMoney(room.total_cents)}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="flex flex-col items-center justify-center flex-1 gap-4">
+        <div className="mitimiti-spin w-8 h-8 border-3 border-gray-200 border-t-[#4C1D80] rounded-full" />
+        <p className="text-[14px] text-gray-400">Entrando a la sala...</p>
       </div>
     </div>
   );

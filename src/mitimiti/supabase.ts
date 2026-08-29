@@ -181,30 +181,52 @@ async function addParticipant(
 }
 
 /**
- * Une a un usuario a una sala por token de invitación.
+ * Mete al usuario en la sala a partir del token de invitación.
+ *
+ * Es idempotente a propósito: escanear el QR YA es la aceptación, así que
+ * reentrar (reintento de red, doble efecto de React, otra pestaña) no puede
+ * fallar. El UNIQUE(room_id, user_id) de la tabla hace ese trabajo.
+ *
+ * Una consulta para la sala y un upsert para entrar. Antes eran cinco viajes
+ * al servidor encadenados, y esa espera era justo la que alcanzaba a mostrar
+ * la pantalla intermedia entre el escáner y la sala.
  */
-export async function joinRoom(
+export async function enterRoomByToken(
   inviteToken: string,
   userId: string,
   displayName: string,
-): Promise<{ room: Room; participant: Participant }> {
-  // Buscar la sala
+): Promise<Room> {
   const room = await getRoomByToken(inviteToken);
   if (!room) throw new Error('Sala no encontrada');
   if (room.status !== 'waiting') throw new Error('Esta sala ya está cerrada');
 
-  // Verificar que no esté ya unido
-  const { data: existing } = await supabase
+  const { data, error } = await supabase
     .from('mitimiti_participants')
-    .select('id')
-    .eq('room_id', room.id)
-    .eq('user_id', userId)
-    .single();
+    .upsert(
+      {
+        id: generateId(),
+        room_id: room.id,
+        user_id: userId,
+        display_name: displayName,
+        role: 'member',
+        amount_cents: null,
+        has_extra_cent: false,
+        confirmation_status: 'pending',
+        confirmed_at: null,
+      },
+      { onConflict: 'room_id,user_id', ignoreDuplicates: true },
+    )
+    .select();
 
-  if (existing) throw new Error('Ya estás en esta sala');
+  if (error) throw new Error(`Error entrando a la sala: ${error.message}`);
 
-  const participant = await addParticipant(room.id, userId, displayName);
-  return { room, participant };
+  // Con ignoreDuplicates, `data` viene vacío si ya estábamos dentro: solo
+  // contamos el evento cuando la entrada es nueva de verdad.
+  if (data && data.length > 0) {
+    trackEvent('USER_JOINED', room.id, userId, { role: 'member' });
+  }
+
+  return room;
 }
 
 /**
@@ -546,70 +568,141 @@ export function subscribeToRoom(
   roomId: string,
   callbacks: RoomSubscriptionCallbacks,
 ): () => void {
-  const channel = supabase
-    .channel(`room-${roomId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'mitimiti_rooms',
-        filter: `id=eq.${roomId}`,
-      },
-      async () => {
+  let channel: ReturnType<typeof supabase.channel> | null = null;
+  let closed = false;
+  let attempt = 0;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const pushRoom = async () => {
+    const room = await getRoom(roomId);
+    if (room && !closed) callbacks.onRoomChange(room);
+  };
+
+  const pushParticipants = async () => {
+    const participants = await getParticipants(roomId);
+    if (!closed) callbacks.onParticipantsChange(participants);
+  };
+
+  const pushDebts = async () => {
+    if (!callbacks.onDebtsChange) return;
+    const { data } = await supabase.from('mitimiti_debts').select('*').eq('room_id', roomId);
+    if (data && !closed) callbacks.onDebtsChange(data as Debt[]);
+  };
+
+  // Re-consulta todo de una. Lo que cambió mientras el canal estaba caído (o
+  // mientras todavía se estaba uniendo) NO llega nunca como evento, así que
+  // hay que ir a buscarlo a mano cada vez que (re)conectamos.
+  const resync = () => {
+    pushRoom().catch(() => { /* el poll de respaldo lo reintenta */ });
+    pushParticipants().catch(() => { /* idem */ });
+    pushDebts().catch(() => { /* idem */ });
+  };
+
+  const scheduleReconnect = () => {
+    if (closed || retryTimer) return;
+    const delay = Math.min(1000 * 2 ** attempt, 10000);
+    attempt++;
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      if (closed) return;
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+      connect();
+    }, delay);
+  };
+
+  function connect() {
+    if (closed) return;
+
+    // Nombre único por intento: reusar el nombre de un canal medio muerto
+    // hace que el join se quede colgado del lado del servidor.
+    channel = supabase
+      .channel(`room-${roomId}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mitimiti_rooms',
+          filter: `id=eq.${roomId}`,
+        },
         // Re-fetch completo para tener datos consistentes
-        const room = await getRoom(roomId);
-        if (room) callbacks.onRoomChange(room);
-      },
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'mitimiti_participants',
-        filter: `room_id=eq.${roomId}`,
-      },
-      async () => {
-        const participants = await getParticipants(roomId);
-        callbacks.onParticipantsChange(participants);
-      },
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'mitimiti_participants',
-        // SIN filter, a propósito: Supabase Realtime NO puede filtrar
-        // eventos DELETE (el registro borrado solo trae su primary key,
-        // no room_id), así que el listener filtrado de arriba nunca se
-        // entera cuando alguien sale de la sala. Escuchamos todos los
-        // DELETE de la tabla y re-consultamos nuestra sala.
-      },
-      async () => {
-        const participants = await getParticipants(roomId);
-        callbacks.onParticipantsChange(participants);
-      },
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'mitimiti_debts',
-        filter: `room_id=eq.${roomId}`,
-      },
-      async () => {
-        if (callbacks.onDebtsChange) {
-          const { data } = await supabase.from('mitimiti_debts').select('*').eq('room_id', roomId);
-          if (data) callbacks.onDebtsChange(data as Debt[]);
+        pushRoom,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mitimiti_participants',
+          filter: `room_id=eq.${roomId}`,
+        },
+        pushParticipants,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'mitimiti_participants',
+          // SIN filter, a propósito: Supabase Realtime NO puede filtrar
+          // eventos DELETE (el registro borrado solo trae su primary key,
+          // no room_id), así que el listener filtrado de arriba nunca se
+          // entera cuando alguien sale de la sala. Escuchamos todos los
+          // DELETE de la tabla y re-consultamos nuestra sala.
+        },
+        pushParticipants,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mitimiti_debts',
+          filter: `room_id=eq.${roomId}`,
+        },
+        pushDebts,
+      )
+      .subscribe((status) => {
+        if (closed) return;
+
+        if (status === 'SUBSCRIBED') {
+          attempt = 0;
+          resync();
+          return;
         }
-      },
-    )
-    .subscribe();
+
+        // Antes esto se llamaba sin callback: si el canal moría al unirse
+        // (red móvil, Realtime saturado, pestaña dormida) nadie se enteraba
+        // y no volvía a intentarlo NUNCA. La sala quedaba dependiendo solo
+        // del poll de respaldo, que es justo lo que se veía como "no se
+        // actualiza en tiempo real".
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          scheduleReconnect();
+        }
+      });
+  }
+
+  // Bloquear el teléfono o cambiar de app tumba el WebSocket sin avisar.
+  // Al volver, re-consultamos: si además el canal quedó muerto, el propio
+  // estado del socket dispara la reconexión de arriba.
+  const onWake = () => {
+    if (closed || document.hidden) return;
+    resync();
+  };
+
+  document.addEventListener('visibilitychange', onWake);
+  window.addEventListener('online', onWake);
+
+  connect();
 
   return () => {
-    supabase.removeChannel(channel);
+    closed = true;
+    document.removeEventListener('visibilitychange', onWake);
+    window.removeEventListener('online', onWake);
+    if (retryTimer) clearTimeout(retryTimer);
+    if (channel) supabase.removeChannel(channel);
   };
 }
