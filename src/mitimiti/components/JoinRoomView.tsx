@@ -1,4 +1,4 @@
-// ─── JoinRoomView: Unirse a una sala MitiMiti ────────────────
+// ─── JoinRoomView: Entrada directa a una sala MitiMiti ───────
 import { useState, useEffect, useRef } from 'react';
 import type { Room } from '../types';
 import { getRoomByToken, getParticipants, joinRoom } from '../supabase';
@@ -12,9 +12,8 @@ interface JoinRoomViewProps {
 
 export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoomViewProps) {
   const [room, setRoom] = useState<Room | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   // Perfil estable: getUserProfile() crea un objeto NUEVO en cada render;
   // tenerlo como dependencia del efecto causaba un loop infinito de fetches.
@@ -24,67 +23,67 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
     onJoinedRef.current = onJoined;
   }, [onJoined]);
 
+  // Escanear el QR YA es la aceptación: entramos solos, sin pedir un tap más.
+  // El ref evita un doble POST si el efecto se re-ejecuta (StrictMode en dev).
+  const isEntering = useRef(false);
+
   useEffect(() => {
-    async function load() {
+    let roomId: string | null = null;
+
+    async function enterRoom() {
+      if (isEntering.current) return;
+      isEntering.current = true;
+
       try {
         const roomData = await getRoomByToken(inviteToken);
         if (!roomData) {
           setError('Sala no encontrada');
-          setIsLoading(false);
           return;
         }
 
         if (roomData.status !== 'waiting') {
           setError('Esta sala ya está cerrada');
-          setIsLoading(false);
           return;
         }
 
-        const parts = await getParticipants(roomData.id);
+        if (!profile) {
+          setError('No encontramos tu perfil');
+          return;
+        }
 
-        // Si ya estoy en la sala, ir directo a la room view
-        if (profile && parts.some(p => p.user_id === profile.userId)) {
+        // Mostramos los datos de la sala mientras entramos: el usuario ve a
+        // qué se une sin que eso lo detenga con una confirmación.
+        roomId = roomData.id;
+        setRoom(roomData);
+
+        const parts = await getParticipants(roomData.id);
+        if (parts.some(p => p.user_id === profile.userId)) {
           onJoinedRef.current(roomData.id);
           return;
         }
 
-        setRoom(roomData);
-        setIsLoading(false);
+        await joinRoom(inviteToken, profile.userId, profile.displayName);
+        onJoinedRef.current(roomData.id);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error cargando sala');
-        setIsLoading(false);
+        const message = err instanceof Error ? err.message : 'Error al entrar a la sala';
+
+        // Carrera con otra pestaña o con un reintento de red: ya estamos
+        // dentro, así que esto no es un error para el usuario.
+        if (message === 'Ya estás en esta sala' && roomId) {
+          onJoinedRef.current(roomId);
+          return;
+        }
+
+        setError(message);
+      } finally {
+        isEntering.current = false;
       }
     }
 
-    load();
-  }, [inviteToken, profile]);
+    enterRoom();
+  }, [inviteToken, profile, attempt]);
 
-  const handleJoin = async () => {
-    if (!profile || !room) return;
-
-    setIsJoining(true);
-    setError(null);
-
-    try {
-      await joinRoom(inviteToken, profile.userId, profile.displayName);
-      onJoined(room.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al unirse');
-      setIsJoining(false);
-    }
-  };
-
-
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center flex-1">
-        <div className="mitimiti-spin w-8 h-8 border-3 border-gray-200 border-t-[#4C1D80] rounded-full" />
-      </div>
-    );
-  }
-
-  if (error && !room) {
+  if (error) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 px-6">
         <div className="w-16 h-16 bg-[#FCEBEB] rounded-full flex items-center justify-center mb-4">
@@ -94,20 +93,31 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
         </div>
-        <p className="text-[16px] font-bold text-[#1a1a1a] mb-2">{error}</p>
-        <button
-          onClick={onBack}
-          className="mt-4 px-6 py-3 rounded-[14px] bg-gray-100 text-[#1a1a1a] text-[14px] font-bold"
-        >
-          Volver
-        </button>
+        <p className="text-[16px] font-bold text-[#1a1a1a] mb-2 text-center">{error}</p>
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={onBack}
+            className="px-6 py-3 rounded-[14px] bg-gray-100 text-[#1a1a1a] text-[14px] font-bold"
+          >
+            Volver
+          </button>
+          <button
+            onClick={() => {
+              setError(null);
+              setAttempt(a => a + 1);
+            }}
+            className="px-6 py-3 rounded-[14px] bg-[#4C1D80] text-white text-[14px] font-bold active:scale-[0.98]"
+          >
+            Reintentar
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col flex-1">
-      {/* Header */}
+      {/* Header: salida disponible mientras entramos */}
       <div className="flex items-center px-5 pt-14 pb-3 shrink-0">
         <button onClick={onBack} className="mr-3">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -117,59 +127,35 @@ export default function JoinRoomView({ inviteToken, onJoined, onBack }: JoinRoom
         <h1 className="text-[17px] font-bold text-[#1a1a1a]">MitiMiti</h1>
       </div>
 
-      {/* Contenido */}
-      <div className="flex flex-col items-center flex-1 px-6 pt-6">
-        {/* Emoji / icono */}
-        <div className="w-16 h-16 bg-[#EEEDFE] rounded-full flex items-center justify-center mb-5">
-          <span className="text-3xl">🤝</span>
-        </div>
+      {/* Transición: entrando a la sala */}
+      <div className="flex flex-col items-center flex-1 px-6 pt-10">
+        <div className="mitimiti-spin w-10 h-10 border-3 border-gray-200 border-t-[#4C1D80] rounded-full mb-6" />
 
         <h2 className="text-[20px] font-bold text-[#1a1a1a] mb-1 text-center">
-          Te invitan a pagar en grupo
+          {room ? `Entrando a la sala de ${room.host_name}` : 'Entrando a la sala'}
         </h2>
+        <p className="text-[14px] text-gray-400 text-center">
+          Pago en grupo
+        </p>
 
-        {/* Datos de la sala */}
-        <div className="bg-[#F8F8FA] rounded-2xl p-5 w-full mt-5 border border-gray-100">
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-[13px] text-gray-400">Sala</span>
-              <span className="text-[14px] font-semibold text-[#1a1a1a]">
-                {room?.commerce_name}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[13px] text-gray-400">Host</span>
-              <span className="text-[14px] font-semibold text-[#1a1a1a]">
-                {room?.host_name}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[13px] text-gray-400">Total</span>
-              <span className="text-[14px] font-bold text-[#1a1a1a]">
-                {room && formatMoney(room.total_cents)}
-              </span>
+        {room && (
+          <div className="bg-[#F8F8FA] rounded-2xl p-5 w-full mt-6 border border-gray-100">
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-[13px] text-gray-400">Sala</span>
+                <span className="text-[14px] font-semibold text-[#1a1a1a]">
+                  {room.commerce_name}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[13px] text-gray-400">Total</span>
+                <span className="text-[14px] font-bold text-[#1a1a1a]">
+                  {formatMoney(room.total_cents)}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-
-        {error && (
-          <p className="text-red-500 text-[13px] mt-3">{error}</p>
         )}
-      </div>
-
-      {/* CTA */}
-      <div className="px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shrink-0">
-        <button
-          onClick={handleJoin}
-          disabled={isJoining || !profile}
-          className={`w-full py-4 rounded-[14px] text-[16px] font-bold transition-all ${
-            isJoining
-              ? 'bg-gray-200 text-gray-400'
-              : 'bg-[#4C1D80] text-white active:scale-[0.98]'
-          }`}
-        >
-          {isJoining ? 'Uniéndome...' : 'Unirme'}
-        </button>
       </div>
     </div>
   );
