@@ -11,6 +11,12 @@
 | [Pitch del proyecto](./presentation/pitch.md) | Problema, solución, impacto, tech stack |
 | [Guía de demo en vivo](./presentation/demo-script.md) | Flujo paso a paso para presentar en 5 minutos |
 
+## MitiMiti
+
+| Documento | Qué encontrarás |
+|---|---|
+| [Auditoría UX y rediseño](./mitimiti-ux-audit.md) | Hallazgos paso a paso, decisiones de diseño, antes/después y hoja de ruta |
+
 ## Arquitectura técnica
 
 | Documento | Qué encontrarás |
