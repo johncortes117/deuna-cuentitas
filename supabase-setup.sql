@@ -175,3 +175,34 @@ CREATE POLICY "Crear deudas" ON mitimiti_debts
 DROP POLICY IF EXISTS "Actualizar deudas" ON mitimiti_debts;
 CREATE POLICY "Actualizar deudas" ON mitimiti_debts 
   FOR UPDATE USING (true);
+
+-- 6. (Opcional, recomendado) Cierre automático de salas vencidas en el servidor
+--
+-- La app ya cierra una sala vencida en cuanto alguien la lee (inicio, sala,
+-- QR/link), así que esto no es obligatorio. Pero una sala que nadie vuelve a
+-- abrir se queda 'waiting'/'locked'/'confirming' en la BD; esta función la
+-- cierra igual. No borra filas (eso arrastraría en cascada sus deudas): marca
+-- la sala como 'cancelled' y anula los préstamos que eran solo promesas.
+CREATE OR REPLACE FUNCTION mitimiti_expire_rooms() RETURNS integer
+LANGUAGE sql AS $$
+  WITH expired AS (
+    UPDATE mitimiti_rooms
+       SET status = 'cancelled'
+     WHERE status IN ('waiting', 'locked', 'confirming')
+       AND expires_at < now()
+    RETURNING id
+  ), voided AS (
+    UPDATE mitimiti_debts
+       SET status = 'cancelled'
+     WHERE status = 'pending'
+       AND room_id IN (SELECT id FROM expired)
+  )
+  SELECT count(*)::integer FROM expired;
+$$;
+
+-- Limpieza de una sola vez de las salas zombi que ya existen:
+--   SELECT mitimiti_expire_rooms();
+--
+-- Para que corra sola cada minuto, activa la extensión pg_cron
+-- (Database → Extensions → pg_cron) y ejecuta:
+--   SELECT cron.schedule('mitimiti-expire-rooms', '* * * * *', 'SELECT mitimiti_expire_rooms()');

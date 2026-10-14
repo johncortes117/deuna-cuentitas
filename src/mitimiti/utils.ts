@@ -1,5 +1,5 @@
 // ─── MitiMiti Pure Utility Functions ─────────────────────────
-import type { UserProfile, PersonalQRData, InviteQRData, QRData } from './types';
+import type { UserProfile, PersonalQRData, InviteQRData, QRData, Room, RoomStatus, ActiveRoom } from './types';
 
 /**
  * Divide un monto total en centavos entre N participantes.
@@ -81,6 +81,9 @@ export function generateInviteToken(): string {
 /**
  * Color HSL determinístico basado en el nombre del usuario.
  * Siempre genera colores vibrantes y distinguibles.
+ *
+ * Luminosidad 45%: con 55% los tonos amarillos/verdes quedaban casi sin
+ * contraste contra las iniciales blancas (difícil de leer para gente mayor).
  */
 export function getAvatarColor(name: string): string {
   let hash = 0;
@@ -88,7 +91,7 @@ export function getAvatarColor(name: string): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 65%, 55%)`;
+  return `hsl(${hue}, 60%, 45%)`;
 }
 
 /**
@@ -110,6 +113,43 @@ export function isRoomExpired(expiresAt: string): boolean {
   return new Date(expiresAt) <= new Date();
 }
 
+// Estados en los que una sala sigue "viva" (se puede entrar, dividir o pagar).
+export const OPEN_ROOM_STATUSES: RoomStatus[] = ['waiting', 'locked', 'confirming'];
+
+export function isRoomOpen(room: Pick<Room, 'status'>): boolean {
+  return OPEN_ROOM_STATUSES.includes(room.status);
+}
+
+/**
+ * Sala que sigue abierta en la BD pero ya pasó su tiempo máximo: es la sala
+ * "zombi" que seguía apareciendo en el inicio semanas después.
+ */
+export function isRoomStale(room: Pick<Room, 'status' | 'expires_at'>, now = Date.now()): boolean {
+  return isRoomOpen(room) && new Date(room.expires_at).getTime() <= now;
+}
+
+/**
+ * Qué está pasando en tu sala abierta, dicho en una línea, para el aviso del
+ * inicio. Antes decía siempre "Toca para volver a la sala", estuvieras donde
+ * estuvieras; ahora dice qué falta y quién lo tiene que hacer.
+ */
+export function activeRoomHint(active: ActiveRoom, userId: string): string {
+  const { room, myStatus, myAmountCents } = active;
+  const isHost = room.host_id === userId;
+  if (room.status === 'waiting') {
+    return isHost ? 'Esperando a que se unan' : `Esperando a que ${room.host_name} divida la cuenta`;
+  }
+  if (room.status === 'confirming') {
+    return isHost ? '¡Todos aceptaron! Toca para pagar' : `Esperando a que ${room.host_name} pague`;
+  }
+  // locked
+  if (myStatus === 'pending') {
+    return myAmountCents ? `Falta que aceptes ${formatMoney(myAmountCents)}` : 'Falta que aceptes tu parte';
+  }
+  if (myStatus === 'requesting_loan') return 'Esperando que alguien te preste';
+  return 'Esperando a que los demás acepten';
+}
+
 /**
  * Obtiene o crea el perfil del usuario en localStorage.
  */
@@ -123,11 +163,17 @@ export function getUserProfile(): UserProfile | null {
   }
 }
 
+// Avisa a toda la app que el saldo cambió (pago de sala, deuda, recarga o un
+// amigo que te pagó), para que el inicio y MitiMiti nunca muestren saldos
+// distintos al mismo tiempo.
+export const BALANCE_CHANGED_EVENT = 'mitimiti:balance-changed';
+
 /**
  * Guarda el perfil del usuario en localStorage.
  */
 export function saveUserProfile(profile: UserProfile): void {
   localStorage.setItem('mitimiti_profile', JSON.stringify(profile));
+  window.dispatchEvent(new Event(BALANCE_CHANGED_EVENT));
 }
 
 /**
@@ -230,4 +276,100 @@ export function formatTimer(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Duración humana corta: 72000 → "1 min 12 s", 45000 → "45 s".
+ */
+export function formatDuration(ms: number): string {
+  const total = Math.max(1, Math.round(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  if (m === 0) return `${s} s`;
+  if (s === 0) return `${m} min`;
+  return `${m} min ${s} s`;
+}
+
+// ─── Fechas (copy humano, sin abreviaturas ambiguas) ─────────
+// Antes salía "11 ago": para mucha gente se lee como el "ago" inglés
+// ("hace 11") y no como "11 de agosto". Ahora el mes va completo.
+
+function startOfDay(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+export function daysSince(iso: string, now = new Date()): number {
+  return Math.round((startOfDay(now) - startOfDay(new Date(iso))) / 86400000);
+}
+
+export function relativeDate(iso: string, now = new Date()): string {
+  const days = daysSince(iso, now);
+  if (days <= 0) return 'Hoy';
+  if (days === 1) return 'Ayer';
+  if (days < 7) return `Hace ${days} días`;
+  if (days < 14) return 'Hace 1 semana';
+  if (days < 28) return `Hace ${Math.floor(days / 7)} semanas`;
+  const d = new Date(iso);
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' };
+  if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString('es-EC', opts);
+}
+
+// "31 de julio de 2026": para el detalle de una deuda (sin la hora, que solo
+// era ruido para decidir si pagar o recordar).
+export function longDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// ─── Recargas simuladas desde la cuenta principal ───────────
+// Misma cuenta que muestra la tarjeta "Recargar desde" del inicio.
+export const PRINCIPAL_ACCOUNT_LABEL = 'Principal ••2213';
+export const TOP_UP_STEP_CENTS = 1000;
+
+/**
+ * Cuánto recargar para cubrir lo que falta, en saltos de $10 (como el botón
+ * del inicio): falta $7,26 → $10; falta $13 → $20.
+ */
+export function topUpAmountFor(shortfallCents: number): number {
+  if (shortfallCents <= 0) return 0;
+  return Math.ceil(shortfallCents / TOP_UP_STEP_CENTS) * TOP_UP_STEP_CENTS;
+}
+
+/**
+ * Suma saldo al perfil local (simula la recarga desde la cuenta principal).
+ */
+export function addToBalance(cents: number): UserProfile | null {
+  const profile = getUserProfile();
+  if (!profile) return null;
+  const updated = { ...profile, balanceCents: profile.balanceCents + cents };
+  saveUserProfile(updated);
+  return updated;
+}
+
+// ─── Nombres de sala sugeridos ──────────────────────────────
+// Cubren los casos más comunes de un pago compartido para que el usuario no
+// tenga que escribir nada.
+export const ROOM_NAME_SUGGESTIONS = [
+  { emoji: '🍔', label: 'Almuerzo' },
+  { emoji: '🍽️', label: 'Cena' },
+  { emoji: '☕', label: 'Café' },
+  { emoji: '🍕', label: 'Pizza' },
+  { emoji: '🚕', label: 'Taxi' },
+  { emoji: '🎂', label: 'Cumpleaños' },
+  { emoji: '🎉', label: 'Salida' },
+  { emoji: '🛒', label: 'Mercado' },
+  { emoji: '🎬', label: 'Cine' },
+];
+
+export function roomEmoji(name: string): string {
+  return ROOM_NAME_SUGGESTIONS.find(s => s.label === name.trim())?.emoji ?? '🧾';
+}
+
+// Un buen valor por defecto ahorra un paso: casi siempre basta con tocar
+// "Crear sala" sin escribir nada.
+export function suggestRoomName(date = new Date()): string {
+  const h = date.getHours();
+  if (h >= 11 && h < 16) return 'Almuerzo';
+  if (h >= 19 || h < 4) return 'Cena';
+  return 'Café';
 }

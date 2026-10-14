@@ -286,6 +286,71 @@
   color: #4C1D80;
 }
 
+/* ─── Animaciones usadas por hojas y modales ─────────────────
+   Las clases animate-slideUp / animate-fadeIn / animate-slideDown se usaban
+   en todos los modales pero nunca se habían definido (no existen en
+   Tailwind), así que las hojas aparecían de golpe. */
+
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slideDown {
+  animation: dropIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.22s ease-out both;
+}
+
+/* Cursor del teclado propio al editar un monto */
+@keyframes caretBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.mitimiti-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  background: #4C1D80;
+  vertical-align: -0.12em;
+  animation: caretBlink 1s step-end infinite;
+}
+
+/* Un monto que cambió solo (auto-reparto) parpadea suave para que el ojo
+   lo note sin necesidad de leer un aviso. */
+@keyframes amountPop {
+  0% { background-color: #EDE4FA; }
+  100% { background-color: transparent; }
+}
+
+.mitimiti-amount-pop {
+  animation: amountPop 0.6s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slideUp,
+  .animate-slideDown,
+  .animate-fadeIn,
+  .mitimiti-fade-in-up,
+  .mitimiti-amount-pop {
+    animation-duration: 0.01ms;
+  }
+}
+
 /* ─── Toggle switch for QR/Participants ──────────────────── */
 
 .mitimiti-toggle-container {

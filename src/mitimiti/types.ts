@@ -59,6 +59,14 @@ export interface Assignment {
   hasExtraCent: boolean;
 }
 
+// Sala abierta del usuario + en qué punto está él dentro de ella, para que el
+// inicio pueda decir algo útil ("Falta que aceptes $12") y no solo "Sala activa".
+export interface ActiveRoom {
+  room: Room;
+  myStatus: Participant['confirmation_status'];
+  myAmountCents: number | null;
+}
+
 // Datos codificados en un QR personal (simula el QR de cobro de DeUna)
 export interface PersonalQRData {
   type: 'deuna_personal';
@@ -90,4 +98,4 @@ export type MitiMitiRoute =
   | { page: 'join'; token: string }
   | { page: 'success'; roomId: string }
   | { page: 'error'; roomId: string; message: string }
-  | { page: 'debts' };
+  | { page: 'debts'; tab?: 'owe' | 'owed' };

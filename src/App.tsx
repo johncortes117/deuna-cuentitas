@@ -1,12 +1,24 @@
 import { useState, useEffect } from 'react';
 import MitiMitiApp from './mitimiti/MitiMitiApp';
-import { getUserProfile, createUserProfile, saveUserProfile, decodeQR, formatMoney, toCents } from './mitimiti/utils';
-import type { UserProfile, Room } from './mitimiti/types';
-import { getActiveRoomForUser } from './mitimiti/supabase';
+import {
+  getUserProfile,
+  createUserProfile,
+  saveUserProfile,
+  decodeQR,
+  formatMoney,
+  toCents,
+  activeRoomHint,
+  roomEmoji,
+  BALANCE_CHANGED_EVENT,
+} from './mitimiti/utils';
+import type { UserProfile, Room, ActiveRoom } from './mitimiti/types';
+import { getActiveRoomForUser, getRoomByToken } from './mitimiti/supabase';
 import QRScanner from './mitimiti/components/QRScanner';
 import SimulatedPaymentView from './mitimiti/components/SimulatedPaymentView';
+import PaymentReceivedToast from './mitimiti/components/PaymentReceivedToast';
 import { createRoom } from './mitimiti/supabase';
 import { useDebts } from './mitimiti/useDebts';
+import { countPeople } from './mitimiti/debtGroups';
 import {
   getFullscreenElement,
   isVisuallyFullscreen,
@@ -18,21 +30,45 @@ import {
 type Screen = 'home' | 'setup' | 'dashboard' | 'mitimiti' | 'scanner';
 type BottomTab = 'inicio' | 'beneficios' | 'billetera' | 'tu';
 
+function inviteTokenFromHash(hash: string): string | null {
+  const match = hash.match(/^#\/mitimiti\/join\/([A-Za-z0-9]+)/);
+  return match ? match[1] : null;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Main App Component
 // ═══════════════════════════════════════════════════════════════
 function App() {
+  const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
+
+  // Link de invitación abierto por alguien que todavía no tiene perfil (el
+  // amigo nuevo que llega por WhatsApp o escaneando con la cámara). Antes
+  // MitiMiti lo mandaba al inicio y la invitación se perdía: justo el camino
+  // por el que entra un usuario nuevo. Ahora se guarda, se le pide solo el
+  // nombre y entra directo a la sala.
+  const [pendingInvite, setPendingInvite] = useState<string | null>(() =>
+    getUserProfile() ? null : inviteTokenFromHash(window.location.hash),
+  );
+
   const [screen, setScreen] = useState<Screen>(() => {
-    if (window.location.hash.startsWith('#/mitimiti')) return 'mitimiti';
-    return 'home';
+    const hash = window.location.hash;
+    if (!hash.startsWith('#/mitimiti')) return 'home';
+    if (getUserProfile()) return 'mitimiti';
+    return inviteTokenFromHash(hash) ? 'setup' : 'home';
   });
-  
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+
   const [scannedData, setScannedData] = useState<string | null>(null);
 
+  // El saldo puede cambiar dentro de MitiMiti (débito al pagar una sala,
+  // pagar una deuda, recargar, un amigo que te pagó): el inicio se entera al
+  // instante en vez de quedar desactualizado hasta recargar la página.
   useEffect(() => {
-    setProfile(getUserProfile());
+    const sync = () => setProfile(getUserProfile());
+    window.addEventListener(BALANCE_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(BALANCE_CHANGED_EVENT, sync);
+  }, []);
 
+  useEffect(() => {
     // Ensure fullscreen on user interactions to recover from keyboard breaks
     // and from the browser exiting fullscreen (e.g. after the camera permission prompt).
     const ensureFullscreen = (e: Event) => {
@@ -81,8 +117,15 @@ function App() {
 
   useEffect(() => {
     function handleHash() {
-      if (window.location.hash.startsWith('#/mitimiti')) {
-        setScreen('mitimiti');
+      const hash = window.location.hash;
+      if (hash.startsWith('#/mitimiti')) {
+        const token = inviteTokenFromHash(hash);
+        if (!profile && token) {
+          setPendingInvite(token);
+          setScreen('setup');
+        } else {
+          setScreen(profile ? 'mitimiti' : 'home');
+        }
       } else if (screen === 'mitimiti') {
         setScreen(profile ? 'dashboard' : 'home');
       }
@@ -90,15 +133,6 @@ function App() {
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
   }, [profile, screen]);
-
-  // Re-leer el perfil al volver al dashboard: el saldo puede haber cambiado
-  // dentro de MitiMiti (débito al pagar una sala, pagar una deuda, etc.) y
-  // este estado local quedaba desactualizado hasta recargar la página.
-  useEffect(() => {
-    if (screen === 'dashboard') {
-      setProfile(getUserProfile());
-    }
-  }, [screen]);
 
   // Fullscreen components (No iPhone frame for MitiMiti and Scanner)
   if (screen === 'mitimiti') {
@@ -115,6 +149,7 @@ function App() {
             </div>
             <FullscreenButton />
             <MitiMitiApp />
+            <PaymentReceivedToast />
           </div>
         </div>
       </div>
@@ -216,15 +251,30 @@ function App() {
           )}
           
           {screen === 'setup' && (
-            <SetupScreen onComplete={(p) => {
-              setProfile(p);
-              setScreen('dashboard');
-            }} />
+            <SetupScreen
+              inviteToken={pendingInvite}
+              onComplete={(p) => {
+                setProfile(p);
+                if (pendingInvite) {
+                  // Directo a la sala a la que lo invitaron. Si el hash ya es
+                  // ese link, MitiMiti lo lee al montarse y entra solo.
+                  const token = pendingInvite;
+                  setPendingInvite(null);
+                  if (inviteTokenFromHash(window.location.hash) !== token) {
+                    window.location.hash = `#/mitimiti/join/${token}`;
+                  }
+                  setScreen('mitimiti');
+                } else {
+                  setScreen('dashboard');
+                }
+              }}
+            />
           )}
 
           {screen === 'dashboard' && profile && (
             <DashboardScreen profile={profile} onScanQR={() => setScreen('scanner')} onUpdateProfile={setProfile} />
           )}
+          <PaymentReceivedToast />
         </div>
       </div>
     </div>
@@ -317,8 +367,22 @@ function ConsumerHomeScreen({ onEnter }: { onEnter: () => void }) {
 // ═══════════════════════════════════════════════════════════════
 // Setup Screen (Pedir nombre, extraído de MitiMiti)
 // ═══════════════════════════════════════════════════════════════
-function SetupScreen({ onComplete }: { onComplete: (profile: UserProfile) => void }) {
+function SetupScreen({ inviteToken, onComplete }: { inviteToken: string | null; onComplete: (profile: UserProfile) => void }) {
   const [name, setName] = useState('');
+  const [invite, setInvite] = useState<Room | null>(null);
+
+  // Si llegó por una invitación, mostrarle a qué lo invitaron: es lo que le
+  // da confianza para dejar su nombre en una app que quizás no conoce.
+  useEffect(() => {
+    if (!inviteToken) return;
+    let alive = true;
+    getRoomByToken(inviteToken)
+      .then(room => { if (alive) setInvite(room); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [inviteToken]);
+
+  const openInvite = invite && invite.status === 'waiting' ? invite : null;
 
   const handleSubmit = () => {
     if (!name.trim()) return;
@@ -327,21 +391,35 @@ function SetupScreen({ onComplete }: { onComplete: (profile: UserProfile) => voi
   };
 
   return (
-    <div className="flex flex-col flex-1 px-6 pt-24 pb-[calc(3rem+env(safe-area-inset-bottom))] bg-white">
-      <div className="flex flex-col items-center mb-10">
+    <div className={`flex flex-col flex-1 px-6 ${openInvite ? 'pt-16' : 'pt-24'} pb-[calc(3rem+env(safe-area-inset-bottom))] bg-white`}>
+      <div className={`flex flex-col items-center ${openInvite ? 'mb-6' : 'mb-10'}`}>
         <h1 className="text-[44px] font-black text-[#4C1D80] leading-none tracking-[-2px] italic">
           deuna!
         </h1>
       </div>
+      {openInvite && (
+        <div className="mb-7 p-4 rounded-2xl bg-[#F6F1FD] border border-[#EBE3F5] text-center animate-fadeIn">
+          <p className="text-[14px] text-[#4C1D80]">
+            🤝 <span className="font-bold">{openInvite.host_name}</span> te invitó a dividir
+          </p>
+          <p className="text-[18px] font-bold text-[#1a1a1a] mt-1">
+            {roomEmoji(openInvite.commerce_name)} {openInvite.commerce_name} · {formatMoney(openInvite.total_cents)}
+          </p>
+        </div>
+      )}
       <h2 className="text-[22px] font-bold text-[#1a1a1a] text-center mb-2">
         ¿Cómo te llamas?
       </h2>
       <p className="text-[15px] text-gray-500 text-center mb-8">
-        Queremos conocerte para personalizar tu experiencia
+        {openInvite
+          ? 'Así te verán tus amigos en la sala.'
+          : 'Queremos conocerte para personalizar tu experiencia'}
       </p>
       <input
         type="text"
-        placeholder="Pedro"
+        // Con invitación, "Pedro" de ejemplo confunde: suele ser justo el
+        // nombre de quien invitó.
+        placeholder={openInvite ? 'Tu nombre' : 'Pedro'}
         value={name}
         onChange={e => setName(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -357,7 +435,7 @@ function SetupScreen({ onComplete }: { onComplete: (profile: UserProfile) => voi
             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
         }`}
       >
-        Continuar
+        {openInvite ? 'Entrar a la sala' : 'Continuar'}
       </button>
     </div>
   );
@@ -369,13 +447,16 @@ function SetupScreen({ onComplete }: { onComplete: (profile: UserProfile) => voi
 function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: UserProfile, onScanQR: () => void, onUpdateProfile: (p: UserProfile) => void }) {
   const [showSaldo, setShowSaldo] = useState(true);
   const [bottomTab, setBottomTab] = useState<BottomTab>('inicio');
-  const [activeRoom, setActiveRoom] = useState<Room | null>(null);
+  const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
 
   // Deudas MitiMiti pendientes: hay que poder verlas desde el inicio, sobre
   // todo después de pagar una sala con préstamo (si no, quedan invisibles).
   const { debtsIOwe, debtsOwedToMe } = useDebts();
   const totalOwe = debtsIOwe.reduce((acc, d) => acc + d.amount_cents, 0);
   const totalOwed = debtsOwedToMe.reduce((acc, d) => acc + d.amount_cents, 0);
+  // Personas, no registros: si Diego te debe de dos salas sigue siendo 1 persona.
+  const peopleIOwe = countPeople(debtsIOwe, profile.userId);
+  const peopleOweMe = countPeople(debtsOwedToMe, profile.userId);
 
   // Detectar si el usuario tiene una sala MitiMiti activa: si salió de la
   // sala con el botón '<' necesita una forma clara de volver a ella.
@@ -429,10 +510,11 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
         </div>
       </div>
 
-      {/* Banner Sala MitiMiti Activa (para volver a la sala) */}
+      {/* Banner Sala MitiMiti Activa (para volver a la sala). Ya no muestra
+          salas vencidas: getActiveRoomForUser las cierra en la BD. */}
       {activeRoom && (
         <div
-          onClick={() => { window.location.hash = `#/mitimiti/room/${activeRoom.id}`; }}
+          onClick={() => { window.location.hash = `#/mitimiti/room/${activeRoom.room.id}`; }}
           className="mx-5 mb-4 p-4 rounded-2xl bg-[#F8F5FB] border border-[#EBE3F5] flex items-center justify-between shadow-sm cursor-pointer active:scale-[0.98] transition-transform"
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -442,8 +524,8 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
             </div>
             <div className="min-w-0">
               <p className="text-[11px] font-bold text-[#4C1D80] uppercase tracking-wide mb-0.5">Sala activa</p>
-              <p className="text-[15px] font-bold text-[#1a1a1a] leading-tight truncate">{activeRoom.commerce_name}</p>
-              <p className="text-[12px] text-gray-500">Toca para volver a la sala</p>
+              <p className="text-[15px] font-bold text-[#1a1a1a] leading-tight truncate">{activeRoom.room.commerce_name}</p>
+              <p className="text-[12px] text-gray-600 truncate">{activeRoomHint(activeRoom, profile.userId)}</p>
             </div>
           </div>
           <svg className="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4C1D80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -455,7 +537,7 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
       {/* Banner Deudas MitiMiti — acceso a la vista de deudas desde el inicio */}
       {debtsIOwe.length > 0 ? (
         <button
-          onClick={() => { window.location.hash = '#/mitimiti/debts'; }}
+          onClick={() => { window.location.hash = '#/mitimiti/debts?tab=owe'; }}
           className="mx-5 mb-4 p-4 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform text-left"
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -465,8 +547,8 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
             <div className="min-w-0">
               <p className="text-[11px] font-bold text-orange-600 uppercase tracking-wide mb-0.5">Deudas por pagar</p>
               <p className="text-[15px] font-bold text-[#1a1a1a] leading-tight">Debes {formatMoney(totalOwe)}</p>
-              <p className="text-[12px] text-gray-500">
-                {debtsIOwe.length} {debtsIOwe.length === 1 ? 'préstamo' : 'préstamos'} · Toca para pagar
+              <p className="text-[12px] text-gray-600">
+                A {peopleIOwe} {peopleIOwe === 1 ? 'persona' : 'personas'} · Toca para pagar
               </p>
             </div>
           </div>
@@ -476,7 +558,7 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
         </button>
       ) : debtsOwedToMe.length > 0 ? (
         <button
-          onClick={() => { window.location.hash = '#/mitimiti/debts'; }}
+          onClick={() => { window.location.hash = '#/mitimiti/debts?tab=owed'; }}
           className="mx-5 mb-4 p-4 rounded-2xl bg-[#EAF3DE] border border-[#3B6D11]/15 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform text-left"
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -486,8 +568,8 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
             <div className="min-w-0">
               <p className="text-[11px] font-bold text-[#3B6D11] uppercase tracking-wide mb-0.5">Te deben</p>
               <p className="text-[15px] font-bold text-[#1a1a1a] leading-tight">{formatMoney(totalOwed)} a favor</p>
-              <p className="text-[12px] text-gray-500">
-                {debtsOwedToMe.length} {debtsOwedToMe.length === 1 ? 'persona' : 'personas'} · Toca para ver
+              <p className="text-[12px] text-gray-600">
+                {peopleOweMe} {peopleOweMe === 1 ? 'persona' : 'personas'} · Toca para ver
               </p>
             </div>
           </div>

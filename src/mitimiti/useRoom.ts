@@ -13,6 +13,7 @@ import {
   cancelRoom as cancelRoomAPI,
   requestLoan as requestLoanAPI,
   lendMoney as lendMoneyAPI,
+  expireRoom as expireRoomAPI,
 } from './supabase';
 import { dividirMonto, getUserProfile, saveUserProfile } from './utils';
 
@@ -27,11 +28,14 @@ export interface UseRoomReturn {
   debts: Debt[];
 
   // Acciones
-  lockRoom: (splitMode?: 'equal' | 'custom', customAmounts?: {userId: string, amountCents: number}[]) => Promise<void>;
-  confirmPayment: () => Promise<void>;
+  // Devuelve los montos asignados (o null si falló; el error queda en `error`).
+  lockRoom: (splitMode?: 'equal' | 'custom', customAmounts?: {userId: string, amountCents: number}[]) => Promise<{ userId: string; amountCents: number }[] | null>;
+  // Devuelve true si quedó confirmado.
+  confirmPayment: (expectedAmountCents?: number) => Promise<boolean>;
   executePayment: (simulateFailure?: boolean) => Promise<void>;
   leaveRoom: () => Promise<void>;
   cancelRoom: () => Promise<void>;
+  expireRoom: () => Promise<void>;
   requestLoan: (deficitCents: number) => Promise<void>;
   lendMoney: (borrowerId: string, borrowerName: string, amountCents: number) => Promise<void>;
   clearError: () => void;
@@ -197,24 +201,38 @@ export function useRoom(roomId: string | null): UseRoomReturn {
   }, [roomId, pollMs]);
 
   const lockRoom = useCallback(async (splitMode: 'equal' | 'custom' = 'equal', customAmounts?: {userId: string, amountCents: number}[]) => {
-    if (!roomId || !userId) return;
+    if (!roomId || !userId) return null;
     try {
       setError(null);
-      await lockRoomAPI(roomId, userId, splitMode, customAmounts);
+      return await lockRoomAPI(roomId, userId, splitMode, customAmounts);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error cerrando sala');
+      setError(err instanceof Error ? err.message : 'Error dividiendo la cuenta');
+      return null;
     }
   }, [roomId, userId]);
 
-  const confirmPayment = useCallback(async () => {
-    if (!roomId || !userId) return;
+  const confirmPayment = useCallback(async (expectedAmountCents?: number) => {
+    if (!roomId || !userId) return false;
     try {
       setError(null);
-      await confirmPaymentAPI(roomId, userId);
+      await confirmPaymentAPI(roomId, userId, expectedAmountCents);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error confirmando');
+      return false;
     }
   }, [roomId, userId]);
+
+  // Cualquiera en la sala puede cerrarla al vencer (antes solo el host, y
+  // solo si estaba mirando la pantalla en 'waiting').
+  const expireRoom = useCallback(async () => {
+    if (!roomId) return;
+    try {
+      await expireRoomAPI(roomId);
+    } catch {
+      // Si falla, la próxima lectura de la sala la vuelve a cerrar.
+    }
+  }, [roomId]);
 
   const executePayment = useCallback(async (simulateFailure = false) => {
     if (!roomId || !userId) return;
@@ -282,6 +300,7 @@ export function useRoom(roomId: string | null): UseRoomReturn {
     executePayment,
     leaveRoom,
     cancelRoom,
+    expireRoom,
     requestLoan,
     lendMoney,
     clearError,

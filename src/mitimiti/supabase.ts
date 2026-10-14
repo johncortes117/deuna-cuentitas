@@ -1,7 +1,7 @@
 // ─── Supabase Client + MitiMiti CRUD ─────────────────────────
 import { createClient } from '@supabase/supabase-js';
-import type { Room, Participant, RoomStatus, Debt } from './types';
-import { generateId, generateInviteToken, dividirMonto } from './utils';
+import type { Room, Participant, RoomStatus, Debt, ActiveRoom } from './types';
+import { generateId, generateInviteToken, dividirMonto, isRoomStale, OPEN_ROOM_STATUSES } from './utils';
 import { trackEvent } from './analytics';
 
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || 'https://placeholder.supabase.co';
@@ -54,6 +54,58 @@ export async function createRoom(
   return data as Room;
 }
 
+// ─── Vencimiento de salas ────────────────────────────────────
+//
+// Antes el vencimiento solo existía en la pantalla: el timer llegaba a 0 y,
+// únicamente si la sala estaba en 'waiting' Y el host la estaba mirando, se
+// cancelaba. Una sala que vencía en 'locked'/'confirming' (o con el host
+// fuera de la app) quedaba abierta para siempre en la BD: la sala "Pizza" que
+// seguía saliendo en el inicio semanas después, y cuyo QR seguía sirviendo.
+//
+// Ahora el vencimiento se aplica al LEER: cualquier lectura que encuentre una
+// sala abierta y vencida la cierra en la BD (sin importar quién la lea) y la
+// devuelve ya cerrada. No se borra la fila — eso arrastraría en cascada las
+// deudas de la sala — se marca 'cancelled', que en la app equivale a que
+// desaparezca. Para cerrarlas aunque nadie abra la app, ver la función SQL
+// opcional `mitimiti_expire_rooms` en supabase-setup.sql.
+
+/**
+ * Cierra una sala vencida. Es condicional (solo si sigue abierta Y vencida)
+ * para no pisar una sala que justo se pagó o se canceló, y para que si varios
+ * teléfonos lo intentan a la vez solo uno lo haga de verdad.
+ */
+export async function expireRoom(roomId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('mitimiti_rooms')
+    .update({ status: 'cancelled' })
+    .eq('id', roomId)
+    .in('status', OPEN_ROOM_STATUSES)
+    .lte('expires_at', new Date().toISOString())
+    .select('id');
+
+  if (error || !data || data.length === 0) return false;
+
+  // Los préstamos hechos en la sala eran solo promesas: se anulan.
+  await supabase
+    .from('mitimiti_debts')
+    .update({ status: 'cancelled' })
+    .eq('room_id', roomId)
+    .eq('status', 'pending');
+
+  trackEvent('ROOM_EXPIRED', roomId);
+  return true;
+}
+
+/**
+ * Si la sala venció pero sigue abierta en la BD, la cierra y la devuelve ya
+ * cerrada, para que ninguna pantalla vuelva a mostrarla como activa.
+ */
+async function closeIfStale(room: Room): Promise<Room> {
+  if (!isRoomStale(room)) return room;
+  await expireRoom(room.id).catch(() => { /* se reintenta en la próxima lectura */ });
+  return { ...room, status: 'cancelled' };
+}
+
 /**
  * Obtiene una sala por su ID.
  */
@@ -65,7 +117,7 @@ export async function getRoom(roomId: string): Promise<Room | null> {
     .single();
 
   if (error) return null;
-  return data as Room;
+  return closeIfStale(data as Room);
 }
 
 /**
@@ -79,16 +131,21 @@ export async function getRoomByToken(token: string): Promise<Room | null> {
     .single();
 
   if (error) return null;
-  return data as Room;
+  return closeIfStale(data as Room);
 }
 
 /**
- * Busca si el usuario está en una sala que aún no haya finalizado.
+ * Busca si el usuario está en una sala que aún no haya finalizado, y en qué
+ * punto está él dentro de ella.
+ *
+ * De paso hace la limpieza: las salas del usuario que vencieron sin cerrarse
+ * se cierran aquí mismo, así que la sala zombi desaparece la primera vez que
+ * el usuario abre el inicio.
  */
-export async function getActiveRoomForUser(userId: string): Promise<Room | null> {
+export async function getActiveRoomForUser(userId: string): Promise<ActiveRoom | null> {
   const { data: parts, error: partsError } = await supabase
     .from('mitimiti_participants')
-    .select('room_id')
+    .select('room_id, confirmation_status, amount_cents')
     .eq('user_id', userId);
 
   if (partsError || !parts || parts.length === 0) return null;
@@ -98,19 +155,27 @@ export async function getActiveRoomForUser(userId: string): Promise<Room | null>
     .from('mitimiti_rooms')
     .select('*')
     .in('id', roomIds)
-    .in('status', ['waiting', 'locked', 'confirming'])
+    .in('status', OPEN_ROOM_STATUSES)
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(20);
 
   if (roomsError || !rooms || rooms.length === 0) return null;
 
-  // Ignorar salas 'waiting' cuyo timer ya expiró: si el host se fue sin
-  // cancelar quedan huérfanas en la BD y no tiene sentido "volver" a ellas.
   const now = Date.now();
-  const active = (rooms as Room[]).find(
-    r => r.status !== 'waiting' || new Date(r.expires_at).getTime() > now,
-  );
-  return active || null;
+  const stale = (rooms as Room[]).filter(r => isRoomStale(r, now));
+  stale.forEach(r => {
+    expireRoom(r.id).catch(() => { /* se reintenta en el próximo chequeo */ });
+  });
+
+  const room = (rooms as Room[]).find(r => !isRoomStale(r, now));
+  if (!room) return null;
+
+  const me = parts.find(p => p.room_id === room.id);
+  return {
+    room,
+    myStatus: (me?.confirmation_status ?? 'pending') as Participant['confirmation_status'],
+    myAmountCents: me?.amount_cents ?? null,
+  };
 }
 
 /**
@@ -135,7 +200,11 @@ export async function updateRoomStatus(
       .update({ status: 'active' })
       .eq('room_id', roomId)
       .eq('status', 'pending');
-  } else if (status === 'cancelled' || status === 'failed') {
+  } else if (status === 'cancelled') {
+    // OJO: 'failed' ya NO anula los préstamos. Después de un fallo el host
+    // puede reintentar el pago; si los anulábamos aquí, al reintentar con
+    // éxito los préstamos de la sala se perdían. Se anulan recién cuando la
+    // sala se cancela de verdad ("Cancelar todo" o vencimiento).
     await supabase
       .from('mitimiti_debts')
       .update({ status: 'cancelled' })
@@ -196,9 +265,14 @@ export async function enterRoomByToken(
   userId: string,
   displayName: string,
 ): Promise<Room> {
+  // getRoomByToken ya devuelve como 'cancelled' una sala vencida: un QR o
+  // link viejo deja de servir aunque nadie la haya cerrado a mano.
   const room = await getRoomByToken(inviteToken);
-  if (!room) throw new Error('Sala no encontrada');
-  if (room.status !== 'waiting') throw new Error('Esta sala ya está cerrada');
+  if (!room) throw new Error('No encontramos esta sala. Puede que el código sea de otra cuenta.');
+  if (room.status === 'locked' || room.status === 'confirming') {
+    throw new Error(`${room.host_name} ya dividió la cuenta, así que esta sala no acepta más personas.`);
+  }
+  if (room.status !== 'waiting') throw new Error('Esta sala ya se cerró.');
 
   const { data, error } = await supabase
     .from('mitimiti_participants')
@@ -276,76 +350,126 @@ export async function getParticipants(roomId: string): Promise<Participant[]> {
 }
 
 /**
- * El host cierra la sala. Calcula la división y asigna montos.
+ * El host divide la cuenta: calcula la división, asigna montos y cierra la
+ * sala para que cada uno acepte su parte.
+ *
+ * También sirve para CORREGIR montos con la sala ya dividida ('locked' o
+ * 'confirming'): así, si al ver los montos alguien dice "yo no tomé
+ * cerveza", el host lo arregla en dos toques en vez de cancelar la sala y
+ * empezar de cero. Al corregir, todos vuelven a aceptar (cambió su monto,
+ * así que su "acepto" anterior ya no vale). Si ya hubo préstamos en la sala
+ * no se permite: esos préstamos se calcularon con los montos viejos.
+ *
+ * Devuelve el monto que quedó para cada persona, para que el host pueda
+ * aceptar su propia parte en el mismo toque.
  */
 export async function lockRoom(
-  roomId: string, 
-  hostId: string, 
+  roomId: string,
+  hostId: string,
   splitMode: 'equal' | 'custom' = 'equal',
   customAmounts?: { userId: string, amountCents: number }[]
-): Promise<void> {
+): Promise<{ userId: string; amountCents: number }[]> {
   const room = await getRoom(roomId);
   if (!room) throw new Error('Sala no encontrada');
-  if (room.host_id !== hostId) throw new Error('Solo el host puede cerrar la sala');
-  if (room.status !== 'waiting') throw new Error('La sala no está abierta');
+  if (room.host_id !== hostId) throw new Error('Solo el anfitrión puede dividir la cuenta');
+  if (room.status === 'cancelled') throw new Error('Esta sala ya se cerró');
+
+  const isResplit = room.status === 'locked' || room.status === 'confirming';
+  if (room.status !== 'waiting' && !isResplit) throw new Error('Esta sala ya no se puede dividir');
+
+  if (isResplit) {
+    const { count } = await supabase
+      .from('mitimiti_debts')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_id', roomId)
+      .eq('status', 'pending');
+    if (count && count > 0) {
+      throw new Error('Ya hubo préstamos en esta sala, así que los montos no se pueden cambiar');
+    }
+  }
 
   const participants = await getParticipants(roomId);
   if (participants.length < 2) throw new Error('Necesitas al menos 2 personas');
 
   // Calcular división
   const totalCents = room.total_cents + room.tip_cents;
-  
-  let updates: {id: string, amount_cents: number, has_extra_cent: boolean}[] = [];
+
+  let updates: {id: string, userId: string, amount_cents: number, has_extra_cent: boolean}[] = [];
 
   if (splitMode === 'equal') {
     const amounts = dividirMonto(totalCents, participants.length);
     updates = participants.map((p, i) => ({
       id: p.id,
+      userId: p.user_id,
       amount_cents: amounts[i],
       has_extra_cent: amounts[i] > Math.floor(totalCents / participants.length),
     }));
   } else {
-    if (!customAmounts) throw new Error('Faltan montos personalizados');
-    const sum = customAmounts.reduce((acc, curr) => acc + curr.amountCents, 0);
+    if (!customAmounts) throw new Error('Faltan los montos de cada persona');
+    // Alguien pudo entrar justo mientras el host ajustaba: mejor avisar que
+    // dejarlo en $0 sin que nadie lo haya decidido.
+    const missing = participants.filter(p => !customAmounts.some(c => c.userId === p.user_id));
+    if (missing.length > 0) {
+      throw new Error(`${missing[0].display_name} acaba de entrar. Revisa los montos otra vez.`);
+    }
+    if (customAmounts.some(c => c.amountCents < 0)) throw new Error('Hay un monto negativo');
+    const sum = participants.reduce(
+      (acc, p) => acc + (customAmounts.find(c => c.userId === p.user_id)?.amountCents || 0),
+      0,
+    );
     if (sum !== totalCents) throw new Error('La suma de montos no coincide con el total');
-    
-    updates = participants.map(p => {
-      const custom = customAmounts.find(c => c.userId === p.user_id);
-      return {
-        id: p.id,
-        amount_cents: custom ? custom.amountCents : 0,
-        has_extra_cent: false,
-      };
-    });
+
+    updates = participants.map(p => ({
+      id: p.id,
+      userId: p.user_id,
+      amount_cents: customAmounts.find(c => c.userId === p.user_id)?.amountCents || 0,
+      has_extra_cent: false,
+    }));
   }
 
-  // Actualizar cada participante
+  // Actualizar cada participante. Quien quedó en $0 (p. ej. el cumpleañero
+  // al que invitan) no tiene nada que aceptar: queda listo de una.
+  const now = new Date().toISOString();
   for (const update of updates) {
+    const nothingToPay = update.amount_cents === 0;
     await supabase
       .from('mitimiti_participants')
       .update({
         amount_cents: update.amount_cents,
         has_extra_cent: update.has_extra_cent,
+        confirmation_status: nothingToPay ? 'confirmed' : 'pending',
+        confirmed_at: nothingToPay ? now : null,
+        deficit_cents: 0,
       })
       .eq('id', update.id);
   }
 
-  // NOTA: el host ya NO se auto-confirma. Debe aceptar su parte como
-  // cualquier participante — así también pasa por el chequeo de saldo y
-  // puede pedir un préstamo si no le alcanza.
+  // NOTA: el host no se auto-confirma aquí: la vista lo hace en el mismo
+  // toque si su saldo alcanza (el saldo vive en el teléfono), y si no, le
+  // abre de una las opciones para cubrir lo que falta.
   await updateRoomStatus(roomId, 'locked', {
-    locked_at: new Date().toISOString(),
+    locked_at: now,
     split_mode: splitMode,
   });
-  trackEvent('ROOM_LOCKED', roomId, hostId, { splitMode });
+  trackEvent(isResplit ? 'ROOM_RESPLIT' : 'ROOM_LOCKED', roomId, hostId, { splitMode });
+
+  return updates.map(u => ({ userId: u.userId, amountCents: u.amount_cents }));
 }
 
 /**
  * Un participante confirma su pago.
  * Si todos confirman, la sala pasa a 'confirming'.
+ *
+ * `expectedAmountCents` es el monto que la persona VIO al aceptar. Si el
+ * host lo cambió (o alguien salió y la sala se reinició) en ese mismo
+ * instante, no se confirma un monto distinto al que aceptó.
  */
-export async function confirmPayment(roomId: string, userId: string): Promise<void> {
-  const { error } = await supabase
+export async function confirmPayment(
+  roomId: string,
+  userId: string,
+  expectedAmountCents?: number,
+): Promise<void> {
+  let query = supabase
     .from('mitimiti_participants')
     .update({
       confirmation_status: 'confirmed',
@@ -354,8 +478,17 @@ export async function confirmPayment(roomId: string, userId: string): Promise<vo
     .eq('room_id', roomId)
     .eq('user_id', userId);
 
+  if (expectedAmountCents !== undefined) {
+    query = query.eq('amount_cents', expectedAmountCents);
+  }
+
+  const { data, error } = await query.select('id');
+
   if (error) throw new Error(`Error confirmando: ${error.message}`);
-  
+  if (expectedAmountCents !== undefined && (!data || data.length === 0)) {
+    throw new Error('Tu monto acaba de cambiar. Revísalo antes de aceptar.');
+  }
+
   trackEvent('USER_CONFIRMED', roomId, userId);
 
   // Verificar si todos confirmaron
@@ -378,8 +511,14 @@ export async function executePayment(
 ): Promise<void> {
   const room = await getRoom(roomId);
   if (!room) throw new Error('Sala no encontrada');
-  if (room.host_id !== hostId) throw new Error('Solo el host puede ejecutar el pago');
-  if (room.status !== 'confirming') throw new Error('No todos han confirmado');
+  if (room.host_id !== hostId) throw new Error('Solo el anfitrión puede pagar');
+  if (room.status === 'cancelled') throw new Error('Esta sala ya se cerró');
+  // 'failed' también vale: es el "Reintentar" después de un pago fallido.
+  // Antes solo se aceptaba 'confirming', así que reintentar SIEMPRE fallaba
+  // con "No todos han confirmado".
+  if (room.status !== 'confirming' && room.status !== 'failed') {
+    throw new Error('Todavía faltan personas por aceptar');
+  }
 
   // Cambiar a processing
   await updateRoomStatus(roomId, 'processing');
@@ -537,18 +676,36 @@ export async function getMyDebts(userId: string): Promise<Debt[]> {
 }
 
 export async function settleDebt(debtId: string): Promise<void> {
+  await settleDebts([debtId]);
+}
+
+/**
+ * Marca varias deudas como pagadas de una vez. Las deudas se muestran
+ * agrupadas por persona ("Le debes $7 a Pedro", aunque vengan de dos
+ * salas), así que pagarle a alguien salda todas las que tienes con él.
+ * Solo toca deudas todavía activas: un doble toque no paga dos veces.
+ */
+export async function settleDebts(debtIds: string[]): Promise<void> {
+  if (debtIds.length === 0) return;
   const { error } = await supabase
     .from('mitimiti_debts')
     .update({ status: 'paid', paid_at: new Date().toISOString() })
-    .eq('id', debtId);
+    .in('id', debtIds)
+    .eq('status', 'active');
   if (error) throw new Error(`Error pagando deuda: ${error.message}`);
 }
 
 export async function forgiveDebt(debtId: string): Promise<void> {
+  await forgiveDebts([debtId]);
+}
+
+export async function forgiveDebts(debtIds: string[]): Promise<void> {
+  if (debtIds.length === 0) return;
   const { error } = await supabase
     .from('mitimiti_debts')
     .update({ status: 'forgiven', forgiven_at: new Date().toISOString() })
-    .eq('id', debtId);
+    .in('id', debtIds)
+    .eq('status', 'active');
   if (error) throw new Error(`Error perdonando deuda: ${error.message}`);
 }
 

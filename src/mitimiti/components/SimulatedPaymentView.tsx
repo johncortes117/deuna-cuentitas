@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toCents } from '../utils';
 
 interface SimulatedPaymentViewProps {
   targetName: string;
@@ -9,8 +10,6 @@ interface SimulatedPaymentViewProps {
 
 export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMitiMiti, onClose }: SimulatedPaymentViewProps) {
   const [amount, setAmount] = useState('0');
-  const [showRoomModal, setShowRoomModal] = useState(false);
-  const [roomName, setRoomName] = useState(targetName);
   const [creating, setCreating] = useState(false);
 
   const handleKey = (key: string) => {
@@ -30,19 +29,18 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
     setAmount(prev => (prev === '0' ? key : prev + key));
   };
 
-  const hasAmount = amount !== '0' && amount !== '';
+  const hasAmount = toCents(amount) > 0;
 
-  const handleMitiMitiClick = () => {
-    setShowRoomModal(true);
-  };
-
-  const handleCreateRoom = async () => {
-    if (!roomName.trim() || creating) return;
-    // Mostrar estado de carga mientras se crea la sala: la vista permanece
-    // montada durante el await (el padre solo navega cuando la sala existe).
+  // El QR del local ya trae su nombre: la sala se llama así y se crea de una.
+  // Antes había un modal "Nombra tu sala" con ese mismo nombre ya escrito,
+  // que solo agregaba un toque (y abría el teclado del sistema).
+  const handleMitiMiti = async () => {
+    if (!hasAmount || creating) return;
+    // La vista permanece montada durante el await (el padre solo navega
+    // cuando la sala existe), así que el botón muestra el progreso.
     setCreating(true);
     try {
-      await onPayMitiMiti(roomName.trim(), amount);
+      await onPayMitiMiti(targetName, amount);
     } finally {
       setCreating(false);
     }
@@ -52,7 +50,7 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
     <div className="flex flex-col flex-1 h-full bg-white absolute inset-0 z-50">
       {/* Header */}
       <div className="flex items-center px-5 pt-14 pb-3 shrink-0 border-b border-gray-100">
-        <button onClick={onClose} className="mr-3">
+        <button onClick={onClose} className="mr-3" aria-label="Volver">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
@@ -79,6 +77,7 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
           <button
             key={key}
             onClick={() => handleKey(key)}
+            aria-label={key === 'del' ? 'Borrar' : key}
             className="flex items-center justify-center py-2.5 rounded-xl text-[28px] font-semibold text-[#4C1D80] active:bg-gray-100 transition-colors"
           >
             {key === 'del' ? (
@@ -93,72 +92,41 @@ export default function SimulatedPaymentView({ targetName, onPayAlone, onPayMiti
       </div>
 
       {/* Acciones */}
-      <div className="px-5 pt-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] shrink-0 flex gap-3">
-        <button
-          onClick={() => onPayAlone(amount)}
-          disabled={!hasAmount}
-          className={`flex-1 py-4 rounded-[16px] text-[15px] font-bold transition-all ${
-            hasAmount
-              ? 'bg-gray-100 text-[#1a1a1a] active:bg-gray-200'
-              : 'bg-gray-50 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          Pagar ${amount}
-        </button>
+      <div className="px-5 pt-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] shrink-0">
+        <p className="text-[12px] text-gray-500 text-center mb-2">¿Pagan entre varios? Divide la cuenta con MitiMiti.</p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => onPayAlone(amount)}
+            disabled={!hasAmount || creating}
+            className={`flex-1 py-4 rounded-[16px] text-[15px] font-bold transition-all ${
+              hasAmount
+                ? 'bg-gray-100 text-[#1a1a1a] active:bg-gray-200'
+                : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            Pagar ${amount}
+          </button>
 
-        <button
-          onClick={handleMitiMitiClick}
-          disabled={!hasAmount}
-          className={`flex-1 py-4 rounded-[16px] text-[15px] font-bold transition-all flex items-center justify-center gap-2 ${
-            hasAmount
-              ? 'bg-[#4C1D80] text-white active:scale-[0.98]'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          <span>🤝</span>
-          <span>MitiMiti</span>
-        </button>
-      </div>
-
-      {/* Modal para Nombre de Sala */}
-      {showRoomModal && (
-        <div className="absolute inset-0 bg-black/60 z-50 flex items-start justify-center pt-4 px-4 animate-fadeIn" onClick={() => !creating && setShowRoomModal(false)}>
-          <div className="bg-white w-full rounded-3xl p-6 shadow-2xl animate-slideDown" onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
-            <h3 className="text-[22px] font-bold text-[#1a1a1a] mb-2 text-center">Nombra tu sala</h3>
-            <p className="text-[15px] text-gray-500 mb-6 text-center">Para crear la sala de pago grupal, ponle un nombre (ej. {targetName})</p>
-            
-            <input
-              type="text"
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              placeholder="Nombre de la sala"
-              disabled={creating}
-              className="w-full bg-[#F8F8FA] border border-gray-100 rounded-2xl py-3 px-4 text-[16px] text-[#1a1a1a] focus:outline-none focus:border-[#4C1D80] focus:ring-1 focus:ring-[#4C1D80] transition-colors mb-5 disabled:opacity-60"
-              autoFocus
-            />
-
-            <button
-              onClick={handleCreateRoom}
-              disabled={!roomName.trim() || creating}
-              className={`w-full py-4 rounded-[16px] text-[16px] font-bold transition-all flex items-center justify-center gap-2 ${
-                roomName.trim() && !creating
-                  ? 'bg-[#4C1D80] text-white active:scale-[0.98]'
-                  : creating
-                    ? 'bg-[#4C1D80]/70 text-white cursor-wait'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              {creating && (
-                <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-              )}
-              {creating ? 'Creando sala…' : 'Crear sala y Pagar'}
-            </button>
-          </div>
+          <button
+            onClick={handleMitiMiti}
+            disabled={!hasAmount || creating}
+            className={`flex-1 py-4 rounded-[16px] text-[15px] font-bold transition-all flex items-center justify-center gap-2 ${
+              hasAmount
+                ? 'bg-[#4C1D80] text-white active:scale-[0.98]'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            } ${creating ? 'opacity-80 cursor-wait' : ''}`}
+          >
+            {creating ? (
+              <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            ) : (
+              <span aria-hidden="true">🤝</span>
+            )}
+            <span>{creating ? 'Creando sala…' : 'Dividir cuenta'}</span>
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

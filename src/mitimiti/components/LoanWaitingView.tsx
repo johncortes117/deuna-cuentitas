@@ -1,5 +1,6 @@
 import type { Participant, Debt } from '../types';
 import { formatMoney } from '../utils';
+import Avatar from './Avatar';
 
 interface Props {
   participant: Participant;
@@ -48,9 +49,7 @@ export default function LoanWaitingView({ participant, debts }: Props) {
             {myLoans.map(loan => (
               <div key={loan.id} className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-50">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-[#4C1D80]/10 rounded-full flex items-center justify-center text-[#4C1D80] font-bold text-[12px]">
-                    {loan.creditor_name.slice(0,2).toUpperCase()}
-                  </div>
+                  <Avatar name={loan.creditor_name} size={32} />
                   <span className="font-medium text-[#1a1a1a] text-[14px]">{loan.creditor_name}</span>
                 </div>
                 <span className="font-bold text-green-600">+{formatMoney(loan.amount_cents)}</span>

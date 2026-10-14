@@ -6,6 +6,8 @@ interface ErrorViewProps {
   onRetry?: () => void;
   onCancel?: () => void;
   onBack: () => void;
+  // Mientras el reintento está en curso, los botones no deben poder tocarse dos veces.
+  busy?: boolean;
 }
 
 export default function ErrorView({
@@ -14,6 +16,7 @@ export default function ErrorView({
   onRetry,
   onCancel,
   onBack,
+  busy = false,
 }: ErrorViewProps) {
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-6">
@@ -41,19 +44,24 @@ export default function ErrorView({
           {onRetry && (
             <button
               onClick={onRetry}
-              className="w-full py-4 rounded-[14px] bg-[#4C1D80] text-white text-[16px] font-bold active:scale-[0.98] transition-transform"
+              disabled={busy}
+              className="w-full py-4 rounded-[14px] bg-[#4C1D80] text-white text-[16px] font-bold active:scale-[0.98] transition-transform disabled:opacity-70"
             >
-              Reintentar
+              {busy ? 'Reintentando…' : 'Reintentar el pago'}
             </button>
           )}
           {onCancel && (
             <button
               onClick={onCancel}
+              disabled={busy}
               className="w-full py-4 rounded-[14px] bg-gray-100 text-[#1a1a1a] text-[16px] font-bold active:scale-[0.98] transition-transform"
             >
-              Cancelar todo
+              Cancelar la sala
             </button>
           )}
+          <p className="text-[12px] text-gray-500 text-center pt-1">
+            Si cancelas, no se le cobra nada a nadie.
+          </p>
         </div>
       ) : (
         <button

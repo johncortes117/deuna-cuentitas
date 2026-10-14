@@ -10,53 +10,73 @@ import JoinRoomView from './components/JoinRoomView';
 import DebtsView from './components/DebtsView';
 import './MitiMiti.css';
 
+/**
+ * Traduce el hash a una ruta. Se usa también para el estado inicial: antes
+ * la ruta arrancaba en 'create' y recién un efecto leía el hash, así que al
+ * abrir un link directo se alcanzaba a ver un instante la pantalla equivocada.
+ *
+ *   #/mitimiti/room/<id>                 sala
+ *   #/mitimiti/join/<token>              entrar con invitación
+ *   #/mitimiti/debts?tab=owe|owed        deudas (en la pestaña indicada)
+ *   #/mitimiti[/create][?amount=&name=]  crear (opcionalmente pre-llenada)
+ */
+function routeFromHash(hash: string): MitiMitiRoute {
+  const roomMatch = hash.match(/^#\/mitimiti\/room\/([A-Za-z0-9-]+)/);
+  if (roomMatch) return { page: 'room', roomId: roomMatch[1] };
+
+  const joinMatch = hash.match(/^#\/mitimiti\/join\/([A-Za-z0-9]+)/);
+  if (joinMatch) return { page: 'join', token: joinMatch[1] };
+
+  const [path, query = ''] = hash.split('?');
+  const params = new URLSearchParams(query);
+
+  if (path === '#/mitimiti/debts') {
+    const tab = params.get('tab');
+    return { page: 'debts', tab: tab === 'owe' || tab === 'owed' ? tab : undefined };
+  }
+
+  const amount = Number(params.get('amount'));
+  return {
+    page: 'create',
+    commerceName: params.get('name') || undefined,
+    totalCents: Number.isFinite(amount) && amount > 0 ? Math.round(amount) : undefined,
+  };
+}
+
 // ─── MitiMitiApp (Router principal) ──────────────────────────
 export default function MitiMitiApp() {
   const [profile] = useState<UserProfile | null>(() => getUserProfile());
-  const [route, setRoute] = useState<MitiMitiRoute>({ page: 'create' });
+  const [route, setRoute] = useState<MitiMitiRoute>(() => routeFromHash(window.location.hash));
 
   // Escuchar hash changes para deep links
   useEffect(() => {
     function handleHash() {
-      const hash = window.location.hash;
-      const joinMatch = hash.match(/#\/mitimiti\/join\/([A-Za-z0-9]+)/);
-      const roomMatch = hash.match(/#\/mitimiti\/room\/([A-Za-z0-9-]+)/);
-      
-      if (roomMatch) {
-        setRoute({ page: 'room', roomId: roomMatch[1] });
-      } else if (joinMatch) {
-        setRoute({ page: 'join', token: joinMatch[1] });
-      } else if (hash === '#/mitimiti/debts') {
-        setRoute({ page: 'debts' });
-      } else if (hash === '#/mitimiti/create' || hash === '#/mitimiti') {
-        setRoute({ page: 'create' });
+      if (window.location.hash.startsWith('#/mitimiti')) {
+        setRoute(routeFromHash(window.location.hash));
       }
     }
-
-    handleHash();
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
-  // Crear sala
+  const goHome = useCallback(() => {
+    window.location.hash = '#/';
+  }, []);
+
+  // Crear sala. Si falla, el error vuelve a la vista para mostrarlo (antes
+  // solo iba a la consola y el botón parecía no hacer nada).
   const handleCreateRoom = useCallback(async (commerceName: string, amountStr: string) => {
     if (!profile) return;
+    const totalCents = toCents(amountStr);
+    if (totalCents <= 0) return;
 
-    try {
-      const totalCents = toCents(amountStr);
-      if (totalCents <= 0) return;
-
-      const room = await createRoom(
-        profile.userId,
-        profile.displayName,
-        commerceName,
-        totalCents,
-      );
-
-      setRoute({ page: 'room', roomId: room.id });
-    } catch (err) {
-      console.error('Error creating room:', err);
-    }
+    const room = await createRoom(
+      profile.userId,
+      profile.displayName,
+      commerceName,
+      totalCents,
+    );
+    window.location.hash = `#/mitimiti/room/${room.id}`;
   }, [profile]);
 
   // ─── Render ─────────────────────────────────────────────
@@ -68,57 +88,59 @@ export default function MitiMitiApp() {
   }
 
   return (
-    <div className="flex flex-col flex-1 relative bg-white h-full w-full">
+    <div className="flex flex-col flex-1 relative bg-white h-full w-full min-h-0">
       {/* Router */}
       {route.page === 'scan_before_create' && (
         <ScannerBeforeCreate
           onScanComplete={(commerceName) => setRoute({ page: 'create', commerceName })}
-          onBack={() => {
-            window.location.hash = '#/';
-          }}
+          onBack={goHome}
         />
       )}
 
       {route.page === 'create' && (
         <CreateRoomView
+          key={`${route.commerceName ?? ''}-${route.totalCents ?? ''}`}
           initialCommerceName={route.commerceName}
           initialAmount={route.totalCents ? fromCents(route.totalCents) : undefined}
           onCreateRoom={handleCreateRoom}
-          onRejoinRoom={(roomId) => setRoute({ page: 'room', roomId })}
-          onBack={() => {
-            window.location.hash = '#/';
-          }}
+          onRejoinRoom={(roomId) => { window.location.hash = `#/mitimiti/room/${roomId}`; }}
+          onBack={goHome}
         />
       )}
 
       {route.page === 'room' && (
         <RoomView
+          key={route.roomId}
           roomId={route.roomId}
-          onBack={() => {
-            window.location.hash = '#/';
+          onBack={goHome}
+          onExit={goHome}
+          onRecreate={(name, totalCents) => {
+            window.location.hash = `#/mitimiti/create?amount=${totalCents}&name=${encodeURIComponent(name)}`;
           }}
-          onExit={() => {
-            window.location.hash = '#/';
-          }}
+          onOpenDebts={(tab) => { window.location.hash = `#/mitimiti/debts?tab=${tab}`; }}
         />
       )}
 
       {route.page === 'join' && (
         <JoinRoomView
           inviteToken={route.token}
-          onJoined={(roomId) => setRoute({ page: 'room', roomId })}
-          onBack={() => {
-            window.location.hash = '#/';
+          onJoined={(roomId) => {
+            // Reemplazar (no apilar) el link de invitación por el de la sala:
+            // recargar lleva a la sala, y "atrás" no vuelve a entrar.
+            window.history.replaceState(null, '', `#/mitimiti/room/${roomId}`);
+            setRoute({ page: 'room', roomId });
           }}
+          onBack={goHome}
         />
       )}
 
       {route.page === 'debts' && (
         <DebtsView
+          initialTab={route.tab}
           onBack={() => {
             // Volver al inicio: la vista de deudas se abre desde el banner del
             // dashboard, así que "atrás" debe regresar ahí, no al escáner.
-            window.location.hash = '#/';
+            goHome();
           }}
         />
       )}

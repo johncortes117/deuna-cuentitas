@@ -1,14 +1,12 @@
 // ─── QRInvite: QR de invitación con URL real ─────────────────
 import { useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { encodeInviteQR } from '../utils';
+import { inviteLink } from '../share';
 
 interface QRInviteProps {
   inviteToken: string;
   size?: number;
 }
-
-const APP_URL = import.meta.env.VITE_APP_URL || window.location.origin;
 
 export default function QRInvite({ inviteToken, size = 200 }: QRInviteProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -16,7 +14,9 @@ export default function QRInvite({ inviteToken, size = 200 }: QRInviteProps) {
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    const url = encodeInviteQR(inviteToken, APP_URL);
+    // Mismo link que se comparte por WhatsApp (antes el QR usaba VITE_APP_URL
+    // y el botón de compartir window.location.origin: podían no coincidir).
+    const url = inviteLink(inviteToken);
 
     QRCode.toCanvas(canvasRef.current, url, {
       width: size,

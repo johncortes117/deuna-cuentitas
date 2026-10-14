@@ -27,17 +27,18 @@ export default function RoomTimer({ expiresAt, onExpired }: RoomTimerProps) {
   const isDanger = seconds < 60;
   const isWarning = seconds < 300 && !isDanger;
 
+  // "⏱ 13:05" solo no decía qué pasaba al llegar a cero; "Cierra en" sí.
   return (
     <span
-      className={`text-[13px] font-mono font-semibold ${
+      className={`text-[12px] font-semibold tabular-nums ${
         isDanger
           ? 'mitimiti-timer-danger'
           : isWarning
-            ? 'text-amber-500'
-            : 'text-gray-400'
+            ? 'text-amber-600'
+            : 'text-gray-500'
       }`}
     >
-      ⏱ {formatTimer(seconds)}
+      Cierra en {formatTimer(seconds)}
     </span>
   );
 }
