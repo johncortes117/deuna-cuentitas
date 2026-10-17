@@ -23,6 +23,9 @@ export default function ScannerBeforeCreate({ onScanComplete, onBack }: ScannerB
     } else if (data.type === 'mitimiti_invite') {
       // Si escaneó una invitación a sala mientras intentaba crear una, redirigir a unirse
       window.location.hash = `#/mitimiti/join/${data.token}`;
+    } else if (data.type === 'mitimiti_debt') {
+      // El QR de una deuda que te anotaron: abrirla
+      window.location.hash = `#/mitimiti/deuda/${data.token}`;
     } else {
       setError("QR no soportado");
     }

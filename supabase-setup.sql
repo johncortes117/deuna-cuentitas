@@ -86,7 +86,7 @@ DO $$
 BEGIN
   ALTER TABLE mitimiti_debts DROP CONSTRAINT IF EXISTS mitimiti_debts_status_check;
   ALTER TABLE mitimiti_debts ADD CONSTRAINT mitimiti_debts_status_check 
-    CHECK (status IN ('pending', 'active', 'paid', 'forgiven', 'cancelled'));
+    CHECK (status IN ('pending', 'active', 'paid', 'forgiven', 'cancelled', 'declined'));
 EXCEPTION
   WHEN undefined_object THEN NULL;
 END $$;
@@ -206,3 +206,35 @@ $$;
 -- Para que corra sola cada minuto, activa la extensión pg_cron
 -- (Database → Extensions → pg_cron) y ejecuta:
 --   SELECT cron.schedule('mitimiti-expire-rooms', '* * * * *', 'SELECT mitimiti_expire_rooms()');
+
+-- 7. Deudas anotadas a mano (sin sala)
+--
+-- "Le presté $1,50 a Juan en efectivo": la deuda nace fuera de una sala.
+-- Quien la anota queda en su lado (acreedor si prestó, deudor si le
+-- prestaron) y el lado del amigo queda en '' hasta que él abre el link que
+-- le llegó por WhatsApp. Mientras tanto la deuda está 'pending'; las de sala
+-- usan 'pending' para los préstamos prometidos en la sala, y `kind` las
+-- distingue.
+--
+--   pending ──(el amigo acepta)──▶ active ──▶ paid / forgiven
+--      │ └──(el amigo no la reconoce)──▶ declined
+--      └──(quien la anotó anula el link)──▶ cancelled
+--
+-- Es idempotente: se puede volver a correr todo el archivo sin problema.
+ALTER TABLE mitimiti_debts ALTER COLUMN room_id DROP NOT NULL;
+ALTER TABLE mitimiti_debts ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'room';
+ALTER TABLE mitimiti_debts ADD COLUMN IF NOT EXISTS concept TEXT;          -- "Taxi", "Comida"… (opcional)
+ALTER TABLE mitimiti_debts ADD COLUMN IF NOT EXISTS invite_token TEXT UNIQUE; -- el link que se comparte
+ALTER TABLE mitimiti_debts ADD COLUMN IF NOT EXISTS created_by TEXT;       -- quien la anotó
+ALTER TABLE mitimiti_debts ADD COLUMN IF NOT EXISTS responded_at TIMESTAMPTZ; -- cuando el amigo aceptó o no
+
+DO $$
+BEGIN
+  ALTER TABLE mitimiti_debts DROP CONSTRAINT IF EXISTS mitimiti_debts_kind_check;
+  ALTER TABLE mitimiti_debts ADD CONSTRAINT mitimiti_debts_kind_check CHECK (
+    (kind = 'room' AND room_id IS NOT NULL)
+    OR (kind = 'direct' AND room_id IS NULL AND invite_token IS NOT NULL AND created_by IS NOT NULL)
+  );
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_debts_created_by ON mitimiti_debts(created_by);

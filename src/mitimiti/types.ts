@@ -41,17 +41,33 @@ export interface Participant {
 
 export interface Debt {
   id: string;
-  room_id: string;
+  // null en las deudas anotadas a mano (no nacieron en una sala).
+  room_id: string | null;
+  // En una deuda anotada a mano, el lado del amigo queda en '' hasta que él
+  // abre el link y la acepta (quien la anotó ya está en su lado).
   debtor_id: string;
   debtor_name: string;
   creditor_id: string;
   creditor_name: string;
   amount_cents: number;
-  status: 'pending' | 'active' | 'paid' | 'forgiven' | 'cancelled';
+  // 'pending': en una sala, préstamo prometido que aún no es oficial; en una
+  // deuda anotada a mano, link enviado que el amigo todavía no acepta.
+  // 'declined': el amigo abrió el link y dijo que no reconoce la deuda.
+  status: 'pending' | 'active' | 'paid' | 'forgiven' | 'cancelled' | 'declined';
   created_at: string;
   paid_at: string | null;
   forgiven_at: string | null;
+  // Deudas anotadas a mano ("le presté $1,50 a Juan"). Opcionales porque una
+  // BD sin la migración de supabase-setup.sql (sección 7) no las trae.
+  kind?: 'room' | 'direct';
+  concept?: string | null;
+  invite_token?: string | null;
+  created_by?: string | null;
+  responded_at?: string | null;
 }
+
+// Quién le prestó a quién, visto por quien anota la deuda.
+export type LoanDirection = 'lent' | 'borrowed'; // lent: yo presté · borrowed: me prestaron
 
 export interface Assignment {
   userId: string;
@@ -80,8 +96,14 @@ export interface InviteQRData {
   token: string;
 }
 
+// Datos de un QR con el link de una deuda anotada a mano
+export interface DebtLinkQRData {
+  type: 'mitimiti_debt';
+  token: string;
+}
+
 // Union de todos los tipos de QR que la app puede leer
-export type QRData = PersonalQRData | InviteQRData;
+export type QRData = PersonalQRData | InviteQRData | DebtLinkQRData;
 
 // Perfil del usuario local (persiste en localStorage)
 export interface UserProfile {
@@ -98,4 +120,6 @@ export type MitiMitiRoute =
   | { page: 'join'; token: string }
   | { page: 'success'; roomId: string }
   | { page: 'error'; roomId: string; message: string }
-  | { page: 'debts'; tab?: 'owe' | 'owed' };
+  | { page: 'debts'; tab?: 'owe' | 'owed' }
+  | { page: 'new_debt'; direction?: LoanDirection }
+  | { page: 'debt_link'; token: string };

@@ -1,14 +1,14 @@
-// ─── QRInvite: QR de invitación con URL real ─────────────────
+// ─── QRInvite: QR con la URL real de una sala o de una deuda ─
 import { useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { inviteLink } from '../share';
 
 interface QRInviteProps {
-  inviteToken: string;
+  // El mismo link que se comparte por WhatsApp (inviteLink / debtLink).
+  url: string;
   size?: number;
 }
 
-export default function QRInvite({ inviteToken, size = 200 }: QRInviteProps) {
+export default function QRInvite({ url, size = 200 }: QRInviteProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -16,8 +16,6 @@ export default function QRInvite({ inviteToken, size = 200 }: QRInviteProps) {
 
     // Mismo link que se comparte por WhatsApp (antes el QR usaba VITE_APP_URL
     // y el botón de compartir window.location.origin: podían no coincidir).
-    const url = inviteLink(inviteToken);
-
     QRCode.toCanvas(canvasRef.current, url, {
       width: size,
       margin: 2,
@@ -27,7 +25,7 @@ export default function QRInvite({ inviteToken, size = 200 }: QRInviteProps) {
       },
       errorCorrectionLevel: 'H',
     });
-  }, [inviteToken, size]);
+  }, [url, size]);
 
   return (
     <div className="relative p-6">

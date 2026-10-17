@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 
 export async function trackEvent(
   eventName: string,
-  roomId?: string,
+  roomId?: string | null,
   userId?: string,
   payload?: any
 ) {

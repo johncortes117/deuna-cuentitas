@@ -5,6 +5,7 @@
 // pagar, confirmar). Ahora la recarga va en el mismo botón: un toque.
 import type { Debt } from '../types';
 import { formatMoney, relativeDate, topUpAmountFor, PRINCIPAL_ACCOUNT_LABEL } from '../utils';
+import { debtOrigin } from '../debtGroups';
 import BottomSheet from './BottomSheet';
 import Avatar from './Avatar';
 
@@ -48,7 +49,7 @@ export default function PayDebtSheet({
             {debts.map(d => (
               <div key={d.id} className="flex justify-between text-[13px]">
                 <span className="text-gray-500 truncate pr-3">
-                  {roomNames[d.room_id] || 'Sala MitiMiti'} · {relativeDate(d.created_at)}
+                  {debtOrigin(d, roomNames)} · {relativeDate(d.created_at)}
                 </span>
                 <span className="font-semibold text-[#1a1a1a] tabular-nums">{formatMoney(d.amount_cents)}</span>
               </div>
@@ -56,7 +57,7 @@ export default function PayDebtSheet({
           </div>
         ) : debts[0] ? (
           <p className="text-[13px] text-gray-500 mb-1">
-            {roomNames[debts[0].room_id] || 'Sala MitiMiti'} · {relativeDate(debts[0].created_at)}
+            {debtOrigin(debts[0], roomNames)} · {relativeDate(debts[0].created_at)}
           </p>
         ) : null}
 
