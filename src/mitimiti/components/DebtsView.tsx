@@ -14,18 +14,23 @@
 //    única forma de cerrar esa deuda era "Perdonar", que no es lo que pasó.
 //  • Pagar sin saldo suficiente ofrece "Recargar $10 y pagar" en un toque.
 //  • Fechas sin abreviaturas ambiguas ("11 de agosto", no "11 ago").
+//  • "Anotar una deuda" abajo, siempre a mano: para los préstamos que no
+//    nacen en una sala ("le presté $1,50 en efectivo"). Mientras el amigo no
+//    abre el link, la deuda ya cuenta y aparece "Sin abrir", con el botón
+//    para reenviarlo.
 import { useState, useEffect, useMemo } from 'react';
 import { useDebts, wasMarkedPaidByMe } from '../useDebts';
 import { useBalance } from '../useBalance';
-import { formatMoney, getUserProfile, relativeDate, longDate, daysSince } from '../utils';
+import { formatMoney, getUserProfile, relativeDate, longDate, daysSince, conceptEmoji } from '../utils';
 import { getRoomNames } from '../supabase';
 import { trackEvent } from '../analytics';
-import { groupDebtsByPerson, type PersonDebts } from '../debtGroups';
-import { openWhatsApp, reminderMessage } from '../share';
-import type { Debt } from '../types';
+import { groupDebtsByPerson, debtOrigin, creatorLent, type PersonDebts } from '../debtGroups';
+import { openWhatsApp, reminderMessage, debtLinkMessage } from '../share';
+import type { Debt, LoanDirection } from '../types';
 import BottomSheet, { SheetCloseButton } from './BottomSheet';
 import Avatar from './Avatar';
 import PayDebtSheet from './PayDebtSheet';
+import DebtLinkActions, { ChatIcon } from './DebtLinkActions';
 
 type Tab = 'owe' | 'owed';
 type PendingAction = { type: 'pay' | 'markPaid' | 'forgive'; personId: string; direction: Tab } | null;
@@ -58,8 +63,26 @@ function sinceLabel(iso: string): string {
   return `Desde el ${relativeDate(iso)}`;
 }
 
-export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; onBack: () => void }) {
-  const { debtsIOwe, debtsOwedToMe, history, isLoading, error, settleDebts, markDebtsPaid, forgiveDebts } = useDebts();
+interface DebtsViewProps {
+  initialTab?: Tab;
+  onBack: () => void;
+  onNewDebt: (direction: LoanDirection) => void;
+}
+
+export default function DebtsView({ initialTab, onBack, onNewDebt }: DebtsViewProps) {
+  const {
+    debtsIOwe,
+    debtsOwedToMe,
+    linksIOwe,
+    linksOwedToMe,
+    history,
+    isLoading,
+    error,
+    settleDebts,
+    markDebtsPaid,
+    forgiveDebts,
+    cancelLink,
+  } = useDebts();
   const { balance, deduct, add } = useBalance();
   const profile = useMemo(() => getUserProfile(), []);
   const userId = profile?.userId || '';
@@ -69,7 +92,9 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
 
   // Si el usuario no eligió pestaña, se abre donde hay algo que hacer.
   const [tabChoice, setTabChoice] = useState<Tab | null>(initialTab ?? null);
-  const tab: Tab = tabChoice ?? (oweGroups.length === 0 && owedGroups.length > 0 ? 'owed' : 'owe');
+  const nothingOwed = oweGroups.length === 0 && linksIOwe.length === 0;
+  const somethingOwedToMe = owedGroups.length > 0 || linksOwedToMe.length > 0;
+  const tab: Tab = tabChoice ?? (nothingOwed && somethingOwedToMe ? 'owed' : 'owe');
   const [showHistory, setShowHistory] = useState(false);
   const [detailOf, setDetailOf] = useState<{ personId: string; direction: Tab } | null>(null);
   const [pending, setPending] = useState<PendingAction>(null);
@@ -77,13 +102,16 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
   const [toast, setToast] = useState<string | null>(null);
   const [roomNames, setRoomNames] = useState<Record<string, string>>({});
   const [remindedIds, setRemindedIds] = useState<Set<string>>(() => loadRemindedToday(userId));
+  const [linkOf, setLinkOf] = useState<string | null>(null);
 
   useEffect(() => {
     trackEvent('DEBTS_VIEW_OPENED', undefined, userId);
   }, [userId]);
 
   // Nombres de las salas de origen (contexto clave de cada deuda)
-  const roomIdsKey = [...new Set([...debtsIOwe, ...debtsOwedToMe, ...history].map(d => d.room_id))].sort().join(',');
+  const roomIdsKey = [...new Set([...debtsIOwe, ...debtsOwedToMe, ...history].flatMap(d => (d.room_id ? [d.room_id] : [])))]
+    .sort()
+    .join(',');
   useEffect(() => {
     if (!roomIdsKey) return;
     let alive = true;
@@ -105,13 +133,22 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
   // teléfono), la hoja se cierra sola en vez de mostrar algo viejo.
   const detail = detailOf ? findGroup(detailOf.personId, detailOf.direction) : null;
   const pendingGroup = pending ? findGroup(pending.personId, pending.direction) : null;
+  // Igual que el detalle: si el amigo responde mientras la hoja está abierta,
+  // se cierra sola.
+  const openLink = linkOf ? [...linksIOwe, ...linksOwedToMe].find(d => d.id === linkOf) ?? null : null;
 
-  const roomNameOf = (debt: Debt) => roomNames[debt.room_id] || 'Sala MitiMiti';
-  const roomsOf = (g: PersonDebts) => [...new Set(g.debts.map(roomNameOf))];
+  const originOf = (debt: Debt) => debtOrigin(debt, roomNames);
+  const originsOf = (g: PersonDebts) => [...new Set(g.debts.map(originOf))];
 
-  const totalOwe = oweGroups.reduce((acc, g) => acc + g.totalCents, 0);
-  const totalOwed = owedGroups.reduce((acc, g) => acc + g.totalCents, 0);
+  const sum = (debts: Debt[]) => debts.reduce((acc, d) => acc + d.amount_cents, 0);
+  // Lo anotado a mano cuenta desde que se anota: la plata se debe igual,
+  // aunque el amigo todavía no abra el link.
+  const totalOwe = oweGroups.reduce((acc, g) => acc + g.totalCents, 0) + sum(linksIOwe);
+  const totalOwed = owedGroups.reduce((acc, g) => acc + g.totalCents, 0) + sum(linksOwedToMe);
+  const peopleOwe = oweGroups.length + linksIOwe.length;
+  const peopleOwed = owedGroups.length + linksOwedToMe.length;
   const groups = tab === 'owe' ? oweGroups : owedGroups;
+  const links = tab === 'owe' ? linksIOwe : linksOwedToMe;
 
   // ─── Acciones ───────────────────────────────────────────
   const finish = (message: string) => {
@@ -121,7 +158,7 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
   };
 
   const remind = (g: PersonDebts) => {
-    openWhatsApp(reminderMessage(g.name, g.totalCents, roomsOf(g)));
+    openWhatsApp(reminderMessage(g.name, g.totalCents, originsOf(g)));
     localStorage.setItem(remindedKey(userId, g.personId), localDateKey());
     setRemindedIds(prev => new Set(prev).add(g.personId));
     trackEvent('DEBT_REMINDER_SENT', g.debts[0]?.room_id, userId, {
@@ -178,6 +215,23 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
     }
   };
 
+  const resendLink = (debt: Debt) => {
+    openWhatsApp(debtLinkMessage(debt));
+    trackEvent('DEBT_LINK_SHARED', undefined, userId, { debtId: debt.id, channel: 'whatsapp', resend: true });
+  };
+
+  const voidLink = async (debt: Debt) => {
+    setProcessing(true);
+    try {
+      const ok = await cancelLink(debt.id);
+      if (!ok) return;
+      setLinkOf(null);
+      setToast(`Anulaste el link de ${formatMoney(debt.amount_cents)}`);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const openDetail = (g: PersonDebts) => {
     trackEvent('DEBT_DETAIL_OPENED', g.debts[0]?.room_id, userId, { personId: g.personId });
     setDetailOf({ personId: g.personId, direction: g.direction });
@@ -203,7 +257,7 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
 
       <div className="flex-1 overflow-y-auto">
         {showHistory ? (
-          <HistoryList history={history} userId={userId} roomNameOf={roomNameOf} />
+          <HistoryList history={history} userId={userId} originOf={originOf} />
         ) : (
           <>
             {/* Resumen = pestañas */}
@@ -212,7 +266,7 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
                 active={tab === 'owe'}
                 label="Debes"
                 totalCents={totalOwe}
-                caption={oweGroups.length === 0 ? 'Estás al día' : `A ${peopleLabel(oweGroups.length)}`}
+                caption={peopleOwe === 0 ? 'Estás al día' : `A ${peopleLabel(peopleOwe)}`}
                 tone="owe"
                 onClick={() => setTabChoice('owe')}
               />
@@ -220,7 +274,7 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
                 active={tab === 'owed'}
                 label="Te deben"
                 totalCents={totalOwed}
-                caption={owedGroups.length === 0 ? 'Nadie te debe' : peopleLabel(owedGroups.length)}
+                caption={peopleOwed === 0 ? 'Nadie te debe' : peopleLabel(peopleOwed)}
                 tone="owed"
                 onClick={() => setTabChoice('owed')}
               />
@@ -233,11 +287,11 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
                     <div key={i} className="bg-white rounded-[18px] h-[76px] animate-pulse border border-gray-100" />
                   ))}
                 </div>
-              ) : groups.length === 0 ? (
+              ) : groups.length === 0 && links.length === 0 ? (
                 tab === 'owe' ? (
-                  <EmptyState emoji="🎉" title="Estás al día" subtitle="No le debes nada a nadie. Si alguna vez te falta saldo en una sala, aquí verás a quién le debes." />
+                  <EmptyState emoji="🎉" title="Estás al día" subtitle="No le debes nada a nadie. ¿Un amigo te prestó? Anótalo abajo para no olvidarte." />
                 ) : (
-                  <EmptyState emoji="🤝" title="Nadie te debe" subtitle="Cuando le prestes a alguien en una sala, aparecerá aquí." />
+                  <EmptyState emoji="🤝" title="Nadie te debe" subtitle="¿Le prestaste a alguien? Anótalo abajo y envíale un link para que te pague en un toque." />
                 )
               ) : (
                 <div className="space-y-3">
@@ -245,7 +299,7 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
                     <DebtRow
                       key={g.personId}
                       group={g}
-                      roomLabel={roomsOf(g)[0]}
+                      originLabel={originsOf(g)[0]}
                       reminded={remindedIds.has(g.personId)}
                       onOpen={() => openDetail(g)}
                       onAction={() =>
@@ -253,6 +307,20 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
                           ? setPending({ type: 'pay', personId: g.personId, direction: g.direction })
                           : remind(g)
                       }
+                    />
+                  ))}
+
+                  {links.length > 0 && (
+                    <p className={`text-[13px] font-semibold text-gray-500 px-1 ${groups.length > 0 ? 'pt-3' : ''}`}>
+                      Esperando que tu amigo abra el link
+                    </p>
+                  )}
+                  {links.map(d => (
+                    <LinkRow
+                      key={d.id}
+                      debt={d}
+                      onOpen={() => setLinkOf(d.id)}
+                      onResend={() => resendLink(d)}
                     />
                   ))}
                 </div>
@@ -271,11 +339,37 @@ export default function DebtsView({ initialTab, onBack }: { initialTab?: Tab; on
         )}
       </div>
 
+      {/* Anotar una deuda a mano: siempre a mano, en la dirección de la pestaña */}
+      {!showHistory && (
+        <div className="bg-white border-t border-gray-100 px-5 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] shrink-0">
+          <button
+            onClick={() => onNewDebt(tab === 'owed' ? 'lent' : 'borrowed')}
+            className="w-full py-3.5 rounded-[14px] bg-[#F3EDFB] text-[#4C1D80] text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Anotar una deuda
+          </button>
+        </div>
+      )}
+
+      {/* Link anotado a mano que el amigo todavía no abre */}
+      {openLink && (
+        <LinkSheet
+          debt={openLink}
+          busy={processing}
+          onClose={() => setLinkOf(null)}
+          onVoid={() => voidLink(openLink)}
+        />
+      )}
+
       {/* Detalle por persona */}
       {detail && !pending && (
         <PersonDebtSheet
           group={detail}
-          roomNameOf={roomNameOf}
+          originOf={originOf}
           remindedToday={remindedIds.has(detail.personId)}
           onClose={() => setDetailOf(null)}
           onPay={() => setPending({ type: 'pay', personId: detail.personId, direction: detail.direction })}
@@ -368,22 +462,23 @@ function SummaryTile({
 // ─── Fila por persona ─────────────────────────────────────────
 function DebtRow({
   group,
-  roomLabel,
+  originLabel,
   reminded,
   onOpen,
   onAction,
 }: {
   group: PersonDebts;
-  roomLabel: string;
+  originLabel: string;
   reminded: boolean;
   onOpen: () => void;
   onAction: () => void;
 }) {
   const owed = group.direction === 'owed';
   const stale = owed && daysSince(group.oldestAt) >= 7;
+  const fromRooms = group.debts.every(d => d.kind !== 'direct');
   const context = group.debts.length === 1
-    ? `${roomLabel} · ${relativeDate(group.oldestAt)}`
-    : `${group.debts.length} salas · ${relativeDate(group.oldestAt)}`;
+    ? `${originLabel} · ${relativeDate(group.oldestAt)}`
+    : `${group.debts.length} ${fromRooms ? 'salas' : 'deudas'} · ${relativeDate(group.oldestAt)}`;
 
   return (
     <div
@@ -432,7 +527,7 @@ function DebtRow({
 // ─── Detalle de lo que hay con una persona ────────────────────
 function PersonDebtSheet({
   group,
-  roomNameOf,
+  originOf,
   remindedToday,
   onClose,
   onPay,
@@ -441,7 +536,7 @@ function PersonDebtSheet({
   onForgive,
 }: {
   group: PersonDebts;
-  roomNameOf: (debt: Debt) => string;
+  originOf: (debt: Debt) => string;
   remindedToday: boolean;
   onClose: () => void;
   onPay: () => void;
@@ -476,7 +571,7 @@ function PersonDebtSheet({
           {group.debts.map(d => (
             <div key={d.id} className="flex justify-between items-start gap-3">
               <div className="min-w-0">
-                <p className="text-[14px] font-semibold text-[#1a1a1a] truncate">{roomNameOf(d)}</p>
+                <p className="text-[14px] font-semibold text-[#1a1a1a] truncate">{originOf(d)}</p>
                 <p className="text-[12px] text-gray-500">{longDate(d.created_at)}</p>
               </div>
               <span className="text-[14px] font-bold text-[#1a1a1a] tabular-nums shrink-0">{formatMoney(d.amount_cents)}</span>
@@ -575,30 +670,41 @@ function ConfirmSheet({
 }
 
 // ─── Historial ────────────────────────────────────────────────
-function HistoryList({ history, userId, roomNameOf }: { history: Debt[]; userId: string; roomNameOf: (d: Debt) => string }) {
+function HistoryList({ history, userId, originOf }: { history: Debt[]; userId: string; originOf: (d: Debt) => string }) {
   if (history.length === 0) {
     return <EmptyState emoji="🗂️" title="Sin movimientos aún" subtitle="Aquí verás las deudas pagadas o perdonadas." />;
   }
   return (
     <div className="px-5 py-4 space-y-2.5">
       {history.map(debt => (
-        <HistoryItem key={debt.id} debt={debt} userId={userId} roomName={roomNameOf(debt)} />
+        <HistoryItem key={debt.id} debt={debt} userId={userId} origin={originOf(debt)} />
       ))}
     </div>
   );
 }
 
-function HistoryItem({ debt, userId, roomName }: { debt: Debt; userId: string; roomName: string }) {
+// Un link anotado a mano que el amigo dijo no reconocer, contado desde cada lado.
+function declinedTitle(debt: Debt, userId: string): string {
+  const lent = creatorLent(debt);
+  if (debt.created_by === userId) {
+    return lent ? `${debt.debtor_name} dijo que no te debe` : `${debt.creditor_name} dijo que no le debes`;
+  }
+  return `No reconociste lo que anotó ${lent ? debt.creditor_name : debt.debtor_name}`;
+}
+
+function HistoryItem({ debt, userId, origin }: { debt: Debt; userId: string; origin: string }) {
   const isDebtor = debt.debtor_id === userId;
   const isPaid = debt.status === 'paid';
   const outsideDeuna = isPaid && !isDebtor && wasMarkedPaidByMe(debt.id);
-  const resolvedAt = debt.paid_at || debt.forgiven_at || debt.created_at;
+  const resolvedAt = debt.paid_at || debt.forgiven_at || debt.responded_at || debt.created_at;
 
-  const title = isPaid
-    ? isDebtor
-      ? `Le pagaste a ${debt.creditor_name}`
-      : outsideDeuna ? `${debt.debtor_name} te pagó por fuera` : `${debt.debtor_name} te pagó`
-    : isDebtor ? `${debt.creditor_name} te perdonó` : `Perdonaste a ${debt.debtor_name}`;
+  const title = debt.status === 'declined'
+    ? declinedTitle(debt, userId)
+    : isPaid
+      ? isDebtor
+        ? `Le pagaste a ${debt.creditor_name}`
+        : outsideDeuna ? `${debt.debtor_name} te pagó por fuera` : `${debt.debtor_name} te pagó`
+      : isDebtor ? `${debt.creditor_name} te perdonó` : `Perdonaste a ${debt.debtor_name}`;
 
   const inflow = isPaid && !isDebtor && !outsideDeuna;
 
@@ -610,12 +716,12 @@ function HistoryItem({ debt, userId, roomName }: { debt: Debt; userId: string; r
             <polyline points="20 6 9 17 4 12" />
           </svg>
         ) : (
-          <span className="text-[14px]" aria-hidden="true">🤍</span>
+          <span className="text-[14px]" aria-hidden="true">{debt.status === 'declined' ? '🤔' : '🤍'}</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[14px] font-semibold text-[#1a1a1a] truncate">{title}</p>
-        <p className="text-[12px] text-gray-500 truncate">{roomName} · {relativeDate(resolvedAt)}</p>
+        <p className="text-[12px] text-gray-500 truncate">{origin} · {relativeDate(resolvedAt)}</p>
       </div>
       <span className={`font-bold text-[14px] shrink-0 tabular-nums ${
         !isPaid ? 'text-gray-400 line-through' : inflow ? 'text-[#3B6D11]' : 'text-[#1a1a1a]'
@@ -639,10 +745,114 @@ function EmptyState({ emoji, title, subtitle }: { emoji: string; title: string; 
   );
 }
 
-function ChatIcon({ size }: { size: number }) {
+// ─── Link anotado a mano, todavía sin abrir ──────────────────
+// No hay persona todavía (el amigo queda anotado al abrirlo), así que la fila
+// muestra para qué fue y la acción útil es reenviarlo.
+function LinkRow({ debt, onOpen, onResend }: { debt: Debt; onOpen: () => void; onResend: () => void }) {
+  const owed = creatorLent(debt);
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-    </svg>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onOpen(); }}
+      className="bg-white rounded-[18px] border border-dashed border-[#D9CCEB] p-3.5 flex items-center gap-3 active:bg-gray-50 transition-colors cursor-pointer"
+    >
+      <div className="w-11 h-11 rounded-full bg-[#F3EDFB] flex items-center justify-center text-[20px] shrink-0" aria-hidden="true">
+        {conceptEmoji(debt.concept)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-[16px] font-bold text-[#1a1a1a] truncate">{debtOrigin(debt, {})}</p>
+          <p className={`text-[17px] font-black tabular-nums shrink-0 ${owed ? 'text-[#3B6D11]' : 'text-[#1a1a1a]'}`}>
+            {formatMoney(debt.amount_cents)}
+          </p>
+        </div>
+        <div className="flex items-center justify-between gap-2 mt-1">
+          <p className="text-[13px] text-gray-500 truncate">Sin abrir · {relativeDate(debt.created_at)}</p>
+          <button
+            onClick={e => { e.stopPropagation(); onResend(); }}
+            className="px-3.5 py-1.5 rounded-full bg-[#F3EDFB] text-[#4C1D80] text-[13px] font-bold flex items-center gap-1.5 active:scale-95 transition-transform shrink-0"
+          >
+            <ChatIcon size={14} />
+            Reenviar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LinkSheet({
+  debt,
+  busy,
+  onClose,
+  onVoid,
+}: {
+  debt: Debt;
+  busy: boolean;
+  onClose: () => void;
+  onVoid: () => void;
+}) {
+  const [confirmVoid, setConfirmVoid] = useState(false);
+  const owed = creatorLent(debt);
+
+  return (
+    <BottomSheet onClose={onClose} dismissible={!busy} label="Link sin abrir">
+      <div className="absolute right-4 top-4 z-10">
+        <SheetCloseButton onClick={onClose} />
+      </div>
+
+      <div className="overflow-y-auto px-6 pb-2 pt-2">
+        <div className="flex flex-col items-center text-center mb-4">
+          <div className="w-16 h-16 rounded-full bg-[#F3EDFB] flex items-center justify-center text-[30px]" aria-hidden="true">
+            {conceptEmoji(debt.concept)}
+          </div>
+          <p className="text-[14px] text-gray-500 mt-3">{owed ? 'Te deben' : 'Debes'} · {debtOrigin(debt, {})}</p>
+          <p className={`text-[36px] font-black leading-tight tabular-nums ${owed ? 'text-[#3B6D11]' : 'text-[#1a1a1a]'}`}>
+            {formatMoney(debt.amount_cents)}
+          </p>
+          <p className="text-[13px] text-gray-500 mt-0.5">Anotado el {longDate(debt.created_at)}</p>
+        </div>
+        <p className="text-[14px] text-gray-600 text-center bg-[#F8F8FA] rounded-2xl px-4 py-3 mb-4">
+          Tu amigo todavía no abre el link. Cuando lo acepte, aparecerá aquí con su nombre.
+        </p>
+      </div>
+
+      <div className="px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1 shrink-0">
+        {confirmVoid ? (
+          <div className="text-center">
+            <p className="text-[15px] font-bold text-[#1a1a1a]">¿Anular este link?</p>
+            <p className="text-[13px] text-gray-500 mt-1 mb-3">
+              Se borra de tus deudas y tu amigo ya no podrá usarlo.
+            </p>
+            <button
+              onClick={onVoid}
+              disabled={busy}
+              className={`w-full py-4 rounded-[14px] font-bold text-[16px] text-white bg-[#A32D2D] ${busy ? 'opacity-70 cursor-wait' : 'active:scale-[0.98]'}`}
+            >
+              {busy ? 'Anulando…' : 'Sí, anular'}
+            </button>
+            <button
+              onClick={() => setConfirmVoid(false)}
+              disabled={busy}
+              className="w-full py-3 mt-1.5 rounded-[14px] font-bold text-[15px] text-gray-500 active:bg-gray-50"
+            >
+              No, dejarlo
+            </button>
+          </div>
+        ) : (
+          <>
+            <DebtLinkActions debt={debt} />
+            <button
+              onClick={() => setConfirmVoid(true)}
+              className="w-full py-2.5 mt-1.5 text-[14px] font-semibold text-[#A32D2D] active:opacity-70"
+            >
+              Anular link
+            </button>
+          </>
+        )}
+      </div>
+    </BottomSheet>
   );
 }
