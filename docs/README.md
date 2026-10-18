@@ -16,6 +16,7 @@
 | Documento | Qué encontrarás |
 |---|---|
 | [Auditoría UX y rediseño](./mitimiti-ux-audit.md) | Hallazgos paso a paso, decisiones de diseño, antes/después y hoja de ruta |
+| [Anotar deuda](./anotar-deuda.md) | Préstamos entre amigos fuera de una sala: link de pago por WhatsApp, flujos, modelo de datos y migración |
 
 ## Arquitectura técnica
 
