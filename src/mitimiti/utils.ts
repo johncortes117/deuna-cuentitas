@@ -1,5 +1,5 @@
 // ─── MitiMiti Pure Utility Functions ─────────────────────────
-import type { UserProfile, PersonalQRData, InviteQRData, QRData, Room, RoomStatus, ActiveRoom } from './types';
+import type { UserProfile, PersonalQRData, InviteQRData, DebtLinkQRData, QRData, Room, RoomStatus, ActiveRoom } from './types';
 
 /**
  * Divide un monto total en centavos entre N participantes.
@@ -235,6 +235,13 @@ export function encodeInviteQR(token: string, appUrl: string): string {
 }
 
 /**
+ * Link de una deuda anotada a mano (el que se manda por WhatsApp).
+ */
+export function encodeDebtLink(token: string, appUrl: string): string {
+  return `${appUrl}/#/mitimiti/deuda/${token}`;
+}
+
+/**
  * Decodifica un string de QR y determina su tipo.
  * Retorna null si el QR no es reconocido.
  */
@@ -243,6 +250,12 @@ export function decodeQR(raw: string): QRData | null {
   const inviteMatch = raw.match(/\/#\/mitimiti\/join\/([A-Za-z0-9]+)$/);
   if (inviteMatch) {
     return { type: 'mitimiti_invite', token: inviteMatch[1] } as InviteQRData;
+  }
+
+  // Link de una deuda anotada a mano
+  const debtMatch = raw.match(/\/#\/mitimiti\/deuda\/([A-Za-z0-9]+)$/);
+  if (debtMatch) {
+    return { type: 'mitimiti_debt', token: debtMatch[1] } as DebtLinkQRData;
   }
 
   // Intentar como JSON
@@ -372,4 +385,24 @@ export function suggestRoomName(date = new Date()): string {
   if (h >= 11 && h < 16) return 'Almuerzo';
   if (h >= 19 || h < 4) return 'Cena';
   return 'Café';
+}
+
+// ─── Para qué fue una deuda anotada a mano ──────────────────
+// Los préstamos chicos entre amigos casi siempre son por lo mismo: con un
+// toque queda claro sin escribir nada. Es opcional; sin concepto se ve como
+// "Préstamo".
+export const DEBT_CONCEPTS = [
+  { emoji: '🍔', label: 'Comida' },
+  { emoji: '🚕', label: 'Taxi' },
+  { emoji: '🛒', label: 'Compras' },
+  { emoji: '🚌', label: 'Pasaje' },
+  { emoji: '📱', label: 'Recarga' },
+  { emoji: '🎟️', label: 'Entradas' },
+  { emoji: '⛽', label: 'Gasolina' },
+];
+
+export const DEFAULT_DEBT_CONCEPT = 'Préstamo';
+
+export function conceptEmoji(concept: string | null | undefined): string {
+  return DEBT_CONCEPTS.find(c => c.label === concept?.trim())?.emoji ?? '💵';
 }

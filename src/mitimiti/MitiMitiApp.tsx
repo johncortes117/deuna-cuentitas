@@ -8,6 +8,8 @@ import CreateRoomView from './components/CreateRoomView';
 import RoomView from './components/RoomView';
 import JoinRoomView from './components/JoinRoomView';
 import DebtsView from './components/DebtsView';
+import NewDebtView from './components/NewDebtView';
+import ClaimDebtView from './components/ClaimDebtView';
 import './MitiMiti.css';
 
 /**
@@ -18,6 +20,8 @@ import './MitiMiti.css';
  *   #/mitimiti/room/<id>                 sala
  *   #/mitimiti/join/<token>              entrar con invitación
  *   #/mitimiti/debts?tab=owe|owed        deudas (en la pestaña indicada)
+ *   #/mitimiti/debts/new?dir=lent|borrowed  anotar una deuda a mano
+ *   #/mitimiti/deuda/<token>             link de una deuda anotada a mano
  *   #/mitimiti[/create][?amount=&name=]  crear (opcionalmente pre-llenada)
  */
 function routeFromHash(hash: string): MitiMitiRoute {
@@ -27,8 +31,16 @@ function routeFromHash(hash: string): MitiMitiRoute {
   const joinMatch = hash.match(/^#\/mitimiti\/join\/([A-Za-z0-9]+)/);
   if (joinMatch) return { page: 'join', token: joinMatch[1] };
 
+  const debtLinkMatch = hash.match(/^#\/mitimiti\/deuda\/([A-Za-z0-9]+)/);
+  if (debtLinkMatch) return { page: 'debt_link', token: debtLinkMatch[1] };
+
   const [path, query = ''] = hash.split('?');
   const params = new URLSearchParams(query);
+
+  if (path === '#/mitimiti/debts/new') {
+    const dir = params.get('dir');
+    return { page: 'new_debt', direction: dir === 'lent' || dir === 'borrowed' ? dir : undefined };
+  }
 
   if (path === '#/mitimiti/debts') {
     const tab = params.get('tab');
@@ -142,6 +154,24 @@ export default function MitiMitiApp() {
             // dashboard, así que "atrás" debe regresar ahí, no al escáner.
             goHome();
           }}
+          onNewDebt={(direction) => { window.location.hash = `#/mitimiti/debts/new?dir=${direction}`; }}
+        />
+      )}
+
+      {route.page === 'new_debt' && (
+        <NewDebtView
+          initialDirection={route.direction}
+          onBack={goHome}
+          onOpenDebts={(tab) => { window.location.hash = `#/mitimiti/debts?tab=${tab}`; }}
+        />
+      )}
+
+      {route.page === 'debt_link' && (
+        <ClaimDebtView
+          key={route.token}
+          token={route.token}
+          onBack={goHome}
+          onOpenDebts={(tab) => { window.location.hash = `#/mitimiti/debts?tab=${tab}`; }}
         />
       )}
     </div>

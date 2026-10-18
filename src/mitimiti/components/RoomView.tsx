@@ -15,7 +15,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { formatMoney, dividirMonto, getUserProfile, roomEmoji, topUpAmountFor, isRoomOpen } from '../utils';
 import { groupDebtsByPerson } from '../debtGroups';
-import { openWhatsApp, inviteMessage } from '../share';
+import { openWhatsApp, inviteMessage, inviteLink } from '../share';
 import { getRoomNames } from '../supabase';
 import { useRoom } from '../useRoom';
 import { useBalance } from '../useBalance';
@@ -175,7 +175,9 @@ export default function RoomView({ roomId, onBack, onExit, onRecreate, onOpenDeb
     userId,
   );
   const bannerGroup = roomCreditorGroups.find(g => !dismissedCreditors.has(g.personId)) ?? null;
-  const bannerRoomIds = bannerGroup ? [...new Set(bannerGroup.debts.map(d => d.room_id))].sort().join(',') : '';
+  const bannerRoomIds = bannerGroup
+    ? [...new Set(bannerGroup.debts.flatMap(d => (d.room_id ? [d.room_id] : [])))].sort().join(',')
+    : '';
 
   useEffect(() => {
     if (!payDebtOpen || !bannerRoomIds) return;
@@ -627,7 +629,7 @@ export default function RoomView({ roomId, onBack, onExit, onRecreate, onOpenDeb
         {/* QR + invitación (host, mientras la gente va llegando) */}
         {isHost && isWaiting && (
           <div className="flex flex-col items-center mitimiti-fade-in">
-            <QRInvite inviteToken={room.invite_token} size={176} />
+            <QRInvite url={inviteLink(room.invite_token)} size={176} />
             <p className="text-[14px] text-gray-600 text-center -mt-1">
               Pide a tus amigos que lo escaneen con Deuna
             </p>

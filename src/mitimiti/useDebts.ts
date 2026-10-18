@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Debt } from './types';
-import { getMyDebts, settleDebts as settleDebtsAPI, forgiveDebts as forgiveDebtsAPI, supabase } from './supabase';
+import {
+  getMyDebts,
+  settleDebts as settleDebtsAPI,
+  forgiveDebts as forgiveDebtsAPI,
+  cancelDebtLink as cancelDebtLinkAPI,
+  supabase,
+} from './supabase';
 import { getUserProfile, addToBalance } from './utils';
 
 // "Te pagaron": lo escucha el aviso global para mostrarlo en cualquier pantalla.
@@ -10,7 +16,20 @@ export interface PaymentReceivedDetail {
   amountCents: number;
 }
 
+// "Juan aceptó tu link": el amigo respondió una deuda que anotaste a mano.
+export const DEBT_LINK_RESPONDED_EVENT = 'mitimiti:debt-link-responded';
+export interface DebtLinkResponse {
+  friendName: string;
+  amountCents: number;
+  accepted: boolean; // false: dijo que no reconoce la deuda
+  lent: boolean;     // true: tú prestaste (el amigo es quien debe)
+}
+export interface DebtLinkRespondedDetail {
+  responses: DebtLinkResponse[]; // varias si respondieron mientras no mirabas
+}
+
 const creditedKey = (debtId: string) => `mitimiti_credited_${debtId}`;
+const respondedKey = (debtId: string) => `mitimiti_link_responded_${debtId}`;
 const markedPaidKey = (debtId: string) => `mitimiti_marked_paid_${debtId}`;
 
 /** ¿El propio acreedor marcó esta deuda como pagada (efectivo, otro banco)? */
@@ -62,6 +81,42 @@ function creditIncomingPayments(debts: Debt[], userId: string) {
   window.dispatchEvent(new CustomEvent(PAYMENT_RECEIVED_EVENT, { detail }));
 }
 
+/**
+ * Quien anotó una deuda se entera, en la pantalla que esté, de que el amigo
+ * abrió el link y respondió. Mismas reglas que "te pagaron": solo respuestas
+ * posteriores a la primera vez que este teléfono vio sus deudas, y una sola
+ * vez por deuda. Si el amigo pagó de una, ya avisa "te pagó": no se repite.
+ */
+function notifyLinkResponses(debts: Debt[], userId: string) {
+  const since = Date.parse(localStorage.getItem(`mitimiti_credit_since_${userId}`) ?? '');
+  if (Number.isNaN(since)) return;
+
+  const fresh = debts.filter(
+    d =>
+      d.kind === 'direct' &&
+      d.created_by === userId &&
+      d.responded_at &&
+      Date.parse(d.responded_at) > since &&
+      localStorage.getItem(respondedKey(d.id)) === null,
+  );
+  fresh.forEach(d => localStorage.setItem(respondedKey(d.id), '1'));
+
+  const responses: DebtLinkResponse[] = fresh
+    .filter(d => d.status === 'active' || d.status === 'declined')
+    .map(d => {
+      const lent = d.creditor_id === userId;
+      return {
+        friendName: lent ? d.debtor_name : d.creditor_name,
+        amountCents: d.amount_cents,
+        accepted: d.status === 'active',
+        lent,
+      };
+    });
+  if (responses.length === 0) return;
+  const detail: DebtLinkRespondedDetail = { responses };
+  window.dispatchEvent(new CustomEvent(DEBT_LINK_RESPONDED_EVENT, { detail }));
+}
+
 export function useDebts() {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,6 +133,7 @@ export function useDebts() {
       const data = await getMyDebts(userId);
       setDebts(data);
       creditIncomingPayments(data, userId);
+      notifyLinkResponses(data, userId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error cargando deudas');
     } finally {
@@ -148,13 +204,24 @@ export function useDebts() {
 
   const forgiveDebt = useCallback((debtId: string) => forgiveDebts([debtId]), [forgiveDebts]);
 
+  const cancelLink = useCallback(
+    (debtId: string) => run(() => cancelDebtLinkAPI(debtId, userId), 'Error anulando el link'),
+    [run, userId],
+  );
+
   const debtsIOwe = debts.filter(d => d.debtor_id === userId && d.status === 'active');
   const debtsOwedToMe = debts.filter(d => d.creditor_id === userId && d.status === 'active');
-  const history = debts.filter(d => d.status !== 'active');
+  // Deudas anotadas a mano cuyo link el amigo todavía no abre. Ya cuentan
+  // (la plata se debe igual), pero no tienen persona a quien pagar/recordar.
+  const linksIOwe = debts.filter(d => d.debtor_id === userId && d.status === 'pending');
+  const linksOwedToMe = debts.filter(d => d.creditor_id === userId && d.status === 'pending');
+  const history = debts.filter(d => d.status !== 'active' && d.status !== 'pending');
 
   return {
     debtsIOwe,
     debtsOwedToMe,
+    linksIOwe,
+    linksOwedToMe,
     history,
     isLoading: userId ? isLoading : false,
     error,
@@ -163,6 +230,7 @@ export function useDebts() {
     markDebtsPaid,
     forgiveDebt,
     forgiveDebts,
+    cancelLink,
     refresh: loadDebts
   };
 }

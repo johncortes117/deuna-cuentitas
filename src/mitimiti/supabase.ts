@@ -1,6 +1,6 @@
 // ─── Supabase Client + MitiMiti CRUD ─────────────────────────
 import { createClient } from '@supabase/supabase-js';
-import type { Room, Participant, RoomStatus, Debt, ActiveRoom } from './types';
+import type { Room, Participant, RoomStatus, Debt, ActiveRoom, LoanDirection } from './types';
 import { generateId, generateInviteToken, dividirMonto, isRoomStale, OPEN_ROOM_STATUSES } from './utils';
 import { trackEvent } from './analytics';
 
@@ -650,7 +650,9 @@ export async function lendMoney(
  * Devuelve un mapa room_id → nombre de la sala, para dar contexto de origen
  * a las deudas (en qué sala/comercio nació cada una).
  */
-export async function getRoomNames(roomIds: string[]): Promise<Record<string, string>> {
+export async function getRoomNames(roomIds: (string | null)[]): Promise<Record<string, string>> {
+  // Las deudas anotadas a mano no tienen sala.
+  roomIds = roomIds.filter((id): id is string => !!id);
   if (roomIds.length === 0) return {};
   const { data } = await supabase
     .from('mitimiti_rooms')
@@ -668,11 +670,14 @@ export async function getMyDebts(userId: string): Promise<Debt[]> {
     .from('mitimiti_debts')
     .select('*')
     .or(`debtor_id.eq.${userId},creditor_id.eq.${userId}`)
-    .in('status', ['active', 'paid', 'forgiven'])
+    .in('status', ['active', 'paid', 'forgiven', 'pending', 'declined'])
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(`Error obteniendo deudas: ${error.message}`);
-  return (data || []) as Debt[];
+  // Un préstamo prometido dentro de una sala ('pending' de sala) todavía no
+  // es una deuda. Una deuda anotada a mano sí lo es desde que se anota,
+  // aunque el amigo no haya abierto el link: quien la anotó la ve ya.
+  return ((data || []) as Debt[]).filter(d => d.status !== 'pending' || d.kind === 'direct');
 }
 
 export async function settleDebt(debtId: string): Promise<void> {
@@ -707,6 +712,132 @@ export async function forgiveDebts(debtIds: string[]): Promise<void> {
     .in('id', debtIds)
     .eq('status', 'active');
   if (error) throw new Error(`Error perdonando deuda: ${error.message}`);
+}
+
+// ─── Deudas anotadas a mano (sin sala) ───────────────────────
+//
+// "Le presté $1,50 a Juan para el taxi" o "Juan me prestó $1,50": deudas que
+// nacen fuera de una sala, casi siempre en efectivo o por transferencia.
+// Quien la anota queda en su lado y manda un link por WhatsApp; el otro lado
+// queda vacío ('') hasta que el amigo lo abre. Así nadie tiene que escribir
+// el nombre de nadie: el amigo queda anotado con su propio perfil.
+//
+//   pending ──(el amigo acepta)──▶ active ──▶ paid / forgiven
+//      │ └──(el amigo no la reconoce)──▶ declined
+//      └──(quien la anotó anula el link)──▶ cancelled
+
+/**
+ * Anota una deuda y devuelve la fila (con el token del link para compartir).
+ */
+export async function createDirectDebt(
+  creatorId: string,
+  creatorName: string,
+  direction: LoanDirection,
+  amountCents: number,
+  concept: string | null,
+): Promise<Debt> {
+  const lent = direction === 'lent';
+  const { data, error } = await supabase
+    .from('mitimiti_debts')
+    .insert({
+      kind: 'direct',
+      room_id: null,
+      creditor_id: lent ? creatorId : '',
+      creditor_name: lent ? creatorName : '',
+      debtor_id: lent ? '' : creatorId,
+      debtor_name: lent ? '' : creatorName,
+      amount_cents: amountCents,
+      concept,
+      invite_token: generateInviteToken(),
+      created_by: creatorId,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Error anotando la deuda: ${error.message}`);
+  trackEvent('DEBT_LINK_CREATED', undefined, creatorId, { debtId: data.id, direction, amountCents, concept });
+  return data as Debt;
+}
+
+/**
+ * La deuda a la que apunta un link. null si el link no existe.
+ */
+export async function getDebtByToken(token: string): Promise<Debt | null> {
+  const { data, error } = await supabase
+    .from('mitimiti_debts')
+    .select('*')
+    .eq('invite_token', token)
+    .maybeSingle();
+
+  if (error) throw new Error(`Error buscando la deuda: ${error.message}`);
+  return (data as Debt | null) ?? null;
+}
+
+/**
+ * El amigo abre el link y responde: acepta la deuda (pasa a 'active' y queda
+ * en "Mis deudas" de los dos) o dice que no la reconoce ('declined', para
+ * que quien la anotó se entere). En ambos casos su nombre ocupa el lado
+ * vacío.
+ *
+ * Es condicional (sigue 'pending' Y el lado sigue vacío): si dos personas
+ * abren el mismo link, solo la primera se queda con la deuda.
+ */
+export async function respondToDebtLink(
+  token: string,
+  userId: string,
+  userName: string,
+  accept: boolean,
+): Promise<Debt> {
+  const debt = await getDebtByToken(token);
+  if (!debt || debt.kind !== 'direct') throw new Error('No encontramos esta deuda.');
+  if (debt.created_by === userId) throw new Error('Este link lo creaste tú: envíaselo a tu amigo.');
+  if (debt.status === 'cancelled') throw new Error('Este link ya no está disponible.');
+  if (debt.status !== 'pending') throw new Error('Este link ya se usó.');
+
+  const friendIsDebtor = debt.debtor_id === '';
+  const friendSide = friendIsDebtor
+    ? { debtor_id: userId, debtor_name: userName }
+    : { creditor_id: userId, creditor_name: userName };
+
+  const { data, error } = await supabase
+    .from('mitimiti_debts')
+    .update({
+      ...friendSide,
+      status: accept ? 'active' : 'declined',
+      responded_at: new Date().toISOString(),
+    })
+    .eq('id', debt.id)
+    .eq('status', 'pending')
+    .eq(friendIsDebtor ? 'debtor_id' : 'creditor_id', '')
+    .select();
+
+  if (error) throw new Error(`Error guardando tu respuesta: ${error.message}`);
+  if (!data || data.length === 0) throw new Error('Este link ya se usó.');
+
+  trackEvent(accept ? 'DEBT_LINK_ACCEPTED' : 'DEBT_LINK_DECLINED', undefined, userId, {
+    debtId: debt.id,
+    amountCents: debt.amount_cents,
+  });
+  return data[0] as Debt;
+}
+
+/**
+ * Quien anotó la deuda anula el link (se equivocó de monto, o el amigo le
+ * pagó antes de abrirlo). Solo mientras nadie lo haya aceptado.
+ */
+export async function cancelDebtLink(debtId: string, userId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('mitimiti_debts')
+    .update({ status: 'cancelled' })
+    .eq('id', debtId)
+    .eq('created_by', userId)
+    .eq('status', 'pending')
+    .select('id');
+
+  if (error) throw new Error(`Error anulando el link: ${error.message}`);
+  if (!data || data.length === 0) throw new Error('Tu amigo ya respondió este link, así que no se puede anular.');
+  trackEvent('DEBT_LINK_CANCELLED', undefined, userId, { debtId });
 }
 
 // ─── Realtime Subscriptions ─────────────────────────────────

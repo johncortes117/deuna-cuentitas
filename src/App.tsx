@@ -9,16 +9,18 @@ import {
   toCents,
   activeRoomHint,
   roomEmoji,
+  conceptEmoji,
+  DEFAULT_DEBT_CONCEPT,
   BALANCE_CHANGED_EVENT,
 } from './mitimiti/utils';
-import type { UserProfile, Room, ActiveRoom } from './mitimiti/types';
-import { getActiveRoomForUser, getRoomByToken } from './mitimiti/supabase';
+import type { UserProfile, Room, ActiveRoom, Debt } from './mitimiti/types';
+import { getActiveRoomForUser, getRoomByToken, getDebtByToken } from './mitimiti/supabase';
 import QRScanner from './mitimiti/components/QRScanner';
 import SimulatedPaymentView from './mitimiti/components/SimulatedPaymentView';
 import PaymentReceivedToast from './mitimiti/components/PaymentReceivedToast';
 import { createRoom } from './mitimiti/supabase';
 import { useDebts } from './mitimiti/useDebts';
-import { countPeople } from './mitimiti/debtGroups';
+import { countPeople, creatorLent } from './mitimiti/debtGroups';
 import {
   getFullscreenElement,
   isVisuallyFullscreen,
@@ -30,9 +32,24 @@ import {
 type Screen = 'home' | 'setup' | 'dashboard' | 'mitimiti' | 'scanner';
 type BottomTab = 'inicio' | 'beneficios' | 'billetera' | 'tu';
 
-function inviteTokenFromHash(hash: string): string | null {
-  const match = hash.match(/^#\/mitimiti\/join\/([A-Za-z0-9]+)/);
-  return match ? match[1] : null;
+// Links que se abren desde WhatsApp o un QR: la invitación a una sala o la
+// deuda que un amigo te anotó. Si quien lo abre todavía no tiene perfil, se
+// guarda, se le pide solo el nombre y llega directo a lo que le mandaron.
+interface DeepLink {
+  kind: 'join' | 'debt';
+  token: string;
+}
+
+function deepLinkFromHash(hash: string): DeepLink | null {
+  const join = hash.match(/^#\/mitimiti\/join\/([A-Za-z0-9]+)/);
+  if (join) return { kind: 'join', token: join[1] };
+  const debt = hash.match(/^#\/mitimiti\/deuda\/([A-Za-z0-9]+)/);
+  if (debt) return { kind: 'debt', token: debt[1] };
+  return null;
+}
+
+function deepLinkHash(link: DeepLink): string {
+  return link.kind === 'join' ? `#/mitimiti/join/${link.token}` : `#/mitimiti/deuda/${link.token}`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -41,20 +58,20 @@ function inviteTokenFromHash(hash: string): string | null {
 function App() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
 
-  // Link de invitación abierto por alguien que todavía no tiene perfil (el
-  // amigo nuevo que llega por WhatsApp o escaneando con la cámara). Antes
-  // MitiMiti lo mandaba al inicio y la invitación se perdía: justo el camino
-  // por el que entra un usuario nuevo. Ahora se guarda, se le pide solo el
-  // nombre y entra directo a la sala.
-  const [pendingInvite, setPendingInvite] = useState<string | null>(() =>
-    getUserProfile() ? null : inviteTokenFromHash(window.location.hash),
+  // Link de invitación (o de una deuda) abierto por alguien que todavía no
+  // tiene perfil (el amigo nuevo que llega por WhatsApp o escaneando con la
+  // cámara). Antes MitiMiti lo mandaba al inicio y la invitación se perdía:
+  // justo el camino por el que entra un usuario nuevo. Ahora se guarda, se le
+  // pide solo el nombre y entra directo a la sala o a la deuda.
+  const [pendingLink, setPendingLink] = useState<DeepLink | null>(() =>
+    getUserProfile() ? null : deepLinkFromHash(window.location.hash),
   );
 
   const [screen, setScreen] = useState<Screen>(() => {
     const hash = window.location.hash;
     if (!hash.startsWith('#/mitimiti')) return 'home';
     if (getUserProfile()) return 'mitimiti';
-    return inviteTokenFromHash(hash) ? 'setup' : 'home';
+    return deepLinkFromHash(hash) ? 'setup' : 'home';
   });
 
   const [scannedData, setScannedData] = useState<string | null>(null);
@@ -119,9 +136,9 @@ function App() {
     function handleHash() {
       const hash = window.location.hash;
       if (hash.startsWith('#/mitimiti')) {
-        const token = inviteTokenFromHash(hash);
-        if (!profile && token) {
-          setPendingInvite(token);
+        const link = deepLinkFromHash(hash);
+        if (!profile && link) {
+          setPendingLink(link);
           setScreen('setup');
         } else {
           setScreen(profile ? 'mitimiti' : 'home');
@@ -184,8 +201,9 @@ function App() {
               const data = decodeQR(scannedData);
               if (!data) return null;
               
-              if (data.type === 'mitimiti_invite') {
-                window.location.hash = `#/mitimiti/join/${data.token}`;
+              // Invitación a una sala o deuda que te anotaron: abrir el link.
+              if (data.type === 'mitimiti_invite' || data.type === 'mitimiti_debt') {
+                window.location.hash = deepLinkHash({ kind: data.type === 'mitimiti_invite' ? 'join' : 'debt', token: data.token });
                 return null;
               }
 
@@ -252,16 +270,17 @@ function App() {
           
           {screen === 'setup' && (
             <SetupScreen
-              inviteToken={pendingInvite}
+              link={pendingLink}
               onComplete={(p) => {
                 setProfile(p);
-                if (pendingInvite) {
-                  // Directo a la sala a la que lo invitaron. Si el hash ya es
-                  // ese link, MitiMiti lo lee al montarse y entra solo.
-                  const token = pendingInvite;
-                  setPendingInvite(null);
-                  if (inviteTokenFromHash(window.location.hash) !== token) {
-                    window.location.hash = `#/mitimiti/join/${token}`;
+                if (pendingLink) {
+                  // Directo a la sala o la deuda que le mandaron. Si el hash
+                  // ya es ese link, MitiMiti lo lee al montarse.
+                  const link = pendingLink;
+                  const current = deepLinkFromHash(window.location.hash);
+                  setPendingLink(null);
+                  if (current?.kind !== link.kind || current.token !== link.token) {
+                    window.location.hash = deepLinkHash(link);
                   }
                   setScreen('mitimiti');
                 } else {
@@ -367,22 +386,33 @@ function ConsumerHomeScreen({ onEnter }: { onEnter: () => void }) {
 // ═══════════════════════════════════════════════════════════════
 // Setup Screen (Pedir nombre, extraído de MitiMiti)
 // ═══════════════════════════════════════════════════════════════
-function SetupScreen({ inviteToken, onComplete }: { inviteToken: string | null; onComplete: (profile: UserProfile) => void }) {
+function SetupScreen({ link, onComplete }: { link: DeepLink | null; onComplete: (profile: UserProfile) => void }) {
   const [name, setName] = useState('');
   const [invite, setInvite] = useState<Room | null>(null);
+  const [debt, setDebt] = useState<Debt | null>(null);
 
-  // Si llegó por una invitación, mostrarle a qué lo invitaron: es lo que le
-  // da confianza para dejar su nombre en una app que quizás no conoce.
+  // Si llegó por un link, mostrarle a qué lo invitaron o qué le anotaron: es
+  // lo que le da confianza para dejar su nombre en una app que quizás no
+  // conoce.
   useEffect(() => {
-    if (!inviteToken) return;
+    if (!link) return;
     let alive = true;
-    getRoomByToken(inviteToken)
-      .then(room => { if (alive) setInvite(room); })
-      .catch(() => {});
+    if (link.kind === 'join') {
+      getRoomByToken(link.token)
+        .then(room => { if (alive) setInvite(room); })
+        .catch(() => {});
+    } else {
+      getDebtByToken(link.token)
+        .then(found => { if (alive) setDebt(found); })
+        .catch(() => {});
+    }
     return () => { alive = false; };
-  }, [inviteToken]);
+  }, [link]);
 
   const openInvite = invite && invite.status === 'waiting' ? invite : null;
+  const openDebt = debt && debt.kind === 'direct' && debt.status === 'pending' ? debt : null;
+  const debtCreator = openDebt ? (creatorLent(openDebt) ? openDebt.creditor_name : openDebt.debtor_name) : '';
+  const hasContext = !!(openInvite || openDebt);
 
   const handleSubmit = () => {
     if (!name.trim()) return;
@@ -391,8 +421,8 @@ function SetupScreen({ inviteToken, onComplete }: { inviteToken: string | null; 
   };
 
   return (
-    <div className={`flex flex-col flex-1 px-6 ${openInvite ? 'pt-16' : 'pt-24'} pb-[calc(3rem+env(safe-area-inset-bottom))] bg-white`}>
-      <div className={`flex flex-col items-center ${openInvite ? 'mb-6' : 'mb-10'}`}>
+    <div className={`flex flex-col flex-1 px-6 ${hasContext ? 'pt-16' : 'pt-24'} pb-[calc(3rem+env(safe-area-inset-bottom))] bg-white`}>
+      <div className={`flex flex-col items-center ${hasContext ? 'mb-6' : 'mb-10'}`}>
         <h1 className="text-[44px] font-black text-[#4C1D80] leading-none tracking-[-2px] italic">
           deuna!
         </h1>
@@ -407,19 +437,32 @@ function SetupScreen({ inviteToken, onComplete }: { inviteToken: string | null; 
           </p>
         </div>
       )}
+      {openDebt && (
+        <div className="mb-7 p-4 rounded-2xl bg-[#F6F1FD] border border-[#EBE3F5] text-center animate-fadeIn">
+          <p className="text-[14px] text-[#4C1D80]">
+            🤝 <span className="font-bold">{debtCreator}</span>{' '}
+            {creatorLent(openDebt) ? 'te prestó' : 'anotó que te debe'}
+          </p>
+          <p className="text-[18px] font-bold text-[#1a1a1a] mt-1">
+            {conceptEmoji(openDebt.concept)} {openDebt.concept || DEFAULT_DEBT_CONCEPT} · {formatMoney(openDebt.amount_cents)}
+          </p>
+        </div>
+      )}
       <h2 className="text-[22px] font-bold text-[#1a1a1a] text-center mb-2">
         ¿Cómo te llamas?
       </h2>
       <p className="text-[15px] text-gray-500 text-center mb-8">
         {openInvite
           ? 'Así te verán tus amigos en la sala.'
-          : 'Queremos conocerte para personalizar tu experiencia'}
+          : openDebt
+            ? `Así te verá ${debtCreator} en Deuna.`
+            : 'Queremos conocerte para personalizar tu experiencia'}
       </p>
       <input
         type="text"
         // Con invitación, "Pedro" de ejemplo confunde: suele ser justo el
         // nombre de quien invitó.
-        placeholder={openInvite ? 'Tu nombre' : 'Pedro'}
+        placeholder={hasContext ? 'Tu nombre' : 'Pedro'}
         value={name}
         onChange={e => setName(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && handleSubmit()}
@@ -435,7 +478,7 @@ function SetupScreen({ inviteToken, onComplete }: { inviteToken: string | null; 
             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
         }`}
       >
-        {openInvite ? 'Entrar a la sala' : 'Continuar'}
+        {openInvite ? 'Entrar a la sala' : openDebt ? 'Ver la deuda' : 'Continuar'}
       </button>
     </div>
   );
@@ -451,12 +494,17 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
 
   // Deudas MitiMiti pendientes: hay que poder verlas desde el inicio, sobre
   // todo después de pagar una sala con préstamo (si no, quedan invisibles).
-  const { debtsIOwe, debtsOwedToMe } = useDebts();
-  const totalOwe = debtsIOwe.reduce((acc, d) => acc + d.amount_cents, 0);
-  const totalOwed = debtsOwedToMe.reduce((acc, d) => acc + d.amount_cents, 0);
-  // Personas, no registros: si Diego te debe de dos salas sigue siendo 1 persona.
-  const peopleIOwe = countPeople(debtsIOwe, profile.userId);
-  const peopleOweMe = countPeople(debtsOwedToMe, profile.userId);
+  // Las deudas anotadas a mano cuentan desde que se anotan, aunque el amigo
+  // todavía no abra el link (la plata se debe igual).
+  const { debtsIOwe, debtsOwedToMe, linksIOwe, linksOwedToMe } = useDebts();
+  const owe = [...debtsIOwe, ...linksIOwe];
+  const owed = [...debtsOwedToMe, ...linksOwedToMe];
+  const totalOwe = owe.reduce((acc, d) => acc + d.amount_cents, 0);
+  const totalOwed = owed.reduce((acc, d) => acc + d.amount_cents, 0);
+  // Personas, no registros: si Diego te debe de dos salas sigue siendo 1
+  // persona. Cada link sin abrir es una persona que aún no sabemos quién es.
+  const peopleIOwe = countPeople(debtsIOwe, profile.userId) + linksIOwe.length;
+  const peopleOweMe = countPeople(debtsOwedToMe, profile.userId) + linksOwedToMe.length;
 
   // Detectar si el usuario tiene una sala MitiMiti activa: si salió de la
   // sala con el botón '<' necesita una forma clara de volver a ella.
@@ -481,6 +529,7 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
   const gridItems = [
     { label: 'Transferir', icon: <TransferIcon /> },
     { label: 'MitiMiti', icon: <MitiIcon /> },
+    { label: 'Anotar\ndeuda', icon: <NoteIcon /> },
     { label: 'Transferir a\notro banco', icon: <BankIcon /> },
     { label: 'Recargar', icon: <TopUpIcon /> },
     { label: 'Cobrar', icon: <ReceiveIcon /> },
@@ -535,7 +584,7 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
       )}
 
       {/* Banner Deudas MitiMiti — acceso a la vista de deudas desde el inicio */}
-      {debtsIOwe.length > 0 ? (
+      {owe.length > 0 ? (
         <button
           onClick={() => { window.location.hash = '#/mitimiti/debts?tab=owe'; }}
           className="mx-5 mb-4 p-4 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform text-left"
@@ -548,7 +597,7 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
               <p className="text-[11px] font-bold text-orange-600 uppercase tracking-wide mb-0.5">Deudas por pagar</p>
               <p className="text-[15px] font-bold text-[#1a1a1a] leading-tight">Debes {formatMoney(totalOwe)}</p>
               <p className="text-[12px] text-gray-600">
-                A {peopleIOwe} {peopleIOwe === 1 ? 'persona' : 'personas'} · Toca para pagar
+                A {peopleIOwe} {peopleIOwe === 1 ? 'persona' : 'personas'} · {debtsIOwe.length > 0 ? 'Toca para pagar' : 'Toca para ver'}
               </p>
             </div>
           </div>
@@ -556,7 +605,7 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </button>
-      ) : debtsOwedToMe.length > 0 ? (
+      ) : owed.length > 0 ? (
         <button
           onClick={() => { window.location.hash = '#/mitimiti/debts?tab=owed'; }}
           className="mx-5 mb-4 p-4 rounded-2xl bg-[#EAF3DE] border border-[#3B6D11]/15 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform text-left"
@@ -614,6 +663,8 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
             onClick={() => {
               if (item.label === 'MitiMiti') {
                 window.location.hash = '#/mitimiti';
+              } else if (item.label === 'Anotar\ndeuda') {
+                window.location.hash = '#/mitimiti/debts/new';
               }
             }}
           >
@@ -680,6 +731,7 @@ const PayBillsIcon = () => <div className="text-[28px]">🧾</div>;
 const YouthIcon = () => <div className="text-[28px]">👥</div>;
 const GiftIcon = () => <div className="text-[28px]">🎁</div>;
 const MitiIcon = () => <div className="text-[28px]">🤝</div>;
+const NoteIcon = () => <div className="text-[28px]">📝</div>;
 
 // Bottom Nav Icons
 const BottomHomeIcon = ({active}:{active:boolean}) => <svg width="24" height="24" viewBox="0 0 24 24" fill={active?"#4C1D80":"none"} stroke={active?"#4C1D80":"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
