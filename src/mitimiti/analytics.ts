@@ -4,7 +4,7 @@ export async function trackEvent(
   eventName: string,
   roomId?: string | null,
   userId?: string,
-  payload?: any
+  payload?: Record<string, unknown>
 ) {
   try {
     await supabase.from('mitimiti_metrics').insert({

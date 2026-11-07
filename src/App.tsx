@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import MitiMitiApp from './mitimiti/MitiMitiApp';
 import {
   getUserProfile,
@@ -118,7 +119,7 @@ function App() {
         }
 
         void forceFullscreen();
-      } catch (err) {
+      } catch {
         // Ignore errors
       }
     };
@@ -192,6 +193,16 @@ function App() {
             {!scannedData && (
               <QRScanner
                 onScan={(data) => {
+                  // Invitación a una sala o deuda que te anotaron: abrir el link
+                  // (desde el evento, no durante el render). Al cambiar de
+                  // pantalla el escáner se desmonta y libera la cámara.
+                  const link = decodeQR(data);
+                  if (link && (link.type === 'mitimiti_invite' || link.type === 'mitimiti_debt')) {
+                    const target = deepLinkHash({ kind: link.type === 'mitimiti_invite' ? 'join' : 'debt', token: link.token });
+                    if (window.location.hash === target) window.dispatchEvent(new HashChangeEvent('hashchange'));
+                    else window.location.hash = target;
+                    return;
+                  }
                   setScannedData(data);
                 }}
                 onBack={() => setScreen('dashboard')}
@@ -199,13 +210,8 @@ function App() {
             )}
             {scannedData && (() => {
               const data = decodeQR(scannedData);
-              if (!data) return null;
-              
-              // Invitación a una sala o deuda que te anotaron: abrir el link.
-              if (data.type === 'mitimiti_invite' || data.type === 'mitimiti_debt') {
-                window.location.hash = deepLinkHash({ kind: data.type === 'mitimiti_invite' ? 'join' : 'debt', token: data.token });
-                return null;
-              }
+              // Las invitaciones y deudas se abren al escanear (ver onScan).
+              if (!data || data.type === 'mitimiti_invite' || data.type === 'mitimiti_debt') return null;
 
               return (
                 <SimulatedPaymentView
@@ -700,7 +706,7 @@ function DashboardScreen({ profile, onScanQR, onUpdateProfile }: { profile: User
   );
 }
 
-function NavButton({ active, icon, label, onClick }: { active: boolean, icon: any, label: string, onClick: () => void }) {
+function NavButton({ active, icon, label, onClick }: { active: boolean, icon: ReactNode, label: string, onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-1 min-w-[64px]">
       {icon}
