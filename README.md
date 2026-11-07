@@ -2,6 +2,13 @@
 
 Dashboard financiero conversacional para dueños de micronegocios. Muestra ventas del día, horas pico y rankings de clientes, con un agente IA que responde preguntas en lenguaje natural sobre los datos del negocio.
 
+> **Dos versiones de MitiMiti en este repositorio**
+>
+> | Carpeta | Qué es |
+> |---|---|
+> | `/` (raíz) | Cuentitas para Deuna Negocios, con MitiMiti integrado a Deuna. |
+> | [`mitimiti-app/`](mitimiti-app/README.md) | **MitiMiti como app propia**: PWA independiente para dividir cuentas y anotar préstamos entre amigos, con su propio backend en Supabase, pruebas y despliegue (Vercel con *Root Directory* `mitimiti-app`). |
+
 ---
 
 ## Stack

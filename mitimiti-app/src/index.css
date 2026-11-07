@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+/* Teléfonos bajitos (o con la barra del navegador): todo lo importante cabe sin scroll. */
+@custom-variant short (@media (max-height: 720px));
+@custom-variant tiny (@media (max-height: 620px));
+
+/* ─── Tokens ──────────────────────────────────────────────────
+   Papel cálido (como una cuenta impresa), tinta casi negra para el texto y
+   los botones, y el coral de la marca para lo que celebra o llama la
+   atención. Todo texto pasa WCAG AA (≥ 4,5:1) en claro y en oscuro. */
+:root {
+  --bg: #fbf8f3;
+  --surface: #ffffff;
+  --surface-2: #f3eee6;
+  --surface-3: #e9e3d8;
+  --line: #e7e1d7;
+  --line-strong: #d5cdbf;
+  --ink: #17151f;
+  --ink-2: #3b3745;
+  --muted: #6b6574;
+  --subtle: #76707d;
+  --on-ink: #ffffff;
+  --brand: #ff5a3c;
+  --brand-ink: #c93a1f;
+  --brand-soft: #ffede7;
+  --positive: #0e7a45;
+  --positive-soft: #e3f5ea;
+  --positive-fill: #16a34a;
+  --warning: #9a5200;
+  --warning-soft: #fff3d6;
+  --danger: #b4232b;
+  --danger-soft: #fdeaea;
+  --overlay: rgb(23 21 31 / 0.45);
+  --shadow-card: 0 1px 2px rgb(23 21 31 / 0.04), 0 8px 24px rgb(23 21 31 / 0.06);
+  --shadow-float: 0 12px 40px rgb(23 21 31 / 0.18);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #131218;
+  --surface: #1c1b23;
+  --surface-2: #24222c;
+  --surface-3: #2e2b37;
+  --line: #2f2c39;
+  --line-strong: #3d3948;
+  --ink: #f3f0eb;
+  --ink-2: #d9d5cf;
+  --muted: #a7a1af;
+  --subtle: #8f8998;
+  --on-ink: #131218;
+  --brand: #ff6b4f;
+  --brand-ink: #ff8a72;
+  --brand-soft: #3a1f1a;
+  --positive: #4ade80;
+  --positive-soft: #16301f;
+  --positive-fill: #22c55e;
+  --warning: #f7b955;
+  --warning-soft: #33260d;
+  --danger: #ff8a8f;
+  --danger-soft: #3a1619;
+  --overlay: rgb(0 0 0 / 0.6);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-float: 0 12px 40px rgb(0 0 0 / 0.5);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-on-ink: var(--on-ink);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-positive-fill: var(--positive-fill);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --shadow-card: var(--shadow-card);
+  --shadow-float: var(--shadow-float);
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--brand) 70%, transparent);
+    outline-offset: 2px;
+    border-radius: 10px;
+  }
+  ::selection {
+    background: var(--brand-soft);
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "cv11" 1;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+}
+
+/* ─── Movimiento (sutil, y nada si la persona prefiere menos) ── */
+@keyframes mm-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes mm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mm-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes mm-toast-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes mm-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes mm-flash {
+  from { background-color: var(--brand-soft); }
+  to { background-color: transparent; }
+}
+@keyframes mm-caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes mm-confetti {
+  0% { transform: translate3d(0, -20px, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--dx, 0), 110vh, 0) rotate(720deg); opacity: 0.9; }
+}
+@keyframes mm-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+.animate-sheet { animation: mm-sheet-in 0.34s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fade { animation: mm-fade-in 0.2s ease-out both; }
+.animate-rise { animation: mm-rise 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-toast { animation: mm-toast-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-pop { animation: mm-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-flash { animation: mm-flash 0.9s ease-out; }
+.animate-pulse-dot { animation: mm-pulse-dot 1.6s ease-in-out infinite; }
+.caret {
+  display: inline-block;
+  width: 3px;
+  height: 0.9em;
+  margin-left: 3px;
+  border-radius: 2px;
+  background: var(--brand);
+  vertical-align: -0.08em;
+  animation: mm-caret 1s step-end infinite;
+}
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  animation: mm-confetti linear forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .confetti-piece { display: none; }
+}
+
+/* Borde de "ticket" (zigzag) para las tarjetas que muestran una cuenta. */
+.receipt-edge {
+  --tooth: 10px;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--tooth) 100%;
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--tooth) 100%;
+  padding-bottom: calc(var(--tooth) / 2 + 2px);
+}

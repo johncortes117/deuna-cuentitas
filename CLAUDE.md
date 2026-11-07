@@ -12,6 +12,22 @@ The repo is a monorepo with two separate npm projects:
 
 ---
 
+## mitimiti-app (standalone MitiMiti)
+
+`mitimiti-app/` is a separate npm project (its own `package.json`, lint config, Supabase schema and Vercel project). It is ignored by the root ESLint/TypeScript configs. See `mitimiti-app/README.md`.
+
+```bash
+cd mitimiti-app
+npm run dev          # Vite on :5180 (needs VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)
+npm run typecheck && npm run lint && npm test
+npm run db:test      # SQL tests against a local PostgreSQL 16 on 127.0.0.1:54329
+npm run test:e2e     # Playwright, multi-phone flows against the local Supabase-compatible gateway
+```
+
+Backend rules for that app: tables are read-only under RLS; every write goes through a `security definer` function `mm_*` in `mitimiti-app/supabase/schema.sql` that raises `mm:<code>` errors; money is always integer cents.
+
+---
+
 ## Commands
 
 ### Frontend (run from repo root)
