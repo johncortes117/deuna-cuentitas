@@ -76,7 +76,7 @@ export class AgentService {
         stateModifier: buildSystemPrompt({ commerceId, role }),
       });
 
-      let messages = this.mapHistory(history);
+      const messages = this.mapHistory(history);
       
       const lastHistoryMessage = history[history.length - 1];
       if (!lastHistoryMessage || lastHistoryMessage.sender !== 'user' || lastHistoryMessage.text !== userMessage) {
