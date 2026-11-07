@@ -11,7 +11,6 @@ import { buildBalances, originsLabel } from '../../lib/ledger'
 import type { PersonBalance } from '../../lib/ledger'
 import { formatMoney } from '../../lib/money'
 import { relativeDay } from '../../lib/dates'
-import { distinctColors } from '../../lib/avatar'
 import { errorMessage } from '../../lib/errors'
 import { Avatar } from '../../ui/Avatar'
 import { Button } from '../../ui/Button'
@@ -63,12 +62,11 @@ export default function BalancesPage() {
   const { profile } = useSession()
   const { signal } = useNotifications()
   const navigate = useNavigate()
-  const { data, loading, error, reload } = useData(async () => buildBalances(await api.ledger(), profile!.id), String(signal))
+  const { data, loading, error, reload } = useData(async () => buildBalances(await api.ledger(), profile!.id, profile!.color), String(signal))
 
   if (error && !data) return <ErrorScreen title="No pudimos cargar tus saldos" body={errorMessage(error)} action={<Button full onClick={() => void reload()}>Reintentar</Button>} />
 
-  // En la lista nadie repite color (como en una mesa).
-  const people = data ? distinctColors(data.people) : []
+  const people = data?.people ?? []
   const toConfirm = people.filter((p) => p.toConfirm.length > 0)
   const owedToMe = people.filter((p) => p.toConfirm.length === 0 && p.net > 0)
   const iOwe = people.filter((p) => p.toConfirm.length === 0 && p.net < 0)

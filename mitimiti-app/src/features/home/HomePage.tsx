@@ -41,7 +41,7 @@ export default function HomePage() {
   const navigate = useNavigate()
   const { data, loading } = useData(async () => {
     const [home, ledger] = await Promise.all([api.home(), api.ledger()])
-    return { home, balances: buildBalances(ledger, profile!.id) }
+    return { home, balances: buildBalances(ledger, profile!.id, profile!.color) }
   }, String(signal))
 
   const bills = data?.home.bills ?? []

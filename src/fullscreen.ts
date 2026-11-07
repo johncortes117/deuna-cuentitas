@@ -18,8 +18,25 @@
 // re-enter after the camera has been fully released.
 // ═══════════════════════════════════════════════════════════════
 
+// APIs con prefijo (Safari viejo, Firefox viejo, IE/Edge viejo) que no
+// están en los tipos estándar del DOM.
+type VendorFullscreenFn = () => Promise<void> | undefined;
+type VendorDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  mozFullScreenElement?: Element | null;
+  msFullscreenElement?: Element | null;
+  webkitExitFullscreen?: VendorFullscreenFn;
+  mozCancelFullScreen?: VendorFullscreenFn;
+  msExitFullscreen?: VendorFullscreenFn;
+};
+type VendorElement = Element & {
+  webkitRequestFullscreen?: VendorFullscreenFn;
+  mozRequestFullScreen?: VendorFullscreenFn;
+  msRequestFullscreen?: VendorFullscreenFn;
+};
+
 export function getFullscreenElement(): Element | null {
-  const doc = document as any;
+  const doc = document as VendorDocument;
   return (
     doc.fullscreenElement ||
     doc.webkitFullscreenElement ||
@@ -30,7 +47,7 @@ export function getFullscreenElement(): Element | null {
 }
 
 export function requestFullscreenOn(target: Element): void {
-  const el = target as any;
+  const el = target as VendorElement;
   const fn =
     el.requestFullscreen ||
     el.webkitRequestFullscreen ||
@@ -57,7 +74,7 @@ export function delay(ms: number): Promise<void> {
 
 export function exitFullscreen(): Promise<void> {
   if (!getFullscreenElement()) return Promise.resolve();
-  const doc = document as any;
+  const doc = document as VendorDocument;
   const fn =
     doc.exitFullscreen ||
     doc.webkitExitFullscreen ||

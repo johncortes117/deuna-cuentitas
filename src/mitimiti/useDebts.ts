@@ -142,6 +142,9 @@ export function useDebts() {
   }, [userId]);
 
   useEffect(() => {
+    // loadDebts solo cambia el estado después de `await getMyDebts()`, nunca
+    // de forma síncrona dentro del efecto; la regla no distingue el await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDebts();
 
     if (userId) {

@@ -94,10 +94,10 @@ export default function MitiMitiApp() {
   // ─── Render ─────────────────────────────────────────────
 
   // Si no tiene perfil, debería haberse manejado en App.tsx, pero por si acaso redirigimos
-  if (!profile) {
-    window.location.hash = '#/';
-    return null;
-  }
+  useEffect(() => {
+    if (!profile) window.location.hash = '#/';
+  }, [profile]);
+  if (!profile) return null;
 
   return (
     <div className="flex flex-col flex-1 relative bg-white h-full w-full min-h-0">
