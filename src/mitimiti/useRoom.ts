@@ -102,10 +102,7 @@ export function useRoom(roomId: string | null): UseRoomReturn {
 
   // Cargar datos iniciales + suscribirse a Realtime
   useEffect(() => {
-    if (!roomId) {
-      setIsLoading(false);
-      return;
-    }
+    if (!roomId) return;
 
     let mounted = true;
 
@@ -291,7 +288,8 @@ export function useRoom(roomId: string | null): UseRoomReturn {
     participants,
     myParticipant,
     isHost,
-    isLoading,
+    // Sin sala no hay nada que cargar.
+    isLoading: roomId ? isLoading : false,
     error,
     amountPerPerson,
     debts,

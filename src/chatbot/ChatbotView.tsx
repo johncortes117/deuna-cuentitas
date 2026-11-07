@@ -142,13 +142,18 @@ export function ChatbotView({ commerceId = 'NEG001' }: { commerceId?: string }) 
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // ─── Iniciar sesión ─────────────────────────────────────────────
-  useEffect(() => {
-    // Reset al cambiar de comercio
+  // Reset al cambiar de comercio: durante el render, así nunca se ve (ni un
+  // instante) la conversación del comercio anterior.
+  const [sessionCommerceId, setSessionCommerceId] = useState(commerceId);
+  if (sessionCommerceId !== commerceId) {
+    setSessionCommerceId(commerceId);
     setSessionId(null);
     setMessages([]);
     setQuickReplies([]);
+  }
 
+  // ─── Iniciar sesión ─────────────────────────────────────────────
+  useEffect(() => {
     fetch(`${API_BASE}/chat/session/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

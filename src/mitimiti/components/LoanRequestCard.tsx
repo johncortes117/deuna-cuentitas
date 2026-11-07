@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Participant } from '../types';
 import { formatMoney, fromCents, toCents } from '../utils';
 
@@ -16,10 +16,13 @@ export default function LoanRequestCard({ participant, onLendMoney, spareCents }
 
   const [amountStr, setAmountStr] = useState(fromCents(maxLendable));
 
-  // Sync cuando cambia el déficit o el prestable (p. ej. préstamo parcial)
-  useEffect(() => {
-    setAmountStr(fromCents(Math.min(participant.deficit_cents, spareCents)));
-  }, [participant.deficit_cents, spareCents]);
+  // Sync cuando cambia el déficit o el prestable (p. ej. préstamo parcial),
+  // durante el render (sin un render extra con el monto viejo).
+  const [syncedWith, setSyncedWith] = useState({ deficit: participant.deficit_cents, spare: spareCents });
+  if (syncedWith.deficit !== participant.deficit_cents || syncedWith.spare !== spareCents) {
+    setSyncedWith({ deficit: participant.deficit_cents, spare: spareCents });
+    setAmountStr(fromCents(maxLendable));
+  }
 
   const handleAmountChange = (val: string) => {
     if (/^[0-9,]*$/.test(val)) {
