@@ -20,7 +20,7 @@ function describe(d: LedgerDebt, me: string): { title: string; inflow: boolean; 
 
 export default function HistoryPage() {
   const { profile } = useSession()
-  const { data, loading } = useData(async () => buildBalances(await api.ledger(), profile!.id).history, 'history')
+  const { data, loading } = useData(async () => buildBalances(await api.ledger(), profile!.id, profile!.color).history, 'history')
   return (
     <>
       <TopBar back="/saldos" title="Historial" />

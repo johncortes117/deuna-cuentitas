@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { centsToInput, formatMoney, inputToCents, keypadInput, parsePrice, percentOf } from './money'
 import { idNumberKind, isMethodComplete, isValidCedula, methodCopyText, methodSummary } from './payMethods'
 import { buildBalances, originsLabel } from './ledger'
+import { tableColors } from './avatar'
 import type { Ledger, LedgerDebt } from './types'
 
 describe('dinero', () => {
@@ -115,5 +116,34 @@ describe('saldos por persona', () => {
     expect(b.people.map((p) => p.name)).toEqual(['Ana', 'Luis'])
     expect(b.toConfirmCount).toBe(1)
     expect(b.people[0].net).toBe(0)
+  })
+})
+
+describe('colores de avatar', () => {
+  const luis = { key: 'u-luis', color: 0 }
+  const carla = { key: 'u-carla', color: 0 }
+  const ana = { key: 'u-ana', color: 5 }
+
+  it('en una mesa nadie repite color', () => {
+    const colors = tableColors([ana, luis, carla])
+    expect(new Set(colors.values()).size).toBe(3)
+    expect(colors.get('u-ana')).toBe(5)
+  })
+
+  it('cada uno conserva su color sin importar el orden de la lista', () => {
+    const inBill = tableColors([ana, luis, carla])
+    const inBalances = tableColors([ana, carla, luis])
+    expect(inBalances.get('u-luis')).toBe(inBill.get('u-luis'))
+    expect(inBalances.get('u-carla')).toBe(inBill.get('u-carla'))
+    // Desempata la clave: 'u-carla' < 'u-luis', así que Carla se queda con el suyo.
+    expect(inBill.get('u-carla')).toBe(0)
+    expect(inBill.get('u-luis')).toBe(1)
+  })
+
+  it('con más de 12 personas los colores se repiten, sin fallar', () => {
+    const many = Array.from({ length: 14 }, (_, i) => ({ key: `u-${String(i).padStart(2, '0')}`, color: 3 }))
+    const colors = tableColors(many)
+    expect(colors.size).toBe(14)
+    expect(new Set(colors.values()).size).toBe(12)
   })
 })

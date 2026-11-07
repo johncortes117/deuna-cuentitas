@@ -7,12 +7,19 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 import { ApiError } from '../lib/errors'
-import { distinctColors } from '../lib/avatar'
-import type { BillBundle } from '../lib/types'
+import { tableColors } from '../lib/avatar'
+import type { BillBundle, Member } from '../lib/types'
+
+/** La misma clave que usa Saldos para cada persona (o invitado sin app). */
+const personKey = (m: Member) => m.user_id ?? `member:${m.id}`
 
 /** Colores únicos por mesa (también para quien pagó). */
 function withTableColors(b: BillBundle): BillBundle {
-  const members = distinctColors(b.members)
+  const colors = tableColors(b.members.map((m) => ({ key: personKey(m), color: m.color })))
+  const members = b.members.map((m) => {
+    const color = colors.get(personKey(m)) ?? m.color
+    return color === m.color ? m : { ...m, color }
+  })
   const payerColor = b.payer ? members.find((m) => m.id === b.payer?.member_id)?.color : undefined
   return { ...b, members, payer: b.payer && payerColor !== undefined ? { ...b.payer, color: payerColor } : b.payer }
 }
