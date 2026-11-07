@@ -6,8 +6,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  // mitimiti-app es un proyecto aparte, con su propio ESLint.
-  globalIgnores(['dist', 'mitimiti-app']),
+  // mitimiti-app y backend son proyectos aparte, cada uno con su propio ESLint.
+  globalIgnores(['dist', 'mitimiti-app', 'backend']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
