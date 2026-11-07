@@ -8,18 +8,25 @@ export const AVATAR_COLORS = [
 ]
 
 /**
- * En una misma mesa, nadie repite color: si el tuyo ya lo tiene alguien que
- * llegó antes, se usa el siguiente libre. Fuera de la cuenta sigues con el tuyo.
+ * En una misma mesa (o lista) nadie repite color: si dos personas tienen el
+ * mismo, la de clave menor se queda con el suyo y la otra toma el siguiente
+ * libre. Se decide por la clave (id de la persona), nunca por el orden en
+ * pantalla, así cada uno conserva su color en la cuenta, en Saldos y en su
+ * detalle. Devuelve clave → índice de color.
  */
-export function distinctColors<T extends { color: number }>(people: T[]): T[] {
+export function tableColors(people: { key: string; color: number }[]): Map<string, number> {
+  const n = AVATAR_COLORS.length
   const used = new Set<number>()
-  return people.map((p) => {
-    const n = AVATAR_COLORS.length
+  const out = new Map<string, number>()
+  const byKey = [...people].sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
+  for (const p of byKey) {
+    if (out.has(p.key)) continue
     let c = ((Math.trunc(p.color ?? 0) % n) + n) % n
     for (let i = 0; i < n && used.has(c); i++) c = (c + 1) % n
     used.add(c)
-    return c === p.color ? p : { ...p, color: c }
-  })
+    out.set(p.key, c)
+  }
+  return out
 }
 
 export function avatarColor(index: number | null | undefined): string {

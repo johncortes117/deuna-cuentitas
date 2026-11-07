@@ -36,7 +36,7 @@ export default function PersonPage() {
   const { signal, refresh: refreshCounts } = useNotifications()
   const navigate = useNavigate()
   const toast = useToast()
-  const { data, loading, error, reload } = useData(async () => buildBalances(await api.ledger(), profile!.id), `${key}:${signal}`)
+  const { data, loading, error, reload } = useData(async () => buildBalances(await api.ledger(), profile!.id, profile!.color), `${key}:${signal}`)
   const [sheet, setSheet] = useState<'pay' | 'received' | 'forgive' | 'cancel' | null>(null)
   const [method, setMethod] = useState<PayMethodType>('cash')
 

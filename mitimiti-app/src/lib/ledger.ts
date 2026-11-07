@@ -10,6 +10,7 @@
 //            se le manda su link o se marca "ya me pagó".
 //  • link:   una deuda anotada a mano cuyo link nadie abrió todavía.
 import type { Ledger, LedgerDebt, LedgerSettlement, PayMethod } from './types'
+import { tableColors } from './avatar'
 
 export interface PersonBalance {
   key: string
@@ -55,7 +56,11 @@ function counterpartOf(d: LedgerDebt, me: string): { key: string; kind: PersonBa
   return { key: `member:${d.member_id ?? d.id}`, kind: 'guest', userId: null, name }
 }
 
-export function buildBalances(ledger: Ledger, me: string): Balances {
+/**
+ * Saldos por persona. `myColor` (el color de quien mira) entra en el reparto
+ * de colores para que cada uno tenga el mismo aquí y en las cuentas.
+ */
+export function buildBalances(ledger: Ledger, me: string, myColor?: number): Balances {
   const map = new Map<string, PersonBalance>()
   const history: LedgerDebt[] = []
 
@@ -112,6 +117,11 @@ export function buildBalances(ledger: Ledger, me: string): Balances {
       Math.abs(b.net) - Math.abs(a.net) ||
       b.lastAt.localeCompare(a.lastAt),
   )
+
+  // Nadie repite color en la lista (los links sin abrir no llevan avatar).
+  const withAvatar = people.filter((p) => p.kind !== 'link')
+  const colors = tableColors([...(myColor === undefined ? [] : [{ key: me, color: myColor }]), ...withAvatar.map((p) => ({ key: p.key, color: p.color }))])
+  for (const p of withAvatar) p.color = colors.get(p.key) ?? p.color
 
   return {
     people,
