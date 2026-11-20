@@ -13,7 +13,16 @@ export const TEMPLATES = {
   reminder: 'Hola {debtorName}, soy MitiMiti 👀 Paso a recordarte los {amount} de {concept} que cubrió {creditorName}. Cuando le pases, avísale para tacharlo.\n{link}',
   /** Compartir un préstamo 1 a 1 recién anotado (en cualquier sentido). */
   loan: 'Anoté en MitiMiti los {amount} de {concept} para que no se nos olvide a ninguno. Échale un ojo aquí: {loanUrl}',
+  /** Junto a la tarjeta de deuda perdonada, para quien debía. */
+  forgiven: 'Listo {debtorName}, te perdoné lo de {concept} 💜 Divide cuentas, no amistades.',
+  /** Junto a la tarjeta sin monto (historias, grupos). */
+  forgivenPublic: 'Hoy invité yo 💜 Divide cuentas, no amistades. {appUrl}',
+  /** Junto al comprobante de deuda saldada, para quien pagó. */
+  settled: 'Listo {debtorName}, ya quedó tachado lo de {concept} en MitiMiti ✅',
 } as const
+
+/** Frases rápidas al perdonar (van en la tarjeta). */
+export const FORGIVE_NOTES = ['Invito yo esta vez.', 'La próxima la pones tú.', "Pa' que no se pierda la amistad."] as const
 
 export type TemplateName = keyof typeof TEMPLATES
 

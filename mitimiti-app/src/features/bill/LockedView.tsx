@@ -23,6 +23,8 @@ import { Sheet } from '../../ui/Sheet'
 import { useToast } from '../../ui/Toast'
 import { success } from '../../ui/haptics'
 import { ConfirmSheet } from '../shared/ConfirmSheet'
+import { ForgiveSheet } from '../shared/Receipt'
+import { useShowReceipt } from '../../state/receipts'
 import { PayOptions } from '../shared/PayOptions'
 import { ReportPaymentSheet } from '../shared/ReportPaymentSheet'
 import { BillSummary, DebtStatusPill } from './parts'
@@ -69,6 +71,8 @@ function PayerView({ bundle, live, refresh }: BillViewProps) {
   const [menu, setMenu] = useState(false)
   const [confirm, setConfirm] = useState<'unlock' | 'cancel' | null>(null)
   const [receiving, setReceiving] = useState<BillDebt | null>(null)
+  const [forgiving, setForgiving] = useState<BillDebt | null>(null)
+  const showReceipt = useShowReceipt()
   const currency = bundle.bill.currency
   const debts = bundle.debts
   const pending = debts.filter((d) => d.status === 'open' || d.status === 'reported')
@@ -179,6 +183,11 @@ function PayerView({ bundle, live, refresh }: BillViewProps) {
                       </Button>
                     </div>
                   )}
+                  {d.status === 'open' && (
+                    <button type="button" onClick={() => setForgiving(d)} className="mx-auto mt-1.5 block rounded-full px-3 py-1.5 text-[13.5px] font-semibold text-forgiven hover:bg-forgiven-soft">
+                      Perdonar
+                    </button>
+                  )}
                 </li>
               )
             })}
@@ -217,6 +226,22 @@ function PayerView({ bundle, live, refresh }: BillViewProps) {
         confirmLabel="Sí, cancelar"
         danger
         onConfirm={() => run(() => api.cancelBill(bundle.bill.id)).then(() => navigate('/', { replace: true }))}
+      />
+      <ForgiveSheet
+        open={forgiving !== null}
+        onClose={() => setForgiving(null)}
+        debtorName={forgiving?.debtor_name ?? ''}
+        amountCents={forgiving?.amount_cents ?? 0}
+        currency={currency}
+        onConfirm={async (note) => {
+          const d = forgiving!
+          await api.forgive([d.id], note)
+          success()
+          track('debt_forgiven', { from: 'bill', note: Boolean(note) })
+          setForgiving(null)
+          showReceipt({ kind: 'forgiven', data: { creditorName: profile?.name ?? '', debtorName: d.debtor_name, concept: bundle.bill.title, amountCents: d.amount_cents, currency, note } })
+          await refresh()
+        }}
       />
       <ReceivedSheet
         debt={receiving}

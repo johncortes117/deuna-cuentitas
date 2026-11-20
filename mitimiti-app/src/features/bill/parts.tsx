@@ -206,7 +206,8 @@ export function MemberRow({
 }
 
 export function DebtStatusPill({ status }: { status: string }) {
-  if (status === 'settled' || status === 'forgiven') return <StatusPill tone="good">{status === 'forgiven' ? 'Perdonado' : 'Pagó ✓'}</StatusPill>
+  if (status === 'forgiven') return <StatusPill tone="forgiven">Perdonada</StatusPill>
+  if (status === 'settled') return <StatusPill tone="good">Pagó ✓</StatusPill>
   if (status === 'reported') return <StatusPill tone="warn">Por confirmar</StatusPill>
   return <StatusPill tone="muted">Pendiente</StatusPill>
 }

@@ -312,8 +312,11 @@ await test('perdonar solo lo que te deben a ti', async () => {
   const l = await pedro.rpc('mm_ledger', {})
   const sofiaDebt = l.debts.find((d) => d.debtor_name === 'Sofía' && d.status === 'open')
   await rejects(sofia.rpc('mm_forgive', { p_debt_ids: [sofiaDebt.id] }), 'mm:invalid_debts', 'Sofía no se perdona')
-  await pedro.rpc('mm_forgive', { p_debt_ids: [sofiaDebt.id] })
-  eq((await sofia.rpc('mm_list_notifications', {}))[0].kind, 'debt_forgiven', 'aviso')
+  await pedro.rpc('mm_forgive', { p_debt_ids: [sofiaDebt.id], p_note: '  La próxima la pones tú.  ' })
+  const n = (await sofia.rpc('mm_list_notifications', {}))[0]
+  eq([n.kind, n.data.note], ['debt_forgiven', 'La próxima la pones tú.'], 'aviso con la frase')
+  const after = (await pedro.rpc('mm_ledger', {})).debts.find((d) => d.id === sofiaDebt.id)
+  eq([after.status, after.forgiven_note, Boolean(after.settled_at)], ['forgiven', 'La próxima la pones tú.', true], 'perdonada, con frase y fecha')
 })
 
 console.log('\nLecturas y privacidad')

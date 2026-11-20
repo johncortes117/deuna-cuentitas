@@ -26,6 +26,8 @@ import { Sheet } from '../../ui/Sheet'
 import { useToast } from '../../ui/Toast'
 import { success } from '../../ui/haptics'
 import { ConfirmSheet } from '../shared/ConfirmSheet'
+import { ForgiveSheet } from '../shared/Receipt'
+import { useShowReceipt } from '../../state/receipts'
 import { PayOptions } from '../shared/PayOptions'
 import { ReportPaymentSheet } from '../shared/ReportPaymentSheet'
 import { titleEmoji } from '../shared/titles'
@@ -39,6 +41,7 @@ export default function PersonPage() {
   const { data, loading, error, reload } = useData(async () => buildBalances(await api.ledger(), profile!.id, profile!.color), `${key}:${signal}`)
   const [sheet, setSheet] = useState<'pay' | 'received' | 'forgive' | 'cancel' | null>(null)
   const [method, setMethod] = useState<PayMethodType>('cash')
+  const showReceipt = useShowReceipt()
 
   const p = data?.people.find((x) => x.key === decodeURIComponent(key))
 
@@ -80,7 +83,9 @@ export default function PersonPage() {
   const owesMe = p.net > 0
   const iOwe = p.net < 0
   const abs = Math.abs(p.net)
-  const myCredits = p.debts.filter((d) => d.status === 'open' && d.creditor_id === profile!.id).map((d) => d.id)
+  const creditDebts = p.debts.filter((d) => d.status === 'open' && d.creditor_id === profile!.id)
+  const myCredits = creditDebts.map((d) => d.id)
+  const creditCents = creditDebts.reduce((acc, d) => acc + d.amount_cents, 0)
   const what = originsLabel(p.debts)
   const name = p.kind === 'link' ? what : p.name
 
@@ -226,7 +231,7 @@ export default function PersonPage() {
                 <Button variant="secondary" size="md" onClick={() => setSheet('received')}>
                   Ya me pagó
                 </Button>
-                <Button variant="ghost" size="md" onClick={() => setSheet('forgive')} disabled={myCredits.length === 0}>
+                <Button variant="ghost" size="md" className="!text-forgiven hover:!bg-forgiven-soft" onClick={() => setSheet('forgive')} disabled={myCredits.length === 0}>
                   Perdonar
                 </Button>
               </div>
@@ -268,14 +273,21 @@ export default function PersonPage() {
           ))}
         </div>
       </Sheet>
-      <ConfirmSheet
+      <ForgiveSheet
         open={sheet === 'forgive'}
         onClose={() => setSheet(null)}
-        title={`¿Perdonarle la deuda a ${firstName(p.name)}?`}
-        body={`Ya no te deberá eso. No se puede deshacer.`}
-        confirmLabel="Sí, perdonar"
-        danger
-        onConfirm={() => run(() => api.forgive(myCredits), { title: `Perdonaste a ${firstName(p.name)}`, emoji: '🤍' }, true)}
+        debtorName={p.name}
+        amountCents={creditCents}
+        currency={currency}
+        onConfirm={async (note) => {
+          await api.forgive(myCredits, note)
+          success()
+          track('debt_forgiven', { from: 'person', note: Boolean(note) })
+          setSheet(null)
+          refreshCounts()
+          showReceipt({ kind: 'forgiven', data: { creditorName: profile!.name, debtorName: p.name, concept: originsLabel(creditDebts), amountCents: creditCents, currency, note } })
+          navigate('/saldos', { replace: true })
+        }}
       />
       <ConfirmSheet
         open={sheet === 'cancel'}
