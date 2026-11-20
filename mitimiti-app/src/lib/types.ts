@@ -155,6 +155,8 @@ export interface LedgerDebt {
   created_at: string
   responded_at: string | null
   settled_at: string | null
+  /** La frase que eligió quien perdonó, si eligió una. */
+  forgiven_note?: string | null
 }
 
 export interface LedgerSettlement {

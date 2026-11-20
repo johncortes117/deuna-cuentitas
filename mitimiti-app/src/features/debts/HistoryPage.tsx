@@ -8,6 +8,7 @@ import { firstName } from '../../lib/avatar'
 import type { LedgerDebt } from '../../lib/types'
 import { Card, EmptyState, Page, Skeleton, TopBar } from '../../ui/Layout'
 import { cx } from '../../ui/cx'
+import { StatusPill } from '../../ui/Controls'
 
 function describe(d: LedgerDebt, me: string): { title: string; inflow: boolean; struck: boolean } {
   const iAmCreditor = d.creditor_id === me
@@ -36,13 +37,22 @@ export default function HistoryPage() {
                 const x = describe(d, profile!.id)
                 return (
                   <li key={d.id} className="flex items-center gap-3 px-4 py-3.5">
-                    <span className={cx('flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[16px]', d.status === 'settled' ? 'bg-positive-soft' : 'bg-surface-2')} aria-hidden="true">
-                      {d.status === 'settled' ? '✓' : d.status === 'forgiven' ? '🤍' : '🤔'}
+                    <span
+                      className={cx(
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[16px] font-bold',
+                        d.status === 'settled' ? 'bg-positive-soft text-positive' : d.status === 'forgiven' ? 'bg-forgiven-soft text-forgiven' : 'bg-surface-2',
+                      )}
+                      aria-hidden="true"
+                    >
+                      {d.status === 'settled' ? '✓' : d.status === 'forgiven' ? '💜' : '🤔'}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[15px] font-semibold text-ink">{x.title}</span>
-                      <span className="block truncate text-[13px] text-muted">
-                        {debtOrigin(d)} · {relativeDay(d.settled_at ?? d.responded_at ?? d.created_at)}
+                      <span className="mt-0.5 flex items-center gap-2 text-[13px] text-muted">
+                        {d.status === 'forgiven' && <StatusPill tone="forgiven">Perdonada</StatusPill>}
+                        <span className="truncate">
+                          {debtOrigin(d)} · {relativeDay(d.settled_at ?? d.responded_at ?? d.created_at)}
+                        </span>
                       </span>
                     </span>
                     <span className={cx('shrink-0 text-[15px] font-bold tabular', x.struck ? 'text-subtle line-through' : x.inflow ? 'text-positive' : 'text-ink')}>

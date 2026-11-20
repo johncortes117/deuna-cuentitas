@@ -103,3 +103,45 @@ export function payCardMessage(code: string): string {
 export function settledMessage(title: string, totalCents: number, currency: string, people: number): string {
   return `✅ Dividimos «${title}» (${formatMoney(totalCents, currency)}) entre ${people} con MitiMiti: sin calculadora y sin "te transfiero luego". Divide cuentas, no amistades 💚 ${APP_URL}`
 }
+
+// ─── Compartir imágenes (tarjetas) ───────────────────────────
+
+/** El dominio que va en el pie de las tarjetas ("mitimiti.app"). */
+export const appDomain = () => {
+  try {
+    return new URL(APP_URL).host
+  } catch {
+    return 'mitimiti.app'
+  }
+}
+
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 4000)
+}
+
+export type ShareImageResult = 'shared' | 'downloaded' | 'cancelled'
+
+/**
+ * La hoja de compartir del teléfono con la imagen (WhatsApp, historias…). Si el
+ * navegador no puede compartir archivos (computador), la descarga.
+ */
+export async function shareImage(blob: Blob, filename: string, data: { title: string; text?: string }): Promise<ShareImageResult> {
+  const file = new File([blob], filename, { type: 'image/png' })
+  if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: data.title, text: data.text })
+      return 'shared'
+    } catch (err) {
+      if ((err as { name?: string })?.name === 'AbortError') return 'cancelled'
+    }
+  }
+  downloadBlob(blob, filename)
+  return 'downloaded'
+}

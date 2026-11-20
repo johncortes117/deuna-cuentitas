@@ -39,7 +39,7 @@ export function notificationCopy(n: AppNotification): NotificationCopy {
     case 'payment_marked':
       return { emoji: '✅', tone: 'good', title: `${who} anotó que ya le pagaste ${amount}`, body: 'Quedó saldado.', href: billHref }
     case 'debt_forgiven':
-      return { emoji: '🤍', tone: 'good', title: `${who} te perdonó ${amount}`, body: 'Ya no le debes eso.', href: billHref }
+      return { emoji: '💜', tone: 'good', title: `${who} te perdonó ${amount}`, body: typeof n.data.note === 'string' && n.data.note ? `«${n.data.note}»` : 'Ya no le debes eso.', href: billHref }
     case 'reminder':
       return { emoji: '👋', tone: 'info', title: `${who} te recuerda ${amount}`, body: 'Mira cómo pagarle en un minuto.', href: '/saldos' }
     case 'link_accepted':

@@ -6,6 +6,7 @@ import { Navigate, Outlet, useLocation } from 'react-router'
 import { Analytics } from '@vercel/analytics/react'
 import { WifiOff } from 'lucide-react'
 import { NotificationsProvider } from './state/notifications'
+import { ReceiptsProvider } from './state/receipts'
 import { useSession } from './state/session'
 import { useOnline } from './hooks/useOnline'
 import { isConfigured } from './lib/env'
@@ -63,11 +64,13 @@ export function AppFrame() {
   const route = routeFor(location.pathname)
   return (
     <NotificationsProvider>
+      <ReceiptsProvider>
       <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-bg sm:border-x sm:border-line">
         <OfflineBanner />
         <Outlet />
       </div>
       {import.meta.env.PROD && <Analytics route={route} path={route} />}
+      </ReceiptsProvider>
     </NotificationsProvider>
   )
 }

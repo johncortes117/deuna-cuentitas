@@ -124,7 +124,7 @@ export function CopyButton({ text, label = 'Copiar', copiedLabel = 'Copiado', cl
   )
 }
 
-export function StatusPill({ tone, children }: { tone: 'good' | 'warn' | 'muted' | 'info' | 'danger'; children: ReactNode }) {
+export function StatusPill({ tone, children }: { tone: 'good' | 'warn' | 'muted' | 'info' | 'danger' | 'forgiven'; children: ReactNode }) {
   return (
     <span
       className={cx(
@@ -134,6 +134,7 @@ export function StatusPill({ tone, children }: { tone: 'good' | 'warn' | 'muted'
         tone === 'muted' && 'bg-surface-2 text-muted',
         tone === 'info' && 'bg-brand-soft text-brand-ink',
         tone === 'danger' && 'bg-danger-soft text-danger',
+        tone === 'forgiven' && 'bg-forgiven-soft text-forgiven',
       )}
     >
       {children}

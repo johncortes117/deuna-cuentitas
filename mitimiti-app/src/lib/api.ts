@@ -76,7 +76,8 @@ export const api = {
   confirmSettlement: (id: string) => rpc<null>('mm_confirm_settlement', { p_settlement: id }),
   rejectSettlement: (id: string) => rpc<null>('mm_reject_settlement', { p_settlement: id }),
   markReceived: (debtIds: string[], method: PayMethodType = 'cash') => rpc<string>('mm_mark_received', { p_debt_ids: debtIds, p_method: method }),
-  forgive: (debtIds: string[]) => rpc<null>('mm_forgive', { p_debt_ids: debtIds }),
+  // p_note solo se manda si hay frase: así funciona también con la versión anterior de la función.
+  forgive: (debtIds: string[], note?: string | null) => rpc<null>('mm_forgive', note ? { p_debt_ids: debtIds, p_note: note } : { p_debt_ids: debtIds }),
   remind: (other: string) => rpc<boolean>('mm_remind', { p_other: other }),
 
   // Pantallas

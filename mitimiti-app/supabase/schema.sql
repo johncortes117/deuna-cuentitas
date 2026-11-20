@@ -167,6 +167,15 @@ create index if not exists mm_members_user_idx on public.mm_bill_members (user_i
 create index if not exists mm_items_bill_idx on public.mm_bill_items (bill_id);
 create index if not exists mm_claims_bill_idx on public.mm_item_claims (bill_id);
 create index if not exists mm_claims_member_idx on public.mm_item_claims (member_id);
+-- La frase que eligió quien perdonó ("Invito yo esta vez."), si eligió una.
+alter table public.mm_debts add column if not exists forgiven_note text;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'mm_debts_forgiven_note_len') then
+    alter table public.mm_debts add constraint mm_debts_forgiven_note_len check (forgiven_note is null or char_length(forgiven_note) <= 60);
+  end if;
+end $$;
+
 create index if not exists mm_debts_debtor_idx on public.mm_debts (debtor_id);
 create index if not exists mm_debts_creditor_idx on public.mm_debts (creditor_id);
 create index if not exists mm_debts_bill_idx on public.mm_debts (bill_id);
@@ -1511,7 +1520,9 @@ begin
   return v_sid;
 end $$;
 
-create or replace function public.mm_forgive(p_debt_ids uuid[])
+-- Perdonar lo que te deben (con una frase opcional para la tarjeta).
+drop function if exists public.mm_forgive(uuid[]);
+create or replace function public.mm_forgive(p_debt_ids uuid[], p_note text default null)
 returns void
 language plpgsql security definer
 set search_path = public, pg_temp
@@ -1520,17 +1531,18 @@ declare
   v_me    public.mm_profiles := public.mm_my_profile();
   v_pair  record;
   v_bills uuid[];
+  v_note  text := nullif(left(btrim(coalesce(p_note, '')), 60), '');
 begin
   select * into v_pair from public.mm_pair_net(p_debt_ids, array['open']);
   if exists (select 1 from public.mm_debts where id = any (p_debt_ids) and creditor_id is distinct from v_me.id) then
     raise exception 'mm:invalid_debts';
   end if;
-  update public.mm_debts set status = 'forgiven', settled_at = now() where id = any (p_debt_ids);
+  update public.mm_debts set status = 'forgiven', settled_at = now(), forgiven_note = v_note where id = any (p_debt_ids);
   select array_agg(distinct bill_id) into v_bills from public.mm_debts where id = any (p_debt_ids) and bill_id is not null;
   perform public.mm_bump(b) from unnest(coalesce(v_bills, '{}'::uuid[])) b;
   perform public.mm_notify(v_pair.other_id, 'debt_forgiven', v_me.id, v_me.name, (-v_pair.net)::integer,
     v_pair.currency, null, null, null, null,
-    jsonb_strip_nulls(jsonb_build_object('code', public.mm_debts_bill_code(p_debt_ids))));
+    jsonb_strip_nulls(jsonb_build_object('code', public.mm_debts_bill_code(p_debt_ids), 'note', v_note)));
 end $$;
 
 -- Recordatorio dentro de la app (además del de WhatsApp). Como mucho uno cada
@@ -1665,7 +1677,8 @@ begin
         'amount_cents', d.amount_cents, 'currency', d.currency, 'status', d.status,
         'created_by', d.created_by, 'settlement_id', d.settlement_id,
         'link_token', case when d.created_by = v_uid or d.creditor_id = v_uid then d.link_token end,
-        'created_at', d.created_at, 'responded_at', d.responded_at, 'settled_at', d.settled_at
+        'created_at', d.created_at, 'responded_at', d.responded_at, 'settled_at', d.settled_at,
+        'forgiven_note', d.forgiven_note
       ) order by d.created_at desc)
       from public.mm_debts d
       left join public.mm_bills b on b.id = d.bill_id
@@ -1843,7 +1856,7 @@ grant execute on function
   public.mm_confirm_settlement(uuid),
   public.mm_reject_settlement(uuid),
   public.mm_mark_received(uuid[], text),
-  public.mm_forgive(uuid[]),
+  public.mm_forgive(uuid[], text),
   public.mm_remind(uuid),
   public.mm_home(),
   public.mm_ledger(),
