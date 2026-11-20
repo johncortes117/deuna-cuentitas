@@ -1,7 +1,11 @@
 // ─── Cómo pagarle a alguien ──────────────────────────────────
 // Sus datos con un botón para copiar cada uno (el número de cuenta, el
 // celular de Deuna o todo junto para pegar en la app del banco).
-import { Banknote, Building2, MessageCircle, Smartphone, Sparkles } from 'lucide-react'
+import { Banknote, Building2, Check, Copy, MessageCircle, Smartphone, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { copyText } from '../../lib/share'
+import { tap } from '../../ui/haptics'
+import { cx } from '../../ui/cx'
 import type { ReactNode } from 'react'
 import { CopyButton } from '../../ui/Controls'
 import { accountTypeLabel, isDeunaLink, methodCopyText, prettyPhone, sortMethods } from '../../lib/payMethods'
@@ -30,6 +34,29 @@ function Row({ icon, title, detail, children, below = false }: { icon: ReactNode
       </div>
       {!below && children}
     </div>
+  )
+}
+
+/** Copiar solo un dato (p. ej. el número de cuenta), con un ícono al lado. */
+function CopyIcon({ text, label, onCopied }: { text: string; label: string; onCopied?: () => void }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      aria-label={copied ? 'Copiado' : label}
+      title={label}
+      onClick={async () => {
+        if (await copyText(text)) {
+          tap(10)
+          setCopied(true)
+          onCopied?.()
+          window.setTimeout(() => setCopied(false), 1800)
+        }
+      }}
+      className={cx('-my-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition active:scale-90', copied ? 'text-positive' : 'text-muted hover:bg-surface-2 hover:text-ink')}
+    >
+      {copied ? <Check size={16} strokeWidth={2.75} /> : <Copy size={16} strokeWidth={2.25} />}
+    </button>
   )
 }
 
@@ -90,7 +117,10 @@ export function PayOptions({ name, methods, onCopy }: { name: string; methods: P
                 title={m.bank}
                 detail={
                   <>
-                    <span className="block">{accountTypeLabel(m.account_type)} · <span className="tabular font-semibold text-ink-2">{m.account_number}</span></span>
+                    <span className="flex items-center gap-1">
+                      {accountTypeLabel(m.account_type)} · <span className="tabular font-semibold text-ink-2">{m.account_number}</span>
+                      <CopyIcon text={m.account_number} label="Copiar número de cuenta" onCopied={() => onCopy?.('transfer')} />
+                    </span>
                     <span className="block">{m.holder}{m.id_number ? ` · C.I. ${m.id_number}` : ''}</span>
                   </>
                 }
