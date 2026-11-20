@@ -319,7 +319,7 @@ export function MemberOpenView(props: BillViewProps) {
 
         <BottomBar>
           <div className="flex items-center justify-center gap-2.5 rounded-2xl bg-surface-2 px-4 py-3.5 text-[15px] font-semibold text-ink-2" role="status">
-            <span className="h-2.5 w-2.5 animate-pulse-dot rounded-full bg-brand" aria-hidden="true" />
+            <span className="h-2.5 w-2.5 animate-pulse-dot rounded-full bg-pending" aria-hidden="true" />
             Esperando a que {firstName(host?.name ?? '')} divida la cuenta
           </div>
           <button type="button" onClick={() => setLeaving(true)} className="mx-auto mt-2 block px-4 py-2 text-[14px] font-semibold text-muted">

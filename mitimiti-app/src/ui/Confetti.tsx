@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { CSSProperties } from 'react'
 
-const COLORS = ['#FF5A3C', '#17151F', '#FFB020', '#16A34A', '#6D4AE8', '#2F55D4']
+const COLORS = ['#22D39A', '#121514', '#E59A2B', '#0B8F65', '#7C6FF7', '#2EE5A8']
 
 /** Celebración breve al cerrar una cuenta (se apaga con "reducir movimiento"). */
 export function Confetti({ count = 36 }: { count?: number }) {

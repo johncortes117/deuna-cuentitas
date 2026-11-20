@@ -3,6 +3,7 @@ import { centsToInput, formatMoney, inputToCents, keypadInput, parsePrice, perce
 import { idNumberKind, isDeunaLink, isMethodComplete, isValidCedula, methodCopyText, methodSummary } from './payMethods'
 import { buildBalances, originsLabel } from './ledger'
 import { tableColors } from './avatar'
+import { conceptText, fillTemplate, TEMPLATES } from './templates'
 import type { Ledger, LedgerDebt } from './types'
 
 describe('dinero', () => {
@@ -164,5 +165,24 @@ describe('QR de Deuna', () => {
     expect(isMethodComplete({ type: 'deuna', phone: '' })).toBe(false)
     expect(methodSummary({ type: 'deuna', phone: '', qr: link })).toBe('Deuna · con QR')
     expect(methodCopyText({ type: 'deuna', phone: '', qr: link })).toBe(link)
+  })
+})
+
+describe('mensajes de WhatsApp', () => {
+  it('llena las marcas y deja vacías las que faltan', () => {
+    expect(fillTemplate('Hola {a}, {b}!', { a: 'Ana' })).toBe('Hola Ana, !')
+    expect(fillTemplate(TEMPLATES.loan, { amount: '$5,00', concept: conceptText('Taxi'), loanUrl: 'https://x/d/1' })).toBe(
+      'Anoté en MitiMiti los $5,00 de «Taxi» para que no se nos olvide a ninguno. Échale un ojo aquí: https://x/d/1',
+    )
+  })
+  it('sin concepto usa uno genérico', () => {
+    expect(conceptText(null)).toBe('nuestro préstamo')
+    expect(conceptText('  ', 'la cuenta')).toBe('la cuenta')
+  })
+  it('el mensaje se codifica entero para el link de WhatsApp', () => {
+    const text = fillTemplate(TEMPLATES.reminder, { debtorName: 'Sofía', amount: '$1,50', concept: '«Café & pan»', creditorName: 'Ana', link: 'https://x/c/AB12CD' })
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`
+    expect(decodeURIComponent(new URL(url).searchParams.get('text') ?? '')).toBe(text)
+    expect(url).not.toContain('&pan')
   })
 })

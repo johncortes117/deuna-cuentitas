@@ -16,7 +16,7 @@ test('le presté $5: mi amigo lo confirma, me paga y quedamos a mano', async ({ 
   await pedro.page.getByRole('button', { name: 'Anotar y enviar por WhatsApp' }).click()
   await expect(pedro.page.getByRole('heading', { name: '¡Quedó anotado!' })).toBeVisible()
   await expect.poll(() => pedro.whatsapp.length).toBe(1)
-  expect(pedro.whatsapp[0]).toContain('Te presté $5,00 (Taxi)')
+  expect(pedro.whatsapp[0]).toContain('Anoté en MitiMiti los $5,00 de «Taxi» para que no se nos olvide a ninguno. Échale un ojo aquí: ')
 
   // Sofía abre el link sin la app.
   await sofia.page.goto(`/d/${debtTokenIn(pedro.whatsapp[0])}`)
@@ -63,7 +63,7 @@ test('deudas en los dos sentidos: se ve y se paga solo el neto', async ({ browse
   await typeAmount(pedro.page, '12')
   await pedro.page.getByRole('button', { name: 'Anotar y enviar por WhatsApp' }).click()
   await expect.poll(() => pedro.whatsapp.length).toBe(2)
-  expect(pedro.whatsapp[1]).toContain('que me prestaste')
+  expect(pedro.whatsapp[1]).toContain('Anoté en MitiMiti los $12,00 de nuestro préstamo')
   await sofia.page.goto(`/d/${debtTokenIn(pedro.whatsapp[1])}`)
   await expect(sofia.page.getByText('Pedro anotó que te debe')).toBeVisible()
   await sofia.page.getByRole('button', { name: 'Sí, me debe $12,00' }).click()
@@ -99,7 +99,7 @@ test('quien no reconoce una deuda puede decirlo, aunque no tenga la app', async 
   await expect.poll(() => pedro.whatsapp.length).toBe(1)
 
   await luis.page.goto(`/d/${debtTokenIn(pedro.whatsapp[0])}`)
-  await luis.page.getByRole('button', { name: 'No le debo nada a Pedro' }).click()
+  await luis.page.getByRole('button', { name: 'Creo que hubo un error' }).click()
   const sheet = luis.page.getByRole('dialog')
   await sheet.getByLabel('¿Cómo te llamas?').fill('Luis')
   await sheet.getByRole('button', { name: 'Avisarle a Pedro' }).click()

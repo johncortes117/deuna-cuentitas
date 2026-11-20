@@ -15,15 +15,15 @@ export default defineConfig({
       manifest: {
         name: 'MitiMiti · Divide la cuenta',
         short_name: 'MitiMiti',
-        description: 'Divide la cuenta en la mesa, sin calculadora. Cuentas claras, amistades largas.',
+        description: 'Divide la cuenta en la mesa, sin calculadora. Divide cuentas, no amistades.',
         lang: 'es',
         dir: 'ltr',
         start_url: '/',
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#FBF8F3',
-        theme_color: '#FBF8F3',
+        background_color: '#F9F9F7',
+        theme_color: '#F9F9F7',
         categories: ['finance', 'lifestyle', 'social'],
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

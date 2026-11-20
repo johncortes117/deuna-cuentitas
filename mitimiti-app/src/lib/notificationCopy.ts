@@ -29,7 +29,7 @@ export function notificationCopy(n: AppNotification): NotificationCopy {
     case 'bill_cancelled':
       return { emoji: '🗑️', tone: 'info', title: `${who} canceló ${title}`, body: 'No queda nada por pagar en esa cuenta.', href: '/' }
     case 'bill_settled':
-      return { emoji: '🎉', tone: 'good', title: `¡Todos te pagaron ${title}!`, body: 'Cuentas claras, amistades largas.', href: billHref }
+      return { emoji: '🎉', tone: 'good', title: `¡Todos te pagaron ${title}!`, body: 'Divide cuentas, no amistades.', href: billHref }
     case 'payment_reported':
       return { emoji: '💸', tone: 'warn', title: `${who} dice que te pagó ${amount}`, body: `${via ? `${capitalize(via)}. ` : ''}Confírmalo cuando lo veas.`, href: billHref }
     case 'payment_confirmed':

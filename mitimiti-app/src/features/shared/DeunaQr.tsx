@@ -15,7 +15,7 @@ export function DeunaQrImage({ link, size = 240, alt }: { link: string; size?: n
   const [src, setSrc] = useState<string | null>(null)
   useEffect(() => {
     let alive = true
-    QRCode.toDataURL(link, { width: 720, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#17151F', light: '#FFFFFF' } })
+    QRCode.toDataURL(link, { width: 720, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#121514', light: '#FFFFFF' } })
       .then((url) => alive && setSrc(url))
       .catch(() => alive && setSrc(null))
     return () => {
@@ -53,7 +53,7 @@ export function DeunaPayActions({ link, name, onPay }: { link: string; name: str
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => onPay?.()}
-          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-[14px] font-semibold text-on-ink transition active:scale-95"
+          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-cta px-4 text-[14px] font-semibold text-on-cta transition active:scale-95"
         >
           <ExternalLink size={16} aria-hidden="true" /> Pagar con Deuna
         </a>
@@ -65,7 +65,7 @@ export function DeunaPayActions({ link, name, onPay }: { link: string; name: str
         <div className="flex flex-col items-center gap-4 pb-4 pt-2">
           <DeunaQrImage link={link} size={250} alt={`Código QR de Deuna de ${who}`} />
           <div className="flex w-full flex-col gap-2">
-            <a href={link.trim()} target="_blank" rel="noopener noreferrer" onClick={() => onPay?.()} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-ink text-[16px] font-semibold text-on-ink active:scale-[0.98]">
+            <a href={link.trim()} target="_blank" rel="noopener noreferrer" onClick={() => onPay?.()} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-cta text-[16px] font-semibold text-on-cta active:scale-[0.98]">
               <ExternalLink size={18} aria-hidden="true" /> Abrir en Deuna
             </a>
             <a

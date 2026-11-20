@@ -8,9 +8,9 @@ import { dirname, join } from 'node:path'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const font = readFileSync(join(root, 'node_modules/@fontsource-variable/inter/files/inter-latin-opsz-normal.woff2')).toString('base64')
 
-const INK = '#17151F'
-const PAPER = '#FBF8F3'
-const CORAL = '#FF5A3C'
+const INK = '#121514'
+const PAPER = '#F9F9F7'
+const MINT = '#22D39A'
 
 const mark = (left, right, size) => `
   <svg width="${size}" height="${size}" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -27,29 +27,29 @@ const base = `
 
 const icon = (size, { radius, scale }) => `${base}
   <div style="width:${size}px;height:${size}px;background:${INK};border-radius:${radius}px;display:flex;align-items:center;justify-content:center">
-    ${mark(PAPER, CORAL, Math.round(size * scale))}
+    ${mark(PAPER, MINT, Math.round(size * scale))}
   </div>`
 
 const og = `${base}
   <div style="width:1200px;height:630px;background:${PAPER};display:flex;align-items:center;padding:0 84px;gap:64px;position:relative;overflow:hidden">
-    <div style="position:absolute;right:-120px;top:-160px;width:520px;height:520px;border-radius:50%;background:#FFEDE7"></div>
+    <div style="position:absolute;right:-120px;top:-160px;width:520px;height:520px;border-radius:50%;background:#E8FBF4"></div>
     <div style="flex:1;position:relative">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:40px">
-        ${mark(INK, CORAL, 64)}
-        <span style="font-size:40px;font-weight:800;letter-spacing:-1.2px;color:${INK}">Miti<span style="color:${CORAL}">Miti</span></span>
+        ${mark(INK, MINT, 64)}
+        <span style="font-size:40px;font-weight:800;letter-spacing:-1.2px;color:${INK}">Miti<span style="color:${MINT}">Miti</span></span>
       </div>
       <h1 style="font-size:68px;line-height:1.02;font-weight:850;letter-spacing:-2.6px;color:${INK}">Divide la cuenta<br/>en la mesa.</h1>
-      <p style="margin-top:24px;font-size:28px;line-height:1.35;color:#5E5867;max-width:600px">Tus amigos entran con un link, ven cuánto les toca y te pagan. Sin calculadora y sin descargar nada.</p>
-      <p style="margin-top:34px;display:inline-block;font-size:22px;font-weight:700;color:${INK};background:#fff;border:2px solid #E7E1D7;border-radius:999px;padding:10px 22px">Cuentas claras, amistades largas</p>
+      <p style="margin-top:24px;font-size:28px;line-height:1.35;color:#646E6A;max-width:600px">Tus amigos entran con un link, ven cuánto les toca y te pagan. Sin calculadora y sin descargar nada.</p>
+      <p style="margin-top:34px;display:inline-block;font-size:22px;font-weight:700;color:${INK};background:#fff;border:2px solid #E5E8E6;border-radius:999px;padding:10px 22px">Divide cuentas, no amistades.</p>
     </div>
     <div style="width:360px;position:relative;transform:rotate(3deg)">
-      <div style="background:#fff;border-radius:28px 28px 0 0;padding:30px 30px 18px;box-shadow:0 24px 60px rgba(23,21,31,.14)">
-        <p style="font-size:20px;font-weight:600;color:#6B6574">🍔 Almuerzo</p>
+      <div style="background:#fff;border-radius:28px 28px 0 0;padding:30px 30px 18px;box-shadow:0 24px 60px rgba(18,21,20,.14)">
+        <p style="font-size:20px;font-weight:600;color:#646E6A">🍔 Almuerzo</p>
         <p style="font-size:54px;font-weight:850;letter-spacing:-2px;color:${INK};margin-top:4px">$36,00</p>
         <div style="margin-top:22px;display:flex;flex-direction:column;gap:16px">
-          ${[['Ana', '#0E7A45', 'Pagó ✓'], ['Luis', '#9A5200', 'Pendiente'], ['Tú', INK, 'Pagaste la cuenta']].map(([n, c, s]) => `
+          ${[['Ana', '#087A56', 'Pagó ✓'], ['Luis', '#9A5800', 'Pendiente'], ['Tú', INK, 'Pagaste la cuenta']].map(([n, c, s]) => `
             <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:44px;height:44px;border-radius:50%;background:${n === 'Tú' ? INK : n === 'Ana' ? '#7C5CFC' : '#E6762F'};color:#fff;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center">${n.slice(0, 2).toUpperCase()}</div>
+              <div style="width:44px;height:44px;border-radius:50%;background:${n === 'Tú' ? INK : n === 'Ana' ? '#6D4AE8' : '#1769A8'};color:#fff;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center">${n.slice(0, 2).toUpperCase()}</div>
               <div style="flex:1"><p style="font-size:21px;font-weight:700;color:${INK}">${n}</p><p style="font-size:16px;font-weight:600;color:${c}">${s}</p></div>
               <p style="font-size:22px;font-weight:800;color:${INK}">$12,00</p>
             </div>`).join('')}
@@ -59,7 +59,7 @@ const og = `${base}
     </div>
   </div>`
 
-const browser = await chromium.launch()
+const browser = await chromium.launch(process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {})
 const page = await browser.newPage()
 async function render(html, width, height, file) {
   await page.setViewportSize({ width, height })

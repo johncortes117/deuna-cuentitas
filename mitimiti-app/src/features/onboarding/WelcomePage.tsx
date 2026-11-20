@@ -19,7 +19,7 @@ function safeNext(next: string | null): string {
 function HeroReceipt() {
   const rows = [
     { name: 'Ana', color: 0, status: 'Pagó ✓', tone: 'text-positive' },
-    { name: 'Luis', color: 3, status: 'Pendiente', tone: 'text-warning' },
+    { name: 'Luis', color: 8, status: 'Pendiente', tone: 'text-warning' },
     { name: 'Tú', color: 9, status: 'Pagaste la cuenta', tone: 'text-muted' },
   ]
   return (
@@ -128,7 +128,7 @@ export default function WelcomePage() {
         <Button full onClick={() => setStep('name')}>
           Empezar
         </Button>
-        <p className="mt-3 text-center text-[13px] text-muted">Cuentas claras, amistades largas.</p>
+        <p className="mt-3 text-center text-[13px] text-muted">Divide cuentas, no amistades.</p>
       </div>
     </div>
   )

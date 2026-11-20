@@ -82,7 +82,7 @@ function PayerView({ bundle, live, refresh }: BillViewProps) {
   const remind = (d: BillDebt) => {
     const sent = openWhatsApp(
       d.debtor_id
-        ? billReminderMessage(d.debtor_name, d.amount_cents, currency, bundle.bill.title, bundle.bill.code)
+        ? billReminderMessage(d.debtor_name, d.amount_cents, currency, bundle.bill.title, bundle.bill.code, profile?.name ?? '')
         : guestShareMessage(d.debtor_name, d.amount_cents, currency, bundle.bill.title, d.link_token ?? ''),
     )
     if (d.debtor_id) void api.remind(d.debtor_id).catch(() => undefined)
@@ -108,7 +108,7 @@ function PayerView({ bundle, live, refresh }: BillViewProps) {
           {pending.length > 0 ? (
             <>
               <p className="text-[14px] font-semibold text-muted">Te deben</p>
-              <p className="mt-0.5 text-[34px] font-extrabold tracking-[-0.04em] text-positive tabular">{formatMoney(pendingCents, currency)}</p>
+              <p className="mt-0.5 text-[34px] font-extrabold tracking-[-0.04em] text-owed tabular">{formatMoney(pendingCents, currency)}</p>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-2" aria-hidden="true">
                 <div className="h-full rounded-full bg-positive-fill transition-all" style={{ width: `${(done.length / Math.max(1, debts.length)) * 100}%` }} />
               </div>

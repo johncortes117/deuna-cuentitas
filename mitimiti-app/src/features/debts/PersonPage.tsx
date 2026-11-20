@@ -85,7 +85,7 @@ export default function PersonPage() {
   const name = p.kind === 'link' ? what : p.name
 
   const remind = () => {
-    openWhatsApp(personReminderMessage(p.name, abs, currency, what))
+    openWhatsApp(personReminderMessage(p.name, abs, currency, what, profile!.name))
     if (p.userId) void api.remind(p.userId).catch(() => undefined)
     track('person_reminder_sent', {})
     toast({ title: `Le recordamos a ${firstName(p.name)}`, emoji: '👋', tone: 'good' })
@@ -106,7 +106,7 @@ export default function PersonPage() {
           <p className="mt-3 text-[15px] font-semibold text-muted">
             {p.kind === 'link' ? 'Link que nadie abrió todavía' : owesMe ? `${firstName(p.name)} te debe` : iOwe ? `Le debes a ${firstName(p.name)}` : 'Están a mano'}
           </p>
-          {p.net !== 0 && <p className={`text-[44px] font-extrabold leading-tight tracking-[-0.045em] tabular ${owesMe ? 'text-positive' : 'text-ink'}`}>{formatMoney(abs, currency)}</p>}
+          {p.net !== 0 && <p className={`text-[44px] font-extrabold leading-tight tracking-[-0.045em] tabular ${owesMe ? 'text-owed' : 'text-ink'}`}>{formatMoney(abs, currency)}</p>}
         </div>
 
         {p.toConfirm.map((s) => (
@@ -184,7 +184,7 @@ export default function PersonPage() {
                 icon={<Send size={18} />}
                 onClick={() => {
                   const d = p.debts[0]
-                  openWhatsApp(debtLinkMessage(d.creditor_id === profile!.id, d.amount_cents, d.currency, d.concept, d.link_token ?? ''))
+                  openWhatsApp(debtLinkMessage(d.amount_cents, d.currency, d.concept, d.link_token ?? ''))
                 }}
               >
                 Enviar el link otra vez
