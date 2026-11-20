@@ -54,3 +54,24 @@ export function suggestTitle(date = new Date()): string {
   if (h >= 16 && h < 19) return 'Café'
   return 'Cena'
 }
+
+/**
+ * Cuánto tardó una deuda en saldarse, para el recibo:
+ * "Saldada al instante" · "en 14 min" · "en 3 h" · "en 1 día" · "en 5 días".
+ * (Lo que tarda menos de 24 h ya tiene su etiqueta en horas.)
+ */
+export function settledElapsedLabel(fromIso: string, toIso: string): string {
+  const ms = Math.max(0, new Date(toIso).getTime() - new Date(fromIso).getTime())
+  const minutes = Math.floor(ms / 60_000)
+  if (minutes < 1) return 'Saldada al instante'
+  if (minutes < 60) return `Saldada en ${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `Saldada en ${hours} h`
+  const days = Math.floor(hours / 24)
+  return days === 1 ? 'Saldada en 1 día' : `Saldada en ${days} días`
+}
+
+/** "20 nov 2026" para las filas del recibo. */
+export function shortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-EC', { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '')
+}

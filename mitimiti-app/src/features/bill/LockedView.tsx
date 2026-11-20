@@ -73,6 +73,18 @@ function PayerView({ bundle, live, refresh }: BillViewProps) {
   const [receiving, setReceiving] = useState<BillDebt | null>(null)
   const [forgiving, setForgiving] = useState<BillDebt | null>(null)
   const showReceipt = useShowReceipt()
+  const settledFor = (d: BillDebt, amountCents: number) => ({
+    kind: 'settled' as const,
+    data: {
+      creditorName: profile?.name ?? '',
+      debtorName: d.debtor_name,
+      concept: bundle.bill.title,
+      amountCents,
+      currency,
+      createdAt: d.created_at ?? bundle.bill.locked_at ?? new Date().toISOString(),
+      settledAt: new Date().toISOString(),
+    },
+  })
   const currency = bundle.bill.currency
   const debts = bundle.debts
   const pending = debts.filter((d) => d.status === 'open' || d.status === 'reported')
@@ -168,7 +180,7 @@ function PayerView({ bundle, live, refresh }: BillViewProps) {
                       <Button size="md" variant="secondary" onClick={() => run(() => api.rejectSettlement(s.id), { title: `Le avisamos a ${firstName(d.debtor_name)} que no te llegó`, emoji: '📨' })}>
                         No me llegó
                       </Button>
-                      <Button size="md" onClick={() => run(() => api.confirmSettlement(s.id), { title: `¡${firstName(d.debtor_name)} te pagó!`, emoji: '💰' })}>
+                      <Button size="md" onClick={() => run(async () => { await api.confirmSettlement(s.id); success(); showReceipt(settledFor(d, s.amount_cents)) })}>
                         Recibido
                       </Button>
                     </div>
@@ -247,7 +259,7 @@ function PayerView({ bundle, live, refresh }: BillViewProps) {
         debt={receiving}
         currency={currency}
         onClose={() => setReceiving(null)}
-        onConfirm={(method) => run(() => api.markReceived([receiving!.id], method), { title: 'Anotado: ya te pagó', emoji: '💰' }).then(() => setReceiving(null))}
+        onConfirm={(method) => run(async () => { const d = receiving!; await api.markReceived([d.id], method); success(); setReceiving(null); showReceipt(settledFor(d, d.amount_cents)) }).then(() => setReceiving(null))}
       />
     </div>
   )

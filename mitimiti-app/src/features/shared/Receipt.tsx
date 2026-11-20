@@ -8,7 +8,8 @@ import { firstName } from '../../lib/avatar'
 import { CARD_HEIGHT, CARD_WIDTH, STAMP, STAMP_POSITION, renderReceiptCard } from '../../lib/receiptCard'
 import type { ReceiptCard } from '../../lib/receiptCard'
 import { APP_URL } from '../../lib/env'
-import { appDomain, shareImage } from '../../lib/share'
+import { appDomain, openWhatsApp, shareImage } from '../../lib/share'
+import { settledElapsedLabel, shortDate } from '../../lib/dates'
 import { FORGIVE_NOTES, TEMPLATES, fillTemplate } from '../../lib/templates'
 import { track } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
@@ -156,6 +157,20 @@ export interface ForgivenData {
   amountCents: number
   currency: string
   note: string | null
+  /** Quién la mira: quien perdonó (por defecto) o a quien le perdonaron. */
+  viewer?: 'creditor' | 'debtor'
+}
+
+export interface SettledData {
+  creditorName: string
+  debtorName: string
+  concept: string
+  amountCents: number
+  currency: string
+  /** Desde cuándo existía la deuda y cuándo se saldó (ISO). */
+  createdAt: string
+  settledAt: string
+  viewer?: 'creditor' | 'debtor'
 }
 
 /** Después de perdonar: la tarjeta, ocultar el monto y compartir. */
@@ -193,8 +208,15 @@ export function ForgivenReceiptSheet({ data, onClose }: { data: ForgivenData | n
     }
   }
 
+  const asDebtor = data.viewer === 'debtor'
   return (
-    <Sheet open onClose={onClose} dismissible={!busy} title="¡Cuenta perdonada!" description={`${debtor} ya no te debe esto. Mándale la tarjeta.`}>
+    <Sheet
+      open
+      onClose={onClose}
+      dismissible={!busy}
+      title={asDebtor ? `¡${firstName(data.creditorName)} te perdonó!` : '¡Cuenta perdonada!'}
+      description={asDebtor ? 'Ya no debes esto. Puedes compartir la tarjeta.' : `${debtor} ya no te debe esto. Mándale la tarjeta.`}
+    >
       <div className="flex flex-col gap-4 pb-4 pt-2">
         <ReceiptPreview card={card(hideAmount)} />
         <label className="flex items-center justify-between gap-3 rounded-2xl bg-surface-2 px-4 py-3">
@@ -202,14 +224,77 @@ export function ForgivenReceiptSheet({ data, onClose }: { data: ForgivenData | n
           <Switch checked={hideAmount} onChange={setHideAmount} label="Ocultar monto" />
         </label>
         <div className="flex flex-col gap-2">
-          <Button full loading={busy === 'primary'} disabled={busy !== null} onClick={() => void share('primary')}>
-            Avisarle a {debtor} por WhatsApp
-          </Button>
-          <Button full variant="secondary" size="md" loading={busy === 'secondary'} disabled={busy !== null} onClick={() => void share('secondary')}>
+          {!asDebtor && (
+            <Button full loading={busy === 'primary'} disabled={busy !== null} onClick={() => void share('primary')}>
+              Avisarle a {debtor} por WhatsApp
+            </Button>
+          )}
+          <Button full variant={asDebtor ? 'primary' : 'secondary'} size={asDebtor ? 'lg' : 'md'} loading={busy === 'secondary'} disabled={busy !== null} onClick={() => void share('secondary')}>
             Compartir sin monto
           </Button>
           <Button full variant="ghost" size="md" onClick={onClose} disabled={busy !== null}>
             Listo
+          </Button>
+        </div>
+      </div>
+    </Sheet>
+  )
+}
+
+/** Después de confirmar un pago: el comprobante para el chat 1 a 1 (siempre con monto). */
+export function SettledReceiptSheet({ data, onClose }: { data: SettledData | null; onClose: () => void }) {
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  if (!data) return null
+  const debtor = firstName(data.debtorName)
+  const creditor = firstName(data.creditorName)
+  const asDebtor = data.viewer === 'debtor'
+  const other = asDebtor ? creditor : debtor
+  const card: ReceiptCard = {
+    kind: 'settled',
+    creditorName: creditor,
+    debtorName: debtor,
+    concept: data.concept,
+    amount: formatMoney(data.amountCents, data.currency),
+    date: shortDate(data.settledAt),
+    elapsed: settledElapsedLabel(data.createdAt, data.settledAt),
+  }
+  const send = async () => {
+    setBusy(true)
+    try {
+      const blob = await renderReceiptCard(card, { domain: appDomain() })
+      const text = asDebtor
+        ? fillTemplate(TEMPLATES.settledByDebtor, { creditorName: creditor, concept: data.concept })
+        : fillTemplate(TEMPLATES.settled, { debtorName: debtor, concept: data.concept })
+      const result = await shareImage(blob, 'mitimiti-saldada.png', { title: 'Deuda saldada · MitiMiti', text })
+      if (result === 'downloaded') {
+        // Sin compartir archivos (computador): la imagen queda guardada y se abre el chat con el texto.
+        openWhatsApp(text)
+        toast({ title: 'Imagen guardada. Adjúntala en el chat de WhatsApp.', emoji: '🖼️', tone: 'good' })
+      }
+      if (result !== 'cancelled') track('settled_receipt_shared', { how: result, viewer: data.viewer ?? 'creditor' })
+    } catch {
+      toast({ title: 'No pudimos crear la imagen. Intenta de nuevo.', tone: 'error', emoji: '⚠️' })
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Sheet
+      open
+      onClose={onClose}
+      dismissible={!busy}
+      title="¡Deuda saldada!"
+      description={asDebtor ? `Le pagaste a ${creditor}. Aquí está tu comprobante.` : `${debtor} ya te pagó. Mándale el comprobante.`}
+    >
+      <div className="flex flex-col gap-4 pb-4 pt-2">
+        <ReceiptPreview card={card} />
+        <div className="flex flex-col gap-2">
+          <Button full loading={busy} onClick={() => void send()}>
+            Enviar comprobante a {other}
+          </Button>
+          <Button full variant="ghost" size="md" onClick={onClose} disabled={busy}>
+            Cerrar
           </Button>
         </div>
       </div>

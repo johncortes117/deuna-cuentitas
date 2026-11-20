@@ -45,11 +45,12 @@ export default function PersonPage() {
 
   const p = data?.people.find((x) => x.key === decodeURIComponent(key))
 
-  const run = async (fn: () => Promise<unknown>, ok: { title: string; emoji: string }, back = false) => {
+  /** `ok`: el aviso de éxito (null cuando la respuesta es un recibo). */
+  const run = async (fn: () => Promise<unknown>, ok: { title: string; emoji: string } | null, back = false) => {
     try {
       await fn()
       success()
-      toast({ title: ok.title, emoji: ok.emoji, tone: 'good' })
+      if (ok) toast({ title: ok.title, emoji: ok.emoji, tone: 'good' })
       setSheet(null)
       refreshCounts()
       if (back) navigate('/saldos', { replace: true })
@@ -89,6 +90,23 @@ export default function PersonPage() {
   const what = originsLabel(p.debts)
   const name = p.kind === 'link' ? what : p.name
 
+  // El recibo de lo que te pagaron: desde la deuda más antigua que cubre.
+  const settledReceipt = (amountCents: number, covered: typeof p.debts, fallbackFrom: string | null) => {
+    const from = covered.map((d) => d.created_at).sort()[0] ?? fallbackFrom ?? new Date().toISOString()
+    return {
+      kind: 'settled' as const,
+      data: {
+        creditorName: profile!.name,
+        debtorName: p.name,
+        concept: originsLabel(covered.length ? covered : p.debts),
+        amountCents,
+        currency,
+        createdAt: from,
+        settledAt: new Date().toISOString(),
+      },
+    }
+  }
+
   const remind = () => {
     openWhatsApp(personReminderMessage(p.name, abs, currency, what, profile!.name))
     if (p.userId) void api.remind(p.userId).catch(() => undefined)
@@ -126,7 +144,7 @@ export default function PersonPage() {
               <Button size="md" variant="secondary" onClick={() => run(() => api.rejectSettlement(s.id), { title: `Le avisamos a ${firstName(p.name)} que no te llegó`, emoji: '📨' })}>
                 No me llegó
               </Button>
-              <Button size="md" onClick={() => run(() => api.confirmSettlement(s.id), { title: `¡${firstName(p.name)} te pagó!`, emoji: '💰' })}>
+              <Button size="md" onClick={() => run(async () => { await api.confirmSettlement(s.id); showReceipt(settledReceipt(s.amount_cents, p.debts.filter((d) => s.debt_ids.includes(d.id)), s.created_at)) }, null, p.debts.every((d) => s.debt_ids.includes(d.id)))}>
                 Recibido
               </Button>
             </div>
@@ -262,7 +280,7 @@ export default function PersonPage() {
         onClose={() => setSheet(null)}
         title={`¿${firstName(p.name)} ya te pagó ${formatMoney(abs, currency)}?`}
         description="Lo marcamos como pagado y le avisamos. No mueve dinero."
-        footer={<Button full onClick={() => run(() => api.markReceived(p.openIds, method), { title: `Anotado: ${firstName(p.name)} ya te pagó`, emoji: '💰' }, true)}>Sí, ya me pagó</Button>}
+        footer={<Button full onClick={() => run(async () => { await api.markReceived(p.openIds, method); showReceipt(settledReceipt(abs, p.debts.filter((d) => p.openIds.includes(d.id)), null)) }, null, true)}>Sí, ya me pagó</Button>}
       >
         <p className="mb-2.5 mt-2 text-[14px] font-semibold text-ink-2">¿Cómo te pagó?</p>
         <div className="flex flex-wrap gap-2 pb-2">

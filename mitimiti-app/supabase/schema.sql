@@ -587,6 +587,7 @@ begin
         'id', d.id, 'member_id', d.member_id, 'debtor_id', d.debtor_id, 'debtor_name', d.debtor_name,
         'creditor_id', d.creditor_id, 'creditor_name', d.creditor_name, 'amount_cents', d.amount_cents,
         'status', d.status, 'settlement_id', d.settlement_id, 'settled_at', d.settled_at,
+        'created_at', d.created_at, 'forgiven_note', d.forgiven_note,
         -- El link para reclamar la parte de alguien sin la app: solo para quien cobra.
         'link_token', case when d.creditor_id = v_uid or v_me.is_host then d.link_token end
       ) order by m.joined_at nulls last, d.created_at, d.id)
