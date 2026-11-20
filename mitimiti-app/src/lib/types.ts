@@ -8,7 +8,8 @@ export type PayMethodType = 'deuna' | 'transfer' | 'payphone' | 'cash' | 'other'
 export type SettlementStatus = 'reported' | 'confirmed' | 'rejected'
 
 export type PayMethod =
-  | { type: 'deuna'; phone: string }
+  /** `qr`: el link de pago del QR de Deuna (https://pagar.deuna.app/…). */
+  | { type: 'deuna'; phone: string; qr?: string }
   | { type: 'payphone'; phone: string }
   | { type: 'transfer'; bank: string; account_type: string; account_number: string; holder: string; id_number: string }
   | { type: 'cash' }

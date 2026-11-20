@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { centsToInput, formatMoney, inputToCents, keypadInput, parsePrice, percentOf } from './money'
-import { idNumberKind, isMethodComplete, isValidCedula, methodCopyText, methodSummary } from './payMethods'
+import { idNumberKind, isDeunaLink, isMethodComplete, isValidCedula, methodCopyText, methodSummary } from './payMethods'
 import { buildBalances, originsLabel } from './ledger'
 import { tableColors } from './avatar'
 import type { Ledger, LedgerDebt } from './types'
@@ -145,5 +145,24 @@ describe('colores de avatar', () => {
     const colors = tableColors(many)
     expect(colors.size).toBe(14)
     expect(new Set(colors.values()).size).toBe(12)
+  })
+})
+
+describe('QR de Deuna', () => {
+  const link = 'https://pagar.deuna.app/TEST/person/payment?id=abc123'
+  it('solo acepta links de pago de Deuna', () => {
+    expect(isDeunaLink(link)).toBe(true)
+    expect(isDeunaLink(' ' + link + ' ')).toBe(true)
+    expect(isDeunaLink('http://pagar.deuna.app/x')).toBe(false)
+    expect(isDeunaLink('https://pagar.deuna.app.evil.com/x')).toBe(false)
+    expect(isDeunaLink('javascript:alert(1)')).toBe(false)
+    expect(isDeunaLink('https://pagar.deuna.app/x"><script>')).toBe(false)
+  })
+  it('con el QR basta; el número es opcional pero, si va, válido', () => {
+    expect(isMethodComplete({ type: 'deuna', phone: '', qr: link })).toBe(true)
+    expect(isMethodComplete({ type: 'deuna', phone: '09', qr: link })).toBe(false)
+    expect(isMethodComplete({ type: 'deuna', phone: '' })).toBe(false)
+    expect(methodSummary({ type: 'deuna', phone: '', qr: link })).toBe('Deuna · con QR')
+    expect(methodCopyText({ type: 'deuna', phone: '', qr: link })).toBe(link)
   })
 })

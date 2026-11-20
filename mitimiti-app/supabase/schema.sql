@@ -297,6 +297,11 @@ begin
     v_clean := jsonb_build_object('type', v_type);
     if v_type in ('deuna', 'payphone') then
       v_clean := v_clean || jsonb_build_object('phone', left(btrim(coalesce(v_item ->> 'phone', '')), 20));
+      -- El QR de Deuna se guarda como su link de pago, y solo si es de Deuna
+      -- (así nadie pone otro link detrás del botón "Pagar con Deuna").
+      if v_type = 'deuna' and btrim(coalesce(v_item ->> 'qr', '')) ~ '^https://pagar\.deuna\.app/[A-Za-z0-9/_.?=&%-]{1,240}$' then
+        v_clean := v_clean || jsonb_build_object('qr', btrim(v_item ->> 'qr'));
+      end if;
     elsif v_type = 'transfer' then
       foreach f in array array['bank', 'account_type', 'account_number', 'holder', 'id_number'] loop
         v_clean := v_clean || jsonb_build_object(f, left(btrim(coalesce(v_item ->> f, '')), 60));

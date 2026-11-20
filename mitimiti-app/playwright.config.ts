@@ -25,6 +25,8 @@ export default defineConfig({
     locale: 'es-EC',
     timezoneId: 'America/Guayaquil',
     trace: 'off',
+    // Opcional: otro Chromium ya instalado (p. ej. en CI o en un contenedor).
+    launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
   },
   webServer: [
     {
