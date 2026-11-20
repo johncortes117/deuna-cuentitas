@@ -76,6 +76,9 @@ export interface BillDebt {
   status: DebtStatus
   settlement_id: string | null
   settled_at: string | null
+  /** Desde cuándo existe la deuda (para el "Saldada en 14 min"). */
+  created_at?: string
+  forgiven_note?: string | null
   link_token: string | null
 }
 

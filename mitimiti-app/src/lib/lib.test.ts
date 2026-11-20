@@ -4,6 +4,7 @@ import { idNumberKind, isDeunaLink, isMethodComplete, isValidCedula, methodCopyT
 import { buildBalances, originsLabel } from './ledger'
 import { tableColors } from './avatar'
 import { conceptText, fillTemplate, TEMPLATES } from './templates'
+import { settledElapsedLabel } from './dates'
 import type { Ledger, LedgerDebt } from './types'
 
 describe('dinero', () => {
@@ -184,5 +185,24 @@ describe('mensajes de WhatsApp', () => {
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`
     expect(decodeURIComponent(new URL(url).searchParams.get('text') ?? '')).toBe(text)
     expect(url).not.toContain('&pan')
+  })
+})
+
+describe('tiempo de cierre del recibo', () => {
+  const t0 = '2026-11-20T12:00:00Z'
+  const plus = (ms: number) => new Date(new Date(t0).getTime() + ms).toISOString()
+  const MIN = 60_000, H = 60 * MIN, D = 24 * H
+  it('minutos, horas y días', () => {
+    expect(settledElapsedLabel(t0, plus(20_000))).toBe('Saldada al instante')
+    expect(settledElapsedLabel(t0, plus(MIN))).toBe('Saldada en 1 min')
+    expect(settledElapsedLabel(t0, plus(14 * MIN + 30_000))).toBe('Saldada en 14 min')
+    expect(settledElapsedLabel(t0, plus(59 * MIN))).toBe('Saldada en 59 min')
+    expect(settledElapsedLabel(t0, plus(H))).toBe('Saldada en 1 h')
+    expect(settledElapsedLabel(t0, plus(23 * H + 59 * MIN))).toBe('Saldada en 23 h')
+    expect(settledElapsedLabel(t0, plus(D))).toBe('Saldada en 1 día')
+    expect(settledElapsedLabel(t0, plus(2 * D + 3 * H))).toBe('Saldada en 2 días')
+  })
+  it('una fecha al revés no da tiempos negativos', () => {
+    expect(settledElapsedLabel(plus(MIN), t0)).toBe('Saldada al instante')
   })
 })

@@ -46,6 +46,10 @@ test('dividir en partes iguales, avisar el pago y confirmarlo', async ({ browser
   const luisRow = row(ana.page, 'Luis')
   await expect(luisRow.getByText('Dice que te pagó')).toBeVisible()
   await luisRow.getByRole('button', { name: 'Recibido' }).click()
+  // Sale el recibo de deuda saldada; se cierra para seguir cobrando.
+  const receipt = ana.page.getByRole('dialog', { name: '¡Deuda saldada!' })
+  await expect(receipt.getByRole('button', { name: 'Enviar comprobante a Luis' })).toBeVisible()
+  await receipt.getByRole('button', { name: 'Cerrar' }).last().click()
   await expect(luisRow.getByText('Pagó ✓')).toBeVisible()
   await expect(luis.page.getByText(/Ana confirmó tu pago/).first()).toBeVisible()
 

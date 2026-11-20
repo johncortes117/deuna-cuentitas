@@ -9,6 +9,7 @@ import type { LedgerDebt } from '../../lib/types'
 import { Card, EmptyState, Page, Skeleton, TopBar } from '../../ui/Layout'
 import { cx } from '../../ui/cx'
 import { StatusPill } from '../../ui/Controls'
+import { useShowReceipt } from '../../state/receipts'
 
 function describe(d: LedgerDebt, me: string): { title: string; inflow: boolean; struck: boolean } {
   const iAmCreditor = d.creditor_id === me
@@ -22,6 +23,15 @@ function describe(d: LedgerDebt, me: string): { title: string; inflow: boolean; 
 export default function HistoryPage() {
   const { profile } = useSession()
   const { data, loading } = useData(async () => buildBalances(await api.ledger(), profile!.id, profile!.color).history, 'history')
+  const showReceipt = useShowReceipt()
+  const canReopen = (d: LedgerDebt) => d.status === 'settled' || d.status === 'forgiven'
+  // Volver a abrir el recibo (saldada o perdonada) para verlo o reenviarlo.
+  const reopen = (d: LedgerDebt) => {
+    const viewer = d.creditor_id === profile!.id ? ('creditor' as const) : ('debtor' as const)
+    const base = { creditorName: d.creditor_name, debtorName: d.debtor_name, concept: debtOrigin(d), amountCents: d.amount_cents, currency: d.currency, viewer }
+    if (d.status === 'forgiven') showReceipt({ kind: 'forgiven', data: { ...base, note: d.forgiven_note ?? null } })
+    else showReceipt({ kind: 'settled', data: { ...base, createdAt: d.created_at, settledAt: d.settled_at ?? d.responded_at ?? d.created_at } })
+  }
   return (
     <>
       <TopBar back="/saldos" title="Historial" />
@@ -36,7 +46,10 @@ export default function HistoryPage() {
               {data.map((d) => {
                 const x = describe(d, profile!.id)
                 return (
-                  <li key={d.id} className="flex items-center gap-3 px-4 py-3.5">
+                  <li key={d.id}>
+                    {canReopen(d) ? (
+                      <button type="button" onClick={() => reopen(d)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2 active:bg-surface-2" aria-label={`${x.title}. Ver recibo`}>
+
                     <span
                       className={cx(
                         'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[16px] font-bold',
@@ -59,6 +72,34 @@ export default function HistoryPage() {
                       {x.inflow ? '+' : ''}
                       {formatMoney(d.amount_cents, d.currency)}
                     </span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-3 px-4 py-3.5">
+
+                    <span
+                      className={cx(
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[16px] font-bold',
+                        d.status === 'settled' ? 'bg-positive-soft text-positive' : d.status === 'forgiven' ? 'bg-forgiven-soft text-forgiven' : 'bg-surface-2',
+                      )}
+                      aria-hidden="true"
+                    >
+                      {d.status === 'settled' ? '✓' : d.status === 'forgiven' ? '💜' : '🤔'}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-semibold text-ink">{x.title}</span>
+                      <span className="mt-0.5 flex items-center gap-2 text-[13px] text-muted">
+                        {d.status === 'forgiven' && <StatusPill tone="forgiven">Perdonada</StatusPill>}
+                        <span className="truncate">
+                          {debtOrigin(d)} · {relativeDay(d.settled_at ?? d.responded_at ?? d.created_at)}
+                        </span>
+                      </span>
+                    </span>
+                    <span className={cx('shrink-0 text-[15px] font-bold tabular', x.struck ? 'text-subtle line-through' : x.inflow ? 'text-positive' : 'text-ink')}>
+                      {x.inflow ? '+' : ''}
+                      {formatMoney(d.amount_cents, d.currency)}
+                    </span>
+                      </div>
+                    )}
                   </li>
                 )
               })}

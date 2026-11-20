@@ -4,10 +4,10 @@
 // "¡Cuentas claras!", el recibo sigue abierto.
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ForgivenReceiptSheet } from '../features/shared/Receipt'
-import type { ForgivenData } from '../features/shared/Receipt'
+import { ForgivenReceiptSheet, SettledReceiptSheet } from '../features/shared/Receipt'
+import type { ForgivenData, SettledData } from '../features/shared/Receipt'
 
-type Receipt = { kind: 'forgiven'; data: ForgivenData }
+type Receipt = { kind: 'forgiven'; data: ForgivenData } | { kind: 'settled'; data: SettledData }
 
 const ReceiptsContext = createContext<(r: Receipt) => void>(() => {})
 
@@ -23,6 +23,7 @@ export function ReceiptsProvider({ children }: { children: ReactNode }) {
     <ReceiptsContext.Provider value={value}>
       {children}
       {current?.kind === 'forgiven' && <ForgivenReceiptSheet key={JSON.stringify(current.data)} data={current.data} onClose={close} />}
+      {current?.kind === 'settled' && <SettledReceiptSheet key={JSON.stringify(current.data)} data={current.data} onClose={close} />}
     </ReceiptsContext.Provider>
   )
 }

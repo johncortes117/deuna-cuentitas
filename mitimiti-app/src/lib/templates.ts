@@ -19,6 +19,8 @@ export const TEMPLATES = {
   forgivenPublic: 'Hoy invité yo 💜 Divide cuentas, no amistades. {appUrl}',
   /** Junto al comprobante de deuda saldada, para quien pagó. */
   settled: 'Listo {debtorName}, ya quedó tachado lo de {concept} en MitiMiti ✅',
+  /** El mismo comprobante, si lo manda quien pagó (desde el historial). */
+  settledByDebtor: 'Listo {creditorName}, ya te pagué lo de {concept}. Quedó tachado en MitiMiti ✅',
 } as const
 
 /** Frases rápidas al perdonar (van en la tarjeta). */
