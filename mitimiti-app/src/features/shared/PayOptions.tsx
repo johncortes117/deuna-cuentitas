@@ -4,7 +4,8 @@
 import { Banknote, Building2, MessageCircle, Smartphone, Sparkles } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { CopyButton } from '../../ui/Controls'
-import { accountTypeLabel, methodCopyText, prettyPhone, sortMethods } from '../../lib/payMethods'
+import { accountTypeLabel, isDeunaLink, methodCopyText, prettyPhone, sortMethods } from '../../lib/payMethods'
+import { DeunaPayActions } from './DeunaQr'
 import type { PayMethod } from '../../lib/types'
 import { firstName } from '../../lib/avatar'
 
@@ -47,10 +48,37 @@ export function PayOptions({ name, methods, onCopy }: { name: string; methods: P
       {sortMethods(methods).map((m, i) => {
         switch (m.type) {
           case 'deuna':
+            if (isDeunaLink(m.qr)) {
+              return (
+                <Row
+                  key={i}
+                  below
+                  icon={ICONS.deuna}
+                  title="Deuna"
+                  detail={
+                    m.phone ? (
+                      <span className="flex flex-wrap items-center gap-x-2">
+                        Con un toque, o al <span className="tabular">{prettyPhone(m.phone)}</span>
+                        <CopyButton text={m.phone} label="Copiar número" className="h-8 px-2.5 text-[13px]" onCopied={() => onCopy?.('deuna')} />
+                      </span>
+                    ) : (
+                      'Te lleva a la app de Deuna con todo listo.'
+                    )
+                  }
+                >
+                  <DeunaPayActions link={m.qr!} name={name} onPay={() => onCopy?.('deuna')} />
+                </Row>
+              )
+            }
+            return (
+              <Row key={i} icon={ICONS.deuna} title="Deuna" detail={<span className="tabular">{prettyPhone(m.phone)}</span>}>
+                <CopyButton text={m.phone} label="Copiar" onCopied={() => onCopy?.('deuna')} />
+              </Row>
+            )
           case 'payphone':
             return (
-              <Row key={i} icon={ICONS[m.type]} title={m.type === 'deuna' ? 'Deuna' : 'Payphone'} detail={<span className="tabular">{prettyPhone(m.phone)}</span>}>
-                <CopyButton text={m.phone} label="Copiar" onCopied={() => onCopy?.(m.type)} />
+              <Row key={i} icon={ICONS[m.type]} title="Payphone" detail={<span className="tabular">{prettyPhone(m.phone)}</span>}>
+                <CopyButton text={m.phone} label="Copiar" onCopied={() => onCopy?.('payphone')} />
               </Row>
             )
           case 'transfer':

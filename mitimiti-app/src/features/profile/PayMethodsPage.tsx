@@ -3,12 +3,14 @@
 // debe: nadie vuelve a preguntarte "pásame tus datos".
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { Banknote, Building2, ChevronRight, Plus, Smartphone, Sparkles, Trash2 } from 'lucide-react'
+import { Banknote, Building2, ChevronRight, ImageUp, Plus, Smartphone, Sparkles, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useSession } from '../../state/session'
 import { track } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
-import { ACCOUNT_TYPES, BANKS, idNumberKind, isMethodComplete, isValidPhone, METHOD_LABEL, methodDetail } from '../../lib/payMethods'
+import { ACCOUNT_TYPES, BANKS, idNumberKind, isDeunaLink, isMethodComplete, isValidPhone, METHOD_LABEL, methodDetail } from '../../lib/payMethods'
+import { readQrFromImage } from '../../lib/readQr'
+import { DeunaQrImage } from '../shared/DeunaQr'
 import type { PayMethod, PayMethodType } from '../../lib/types'
 import { Button } from '../../ui/Button'
 import { Segmented, TextField } from '../../ui/Controls'
@@ -16,9 +18,10 @@ import { BottomBar, Card, Page, SectionTitle, TopBar } from '../../ui/Layout'
 import { Sheet } from '../../ui/Sheet'
 import { useToast } from '../../ui/Toast'
 import { success } from '../../ui/haptics'
+import { cx } from '../../ui/cx'
 
 const TYPES: { type: PayMethodType; icon: ReactNode; title: string; body: string }[] = [
-  { type: 'deuna', icon: <Smartphone size={20} />, title: 'Deuna', body: 'Tu número de celular' },
+  { type: 'deuna', icon: <Smartphone size={20} />, title: 'Deuna', body: 'Tu código QR o tu número' },
   { type: 'transfer', icon: <Building2 size={20} />, title: 'Transferencia', body: 'Banco, cuenta y cédula' },
   { type: 'payphone', icon: <Smartphone size={20} />, title: 'Payphone', body: 'Tu número de celular' },
   { type: 'cash', icon: <Banknote size={20} />, title: 'Efectivo', body: 'Te pueden pagar en persona' },
@@ -157,7 +160,9 @@ function MethodSheet({ method, isNew, busy, onClose, onSave, onDelete }: { metho
   const title = isNew ? `Agregar ${METHOD_LABEL[m.type]}` : METHOD_LABEL[m.type]
 
   let fields: ReactNode = null
-  if (m.type === 'deuna' || m.type === 'payphone') {
+  if (m.type === 'deuna') {
+    fields = <DeunaFields method={m} onChange={setM} />
+  } else if (m.type === 'payphone') {
     fields = (
       <TextField
         label="Número de celular"
@@ -237,3 +242,84 @@ function MethodSheet({ method, isNew, busy, onClose, onSave, onDelete }: { metho
   )
 }
 
+
+/**
+ * Deuna se cobra con el QR de "Mi código QR": se sube la captura, la app lee
+ * el link de pago aquí mismo (la imagen no se guarda) y el número queda opcional.
+ */
+function DeunaFields({ method, onChange }: { method: Extract<PayMethod, { type: 'deuna' }>; onChange: (m: PayMethod) => void }) {
+  const [reading, setReading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const hasQr = isDeunaLink(method.qr)
+
+  const onFile = async (file: File | undefined) => {
+    if (!file) return
+    setReading(true)
+    setError(null)
+    try {
+      const text = await readQrFromImage(file)
+      if (!text) setError('No encontramos un QR en esa imagen. Prueba con una captura donde se vea completo.')
+      else if (!isDeunaLink(text)) setError('Ese QR no es de cobro de Deuna. Usa el de «Mi código QR» en la app de Deuna.')
+      else {
+        onChange({ ...method, qr: text.trim() })
+        track('deuna_qr_added', {})
+      }
+    } catch {
+      setError('No pudimos leer esa imagen. Prueba con otra captura.')
+    } finally {
+      setReading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <p className="mb-1.5 text-[14px] font-semibold text-ink-2">Tu QR de cobro</p>
+        {hasQr ? (
+          <div className="flex items-center gap-4 rounded-2xl bg-surface-2 p-3">
+            <DeunaQrImage link={method.qr!} size={84} alt="Tu código QR de Deuna" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-semibold text-ink">QR listo ✓</p>
+              <p className="text-[13.5px] leading-snug text-muted">Quien te deba verá «Pagar con Deuna» y tu QR.</p>
+              <button type="button" onClick={() => onChange({ ...method, qr: undefined })} className="mt-1 text-[14px] font-semibold text-danger">
+                Quitar QR
+              </button>
+            </div>
+          </div>
+        ) : (
+          <label className={cx('flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed border-line-strong px-4 py-4 transition hover:bg-surface-2', reading && 'pointer-events-none opacity-60')}>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink" aria-hidden="true">
+              <ImageUp size={21} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold text-ink">{reading ? 'Leyendo el QR…' : 'Subir captura del QR'}</span>
+              <span className="block text-[13px] leading-snug text-muted">En Deuna abre «Mi código QR», toma una captura y elígela aquí.</span>
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              aria-label="Subir captura del QR de Deuna"
+              onChange={(e) => {
+                void onFile(e.target.files?.[0])
+                e.target.value = ''
+              }}
+            />
+          </label>
+        )}
+        {error && <p className="mt-2 text-[13.5px] text-danger" role="alert">{error}</p>}
+        <p className="mt-2 text-[12.5px] leading-snug text-muted">La imagen no se sube: solo guardamos el link de pago que trae el QR.</p>
+      </div>
+      <TextField
+        label={hasQr ? 'Número de celular (opcional)' : 'Número de celular'}
+        inputMode="tel"
+        autoComplete="tel"
+        placeholder="099 123 4567"
+        value={method.phone}
+        onChange={(e) => onChange({ ...method, phone: e.target.value.replace(/[^\d+\s]/g, '') })}
+        error={method.phone && !isValidPhone(method.phone) ? 'Revisa el número (10 dígitos, empieza con 09).' : null}
+        hint={hasQr ? undefined : 'O sube tu QR arriba: con el QR, el número es opcional.'}
+      />
+    </div>
+  )
+}

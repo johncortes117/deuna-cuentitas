@@ -65,6 +65,8 @@ export const PAID_WITH: { value: PayMethodType; label: string }[] = [
 export function methodDetail(m: PayMethod): string {
   switch (m.type) {
     case 'deuna':
+      if (isDeunaLink(m.qr)) return m.phone ? `Código QR · ${prettyPhone(m.phone)}` : 'Código QR'
+      return prettyPhone(m.phone)
     case 'payphone':
       return prettyPhone(m.phone)
     case 'transfer':
@@ -110,6 +112,16 @@ export function isValidPhone(value: string): boolean {
   return /^0?9\d{8}$/.test(value.replace(/\s|-/g, '')) || /^\+?\d{8,15}$/.test(value.replace(/\s|-/g, ''))
 }
 
+/**
+ * El link de pago que trae el QR de Deuna ("Mi código QR"). Solo se aceptan
+ * links de pagar.deuna.app: así nadie puede poner otro link en el botón de pagar.
+ */
+const DEUNA_LINK = /^https:\/\/pagar\.deuna\.app\/[A-Za-z0-9/_.?=&%-]{1,240}$/
+
+export function isDeunaLink(value: string | undefined | null): boolean {
+  return Boolean(value && DEUNA_LINK.test(value.trim()))
+}
+
 /** "0991234567" → "099 123 4567" */
 export function prettyPhone(value: string): string {
   const v = value.replace(/\s|-/g, '')
@@ -120,6 +132,8 @@ export function prettyPhone(value: string): string {
 export function methodSummary(m: PayMethod): string {
   switch (m.type) {
     case 'deuna':
+      if (isDeunaLink(m.qr)) return m.phone ? `Deuna · QR y ${prettyPhone(m.phone)}` : 'Deuna · con QR'
+      return `${METHOD_LABEL[m.type]} · ${prettyPhone(m.phone)}`
     case 'payphone':
       return `${METHOD_LABEL[m.type]} · ${prettyPhone(m.phone)}`
     case 'transfer':
@@ -135,6 +149,7 @@ export function methodSummary(m: PayMethod): string {
 export function methodCopyText(m: PayMethod): string {
   switch (m.type) {
     case 'deuna':
+      return m.phone || (isDeunaLink(m.qr) ? m.qr!.trim() : '')
     case 'payphone':
       return m.phone
     case 'transfer':
@@ -157,6 +172,9 @@ export function methodCopyText(m: PayMethod): string {
 export function isMethodComplete(m: PayMethod): boolean {
   switch (m.type) {
     case 'deuna':
+      // Con el QR basta; el número es opcional, pero si se escribe, que sea válido.
+      if (m.phone.trim() && !isValidPhone(m.phone)) return false
+      return isDeunaLink(m.qr) || isValidPhone(m.phone)
     case 'payphone':
       return isValidPhone(m.phone)
     case 'transfer':

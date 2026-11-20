@@ -81,6 +81,14 @@ await test('limpia las formas de cobro (solo lo que se sabe mostrar)', async () 
   })
   eq(me.pay_methods.map((m) => m.type), ['deuna', 'transfer', 'cash'], 'tipos válidos')
   eq(me.pay_methods[0], { type: 'deuna', phone: '0991234567' }, 'deuna limpio')
+  await ana.rpc('mm_save_profile', { p_name: 'Ana', p_pay_methods: [
+    { type: 'deuna', phone: '', qr: ' https://pagar.deuna.app/TEST/person/payment?id=abc123 ' },
+    { type: 'deuna', phone: '', qr: 'https://evil.example/pagar.deuna.app/' },
+    { type: 'deuna', phone: '', qr: 'javascript:alert(1)' },
+  ] })
+  const qr = (await ana.rpc('mm_me', {})).pay_methods
+  eq(qr.map((m) => m.qr ?? null), ['https://pagar.deuna.app/TEST/person/payment?id=abc123', null, null], 'solo links de Deuna')
+  await ana.rpc('mm_save_profile', { p_name: 'Ana', p_pay_methods: [] })
 })
 await test('sin sesión no se puede leer ni crear nada', async () => {
   await rejects(anon.rpc('mm_me'), '42501', 'anon mm_me')

@@ -33,8 +33,12 @@ MitiMiti **no mueve dinero**: dice cuánto y a quién; cada uno paga como prefie
   mesa. Solo se pide el nombre.
 - **Alguien sin celular** (la abuela): se agrega a mano; su parte sale con un link que
   su familia puede abrir para quedarse con la deuda.
-- **Pagar fuera de la app** con los datos de quien cobra, listos para copiar (número de
-  Deuna o Payphone, banco + tipo + número de cuenta + titular + cédula).
+- **Pagar fuera de la app** con los datos de quien cobra, listos para copiar (Payphone,
+  banco + tipo + número de cuenta + titular + cédula).
+- **Deuna con su QR**: quien cobra sube la captura de "Mi código QR" (se lee en el
+  teléfono; solo se guarda el link de pago de `pagar.deuna.app`). Quien debe ve
+  **"Pagar con Deuna"**, que abre ese link, y **"Ver QR"** para escanearlo en la mesa o
+  guardarlo en la galería.
 - **"Ya le pagué" → "Recibido"**: quien debe avisa y quien cobra confirma (o "No me
   llegó"). Quien cobra también puede anotar "Ya me pagó" (efectivo) o perdonar.
 - **Préstamos con link** ("te presté $5 para el taxi"): se anotan en un toque y se
@@ -163,7 +167,8 @@ npm run db:test      # base de datos: RLS, permisos, división, netos, links, re
 npm run test:e2e     # Playwright: varios teléfonos a la vez contra el backend local
 ```
 
-`db:test` y `test:e2e` necesitan el PostgreSQL local de arriba. `test:e2e` levanta solo el
+`db:test` y `test:e2e` necesitan el PostgreSQL local de arriba. Si Playwright no encuentra
+su navegador, se puede usar otro Chromium instalado con `PW_CHROMIUM_PATH=/ruta/a/chrome`. `test:e2e` levanta solo el
 backend local y la app (puerto 5190). Lo que cubren las pruebas de punta a punta:
 
 - dividir en partes iguales con tres teléfonos, avisar el pago por Deuna, confirmarlo y
