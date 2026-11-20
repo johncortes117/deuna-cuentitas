@@ -13,6 +13,9 @@ test('dividir en partes iguales, avisar el pago y confirmarlo', async ({ browser
   await addDeuna(ana.page, '0991234567')
   const code = await createBill(ana.page, '45,10', 'Cena')
   await expect(ana.page.getByText('Invita a la mesa')).toBeVisible()
+  await ana.page.getByRole('button', { name: 'Enviar por WhatsApp' }).click()
+  await expect.poll(() => ana.whatsapp.length).toBe(1)
+  expect(ana.whatsapp.pop()).toBe(`Únete a la sala de Ana. Aquí cuadramos cuánto pone cada uno sin sacar calculadora: http://127.0.0.1:5190/c/${code}`)
   await expect(ana.page.getByText(/Comparte el link: hace falta al menos otra persona/)).toBeVisible()
 
   // Luis entra con el link y Sofía dictando el código (en minúsculas, da igual).
@@ -45,6 +48,11 @@ test('dividir en partes iguales, avisar el pago y confirmarlo', async ({ browser
   await luisRow.getByRole('button', { name: 'Recibido' }).click()
   await expect(luisRow.getByText('Pagó ✓')).toBeVisible()
   await expect(luis.page.getByText(/Ana confirmó tu pago/).first()).toBeVisible()
+
+  // Recordarle a Sofía: el mensaje nuevo, con su link al final.
+  await row(ana.page, 'Sofía').getByRole('button', { name: 'Recordar' }).click()
+  await expect.poll(() => ana.whatsapp.length).toBe(1)
+  expect(ana.whatsapp[0]).toBe(`Hola Sofía, soy MitiMiti 👀 Paso a recordarte los $15,03 de «Cena» que cubrió Ana. Cuando le pases, avísale para tacharlo.\nhttp://127.0.0.1:5190/c/${code}`)
 
   // Sofía le pagó en efectivo: Ana lo anota y la cuenta se cierra sola.
   await row(ana.page, 'Sofía').getByRole('button', { name: 'Ya me pagó' }).click()

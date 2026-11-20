@@ -95,7 +95,7 @@ export default function BalancesPage() {
               <Card className="grid grid-cols-2 divide-x divide-line">
                 <div className="px-5 py-4">
                   <p className="text-[13px] font-semibold text-muted">Te deben</p>
-                  <p className={cx('mt-0.5 text-[26px] font-extrabold tracking-[-0.03em] tabular', data.owedToMe > 0 ? 'text-positive' : 'text-subtle')}>{formatMoney(data.owedToMe)}</p>
+                  <p className={cx('mt-0.5 text-[26px] font-extrabold tracking-[-0.03em] tabular', data.owedToMe > 0 ? 'text-owed' : 'text-subtle')}>{formatMoney(data.owedToMe)}</p>
                 </div>
                 <div className="px-5 py-4">
                   <p className="text-[13px] font-semibold text-muted">Debes</p>

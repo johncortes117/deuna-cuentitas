@@ -5,6 +5,7 @@
 import { APP_URL } from './env'
 import { formatMoney } from './money'
 import { firstName } from './avatar'
+import { TEMPLATES, conceptText, fillTemplate } from './templates'
 
 export const billLink = (code: string) => `${APP_URL}/c/${code}`
 export const debtLink = (token: string) => `${APP_URL}/d/${token}`
@@ -56,27 +57,43 @@ export async function copyText(text: string): Promise<boolean> {
 
 // ─── Mensajes (amables, nunca con tono de cobro) ─────────────
 
-export function inviteMessage(title: string, totalCents: number, currency: string, code: string): string {
-  return `¡Hola! 👋 Estoy dividiendo la cuenta «${title}» (${formatMoney(totalCents, currency)}) en MitiMiti. Entra con un toque, sin descargar nada, y mira cuánto te toca: ${billLink(code)}`
+export function inviteMessage(hostName: string, code: string): string {
+  return fillTemplate(TEMPLATES.invite, { hostName: firstName(hostName), roomUrl: billLink(code) })
 }
 
-export function billReminderMessage(name: string, amountCents: number, currency: string, title: string, code: string): string {
-  return `¡Hola ${firstName(name)}! 👋 Te recuerdo los ${formatMoney(amountCents, currency)} de «${title}». Aquí ves cómo pagarme en un minuto: ${billLink(code)}`
+/** Recordatorio de una cuenta: el link lleva a la cuenta, donde ve cómo pagar. */
+export function billReminderMessage(debtorName: string, amountCents: number, currency: string, title: string, code: string, creditorName: string): string {
+  return fillTemplate(TEMPLATES.reminder, {
+    debtorName: firstName(debtorName),
+    amount: formatMoney(amountCents, currency),
+    concept: conceptText(title, 'la cuenta'),
+    creditorName: firstName(creditorName),
+    link: billLink(code),
+  })
 }
 
 export function guestShareMessage(name: string, amountCents: number, currency: string, title: string, token: string): string {
   return `¡Hola ${firstName(name)}! 👋 De «${title}» te tocan ${formatMoney(amountCents, currency)}. Aquí ves el detalle y cómo pagarme: ${debtLink(token)}`
 }
 
-export function personReminderMessage(name: string, amountCents: number, currency: string, what: string): string {
-  return `¡Hola ${firstName(name)}! 👋 Te recuerdo los ${formatMoney(amountCents, currency)} que tenemos pendientes (${what}). Cuando puedas, aquí ves cómo pagarme 🧡 ${APP_URL}/saldos`
+/** Recordatorio desde Saldos (lo que te debe una persona, en neto). */
+export function personReminderMessage(debtorName: string, amountCents: number, currency: string, what: string, creditorName: string): string {
+  return fillTemplate(TEMPLATES.reminder, {
+    debtorName: firstName(debtorName),
+    amount: formatMoney(amountCents, currency),
+    concept: conceptText(what, 'lo que tenemos pendiente'),
+    creditorName: firstName(creditorName),
+    link: `${APP_URL}/saldos`,
+  })
 }
 
-export function debtLinkMessage(lent: boolean, amountCents: number, currency: string, concept: string | null, token: string): string {
-  const what = concept ? ` (${concept})` : ''
-  return lent
-    ? `¡Hola! 👋 Te presté ${formatMoney(amountCents, currency)}${what} y lo anoté en MitiMiti para que no se nos olvide. Cuando puedas, aquí ves cómo pagarme: ${debtLink(token)}`
-    : `¡Hola! 👋 Anoté en MitiMiti los ${formatMoney(amountCents, currency)}${what} que me prestaste, para no olvidarme de devolvértelos. Confírmalo aquí: ${debtLink(token)}`
+/** Préstamo 1 a 1 recién anotado (sirve en los dos sentidos). */
+export function debtLinkMessage(amountCents: number, currency: string, concept: string | null, token: string): string {
+  return fillTemplate(TEMPLATES.loan, {
+    amount: formatMoney(amountCents, currency),
+    concept: conceptText(concept),
+    loanUrl: debtLink(token),
+  })
 }
 
 export function payCardMessage(code: string): string {
@@ -84,5 +101,5 @@ export function payCardMessage(code: string): string {
 }
 
 export function settledMessage(title: string, totalCents: number, currency: string, people: number): string {
-  return `✅ Dividimos «${title}» (${formatMoney(totalCents, currency)}) entre ${people} con MitiMiti: sin calculadora y sin "te transfiero luego". Cuentas claras, amistades largas 🧡 ${APP_URL}`
+  return `✅ Dividimos «${title}» (${formatMoney(totalCents, currency)}) entre ${people} con MitiMiti: sin calculadora y sin "te transfiero luego". Divide cuentas, no amistades 💚 ${APP_URL}`
 }

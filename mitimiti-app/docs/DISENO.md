@@ -9,37 +9,44 @@ nada que sobre.
 ## Marca
 
 - **Nombre:** MitiMiti, "mitad y mitad". Fácil de decir en la mesa ("pásalo por MitiMiti").
-- **Logo:** un círculo partido en dos mitades, tinta y coral (`public/favicon.svg`).
-- **Frase:** *Cuentas claras, amistades largas.*
+- **Dirección visual:** *Limpio con pulso*. Lienzo muy limpio, números nítidos, botones en negro
+  carbón y el **Verde Menta** como color firma.
+- **Logo:** un círculo partido en dos mitades, tinta y menta (`public/favicon.svg`).
+- **Lema:** *Divide cuentas, no amistades.* El título "¡Cuentas claras!" se usa solo para
+  celebrar el cierre de una mesa.
 
 ## Color
 
 Los tokens viven en [`src/index.css`](../src/index.css) (claro y oscuro) y se usan como clases
-de Tailwind (`bg-surface`, `text-muted`, `text-positive`…).
+de Tailwind (`bg-surface`, `text-muted`, `text-owed`…).
 
 | Token | Claro | Oscuro | Uso |
 |---|---|---|---|
-| `bg` | `#FBF8F3` | `#131218` | fondo (papel cálido) |
-| `surface` / `surface-2` | `#FFFFFF` / `#F3EEE6` | `#1C1B23` / `#24222C` | tarjetas / chips y fondos suaves |
-| `ink` | `#17151F` | claro | texto principal y **botón principal** |
-| `muted` / `subtle` | `#6B6574` / `#76707D` | `#A7A1AF` / `#8F8998` | texto secundario / terciario |
-| `brand` | `#FF5A3C` (coral) | — | acentos, logo, puntos de estado |
-| `brand-ink` | `#C93A1F` | — | enlaces y texto coral (legible) |
-| `positive` | `#0E7A45` | verde claro | "te deben", pagado |
-| `warning` | `#9A5200` | ámbar claro | "por confirmar", falta algo |
-| `danger` | `#B4232B` | rojo claro | cancelar, errores |
+| `bg` / `surface` | `#F9F9F7` / `#FFFFFF` | `#0D100F` / `#161B19` | fondo hueso / tarjetas y hojas |
+| `ink` / `muted` | `#121514` / `#646E6A` | `#F4F7F5` / `#94A09B` | texto principal / secundario |
+| `cta` / `on-cta` | `#121514` / blanco | `#2EE5A8` / `#0D100F` | botón principal |
+| `brand` | `#22D39A` | `#2EE5A8` | menta pulso: logo, botón `+`, puntos, acentos |
+| `brand-soft` | `#E8FBF4` | `#112B22` | menta hielo: fondos positivos |
+| `owed` | `#0B8F65` | `#2EE5A8` | "Te deben" en montos grandes |
+| `positive` | `#087A56` | `#2EE5A8` | a favor / pagado, texto pequeño |
+| `warning` / `pending` | `#9A5800` / `#E59A2B` | `#E59A2B` | pendiente: texto / punto decorativo |
+| `forgiven` / `forgiven-strong` | `#5F50D6` / `#7C6FF7` | `#9B90FF` | perdonado: texto / sello |
+| `danger` / `danger-strong` | `#C8323F` / `#E04F5F` | `#F07480` / `#E04F5F` | solo errores técnicos o descuadres |
 
 Reglas:
-- **Todo texto cumple WCAG AA (4,5:1)**, incluido el terciario. Blanco sobre coral no lo cumple,
-  por eso el botón principal es tinta y el coral queda para acentos.
+- **Todo texto cumple WCAG AA (4,5:1)**, en claro y oscuro. Los tonos del manual que no llegan
+  como texto pequeño (`#0B8F65`, `#E59A2B`, `#7C6FF7`, `#E04F5F`) van en montos grandes, sellos,
+  fondos e íconos; para texto pequeño se usa la variante más oscura del mismo tono.
+- **"Debes" nunca va en rojo:** usa el neutro fuerte (`ink`).
 - **Verde solo cuando hay dinero a tu favor.** Un $0,00 se ve apagado, no verde.
+- **Sobre la menta, íconos oscuros** (`on-brand`): blanco sobre menta no se lee.
 - **Avatares:** 12 tonos bien distintos, todos con texto blanco legible. En una misma mesa (o
   lista) nadie repite color; quien no tiene la app va con borde punteado.
 
 ## Tipografía
 
 - **Inter Variable** con eje óptico (`opsz`), solo el subconjunto latino precargado.
-- **Números tabulares** en todos los montos (`tabular`) para que no "bailen" al cambiar.
+- **Números tabulares** (`tabular-nums`) en toda la app, así los montos no "bailan" al cambiar.
 - Montos grandes en extra-bold con tracking negativo (`$48,30`); títulos de sección en
   versalitas pequeñas (`EN LA MESA · 4`).
 
@@ -80,8 +87,9 @@ Reglas:
   *te debe, le debes, ya te pagó, están a mano*.
 - **Los botones dicen lo que pasa:** "Sí, avisarle a Ana", "Anotar y enviar por WhatsApp",
   "Sí, ya me pagó".
-- **Nunca tono de cobro.** Mensajes que se comparten: "¡Hola Luis! 👋 Te recuerdo los $12 de
-  «Cena». Aquí ves cómo pagarme en un minuto". Cada uno lleva el link de vuelta a la app.
+- **Amigo cómplice, nunca cobrador.** Directo, cálido y con humor ligero: "Hola Luis, soy
+  MitiMiti 👀 Paso a recordarte los $12,00 de «Cena» que cubrió Ana…". Cada mensaje lleva el
+  link de vuelta a la app. Las plantillas viven en `src/lib/templates.ts`.
 - **Medios de pago en frase:** "pagaste por transferencia", "en efectivo", "por Deuna".
 
 ## Accesibilidad

@@ -43,7 +43,7 @@ export default function NewLoanPage() {
       const debt = await api.createDebt(direction, cents, concept)
       // Mismo toque: WhatsApp con el mensaje. Si el navegador lo bloquea, la
       // pantalla siguiente lo pide con un botón.
-      const sent = openWhatsApp(debtLinkMessage(lent, cents, 'USD', concept, debt.link_token))
+      const sent = openWhatsApp(debtLinkMessage(cents, 'USD', concept, debt.link_token))
       success()
       track('loan_created', { direction, auto_shared: sent })
       setCreated({ token: debt.link_token, sent })
@@ -66,7 +66,7 @@ export default function NewLoanPage() {
             <h1 className="mt-4 text-[26px] font-extrabold tracking-[-0.03em] text-ink">¡Quedó anotado!</h1>
             <div className="mt-4 w-full rounded-3xl border border-line bg-surface px-5 py-4 shadow-card">
               <p className="text-[14px] font-semibold text-muted">{lent ? 'Te deben' : 'Debes'}</p>
-              <p className={`text-[38px] font-extrabold tracking-[-0.045em] tabular ${lent ? 'text-positive' : 'text-ink'}`}>{formatMoney(cents)}</p>
+              <p className={`text-[38px] font-extrabold tracking-[-0.045em] tabular ${lent ? 'text-owed' : 'text-ink'}`}>{formatMoney(cents)}</p>
               <p className="mt-1 text-[14px] font-semibold text-ink-2">
                 {titleEmoji(concept)} {concept ?? 'Préstamo'}
               </p>
@@ -81,7 +81,7 @@ export default function NewLoanPage() {
           </div>
           <div className="mt-auto flex flex-col gap-2.5 pt-8">
             <ShareButtons
-              message={debtLinkMessage(lent, cents, 'USD', concept, created.token)}
+              message={debtLinkMessage(cents, 'USD', concept, created.token)}
               link={debtLink(created.token)}
               primaryLabel={created.sent ? 'Enviar otra vez' : 'Enviar por WhatsApp'}
               quiet={created.sent}

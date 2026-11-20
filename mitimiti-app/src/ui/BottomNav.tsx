@@ -30,7 +30,7 @@ export function BottomNav() {
                 </span>
                 {label}
                 {to === '/saldos' && toConfirm > 0 && (
-                  <span className="absolute right-[calc(50%-26px)] top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-white ring-2 ring-surface" aria-label={`${toConfirm} pagos por confirmar`}>
+                  <span className="absolute right-[calc(50%-26px)] top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-on-brand ring-2 ring-surface" aria-label={`${toConfirm} pagos por confirmar`}>
                     {toConfirm}
                   </span>
                 )}

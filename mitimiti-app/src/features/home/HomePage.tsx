@@ -69,7 +69,7 @@ export default function HomePage() {
             <div className="grid grid-cols-2 divide-x divide-line">
               <div className="px-5 py-4">
                 <p className="text-[13px] font-semibold text-muted">Te deben</p>
-                <p className={cx('mt-0.5 text-[26px] font-extrabold tracking-[-0.03em] tabular', b.owedToMe > 0 ? 'text-positive' : 'text-subtle')}>{formatMoney(b.owedToMe)}</p>
+                <p className={cx('mt-0.5 text-[26px] font-extrabold tracking-[-0.03em] tabular', b.owedToMe > 0 ? 'text-owed' : 'text-subtle')}>{formatMoney(b.owedToMe)}</p>
               </div>
               <div className="px-5 py-4">
                 <p className="text-[13px] font-semibold text-muted">Debes</p>
@@ -99,7 +99,7 @@ export default function HomePage() {
           onClick={() => navigate('/nueva')}
           className="mt-4 flex w-full items-center gap-4 rounded-3xl bg-ink px-5 py-5 text-left text-on-ink shadow-[0_12px_28px_rgb(23_21_31/0.22)] transition active:scale-[0.99]"
         >
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand text-white" aria-hidden="true">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand text-on-brand" aria-hidden="true">
             <Plus size={28} strokeWidth={2.75} />
           </span>
           <span className="min-w-0 flex-1">

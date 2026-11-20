@@ -169,7 +169,7 @@ function JoinGate({ preview, onJoined }: { preview: BillPreview; onJoined: () =>
         </div>
       )}
 
-      <p className="mt-auto pt-10 text-center text-[13px] text-muted">MitiMiti divide la cuenta sin calculadora. Cuentas claras, amistades largas.</p>
+      <p className="mt-auto pt-10 text-center text-[13px] text-muted">MitiMiti divide la cuenta sin calculadora. Divide cuentas, no amistades.</p>
     </div>
   )
 }

@@ -17,7 +17,7 @@ export function getTheme(): ThemeChoice {
 export function applyTheme(choice: ThemeChoice = getTheme()) {
   const dark = choice === 'dark' || (choice === 'system' && media().matches)
   document.documentElement.classList.toggle('dark', dark)
-  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', dark ? '#131218' : '#FBF8F3'))
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', dark ? '#0D100F' : '#F9F9F7'))
 }
 
 export function setTheme(choice: ThemeChoice) {

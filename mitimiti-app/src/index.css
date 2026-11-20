@@ -6,59 +6,86 @@
 @custom-variant tiny (@media (max-height: 620px));
 
 /* ─── Tokens ──────────────────────────────────────────────────
-   Papel cálido (como una cuenta impresa), tinta casi negra para el texto y
-   los botones, y el coral de la marca para lo que celebra o llama la
-   atención. Todo texto pasa WCAG AA (≥ 4,5:1) en claro y en oscuro. */
+   "Limpio con pulso": lienzo muy limpio, números nítidos, botones en negro
+   carbón (en oscuro, en menta) y el Verde Menta como color de la marca.
+   Todo texto pasa WCAG AA (≥ 4,5:1) en claro y en oscuro. Los tonos de
+   marca/estado del manual que no llegan a 4,5:1 como texto pequeño se usan
+   en montos grandes, sellos, fondos e íconos (≥ 3:1); para texto pequeño va
+   una variante del mismo tono un poco más oscura. */
 :root {
-  --bg: #fbf8f3;
+  /* Neutros */
+  --bg: #f9f9f7;
   --surface: #ffffff;
-  --surface-2: #f3eee6;
-  --surface-3: #e9e3d8;
-  --line: #e7e1d7;
-  --line-strong: #d5cdbf;
-  --ink: #17151f;
-  --ink-2: #3b3745;
-  --muted: #6b6574;
-  --subtle: #76707d;
+  --surface-2: #f0f2f1;
+  --surface-3: #e4e8e6;
+  --line: #e5e8e6;
+  --line-strong: #cdd3d0;
+  --ink: #121514;
+  --ink-2: #343b38;
+  --muted: #646e6a;
+  --subtle: #67706c;
   --on-ink: #ffffff;
-  --brand: #ff5a3c;
-  --brand-ink: #c93a1f;
-  --brand-soft: #ffede7;
-  --positive: #0e7a45;
-  --positive-soft: #e3f5ea;
-  --positive-fill: #16a34a;
-  --warning: #9a5200;
-  --warning-soft: #fff3d6;
-  --danger: #b4232b;
-  --danger-soft: #fdeaea;
-  --overlay: rgb(23 21 31 / 0.45);
-  --shadow-card: 0 1px 2px rgb(23 21 31 / 0.04), 0 8px 24px rgb(23 21 31 / 0.06);
-  --shadow-float: 0 12px 40px rgb(23 21 31 / 0.18);
+  /* Marca (doble menta) */
+  --brand: #22d39a;          /* pulso: logo, botón +, puntos, acentos */
+  --brand-ink: #087a56;      /* texto de marca (AA) */
+  --brand-soft: #e8fbf4;     /* hielo: fondos suaves */
+  --on-brand: #121514;       /* íconos sobre la menta */
+  /* Botón principal */
+  --cta: #121514;
+  --on-cta: #ffffff;
+  /* Semánticos */
+  --owed: #0b8f65;           /* "Te deben" en montos grandes */
+  --positive: #087a56;       /* a favor / pagado, texto */
+  --positive-soft: #e8fbf4;
+  --positive-fill: #22d39a;
+  --pending: #e59a2b;        /* pendiente: puntos, íconos, bordes */
+  --warning: #9a5800;        /* pendiente, texto */
+  --warning-soft: #fdf3e3;
+  --forgiven-strong: #7c6ff7; /* sello PERDONADA */
+  --forgiven: #5f50d6;        /* perdonado, texto */
+  --forgiven-soft: #f2f0ff;
+  --danger-strong: #e04f5f;  /* solo errores técnicos o descuadres */
+  --danger: #c8323f;
+  --danger-soft: #fdecee;
+  --focus: #0b8f65;
+  --overlay: rgb(18 21 20 / 0.45);
+  --shadow-card: 0 1px 2px rgb(18 21 20 / 0.04), 0 8px 24px rgb(18 21 20 / 0.06);
+  --shadow-float: 0 12px 40px rgb(18 21 20 / 0.18);
   color-scheme: light;
 }
 
 .dark {
-  --bg: #131218;
-  --surface: #1c1b23;
-  --surface-2: #24222c;
-  --surface-3: #2e2b37;
-  --line: #2f2c39;
-  --line-strong: #3d3948;
-  --ink: #f3f0eb;
-  --ink-2: #d9d5cf;
-  --muted: #a7a1af;
-  --subtle: #8f8998;
-  --on-ink: #131218;
-  --brand: #ff6b4f;
-  --brand-ink: #ff8a72;
-  --brand-soft: #3a1f1a;
-  --positive: #4ade80;
-  --positive-soft: #16301f;
-  --positive-fill: #22c55e;
-  --warning: #f7b955;
-  --warning-soft: #33260d;
-  --danger: #ff8a8f;
-  --danger-soft: #3a1619;
+  --bg: #0d100f;
+  --surface: #161b19;
+  --surface-2: #1d2321;
+  --surface-3: #28302c;
+  --line: #252c29;
+  --line-strong: #34403b;
+  --ink: #f4f7f5;
+  --ink-2: #d3dad6;
+  --muted: #94a09b;
+  --subtle: #83908a;
+  --on-ink: #0d100f;
+  --brand: #2ee5a8;
+  --brand-ink: #2ee5a8;
+  --brand-soft: #112b22;
+  --on-brand: #0d100f;
+  --cta: #2ee5a8;
+  --on-cta: #0d100f;
+  --owed: #2ee5a8;
+  --positive: #2ee5a8;
+  --positive-soft: #112b22;
+  --positive-fill: #2ee5a8;
+  --pending: #e59a2b;
+  --warning: #e59a2b;
+  --warning-soft: #2e2312;
+  --forgiven-strong: #9b90ff;
+  --forgiven: #9b90ff;
+  --forgiven-soft: #1e1b33;
+  --danger-strong: #e04f5f;
+  --danger: #f07480;
+  --danger-soft: #331a1e;
+  --focus: #2ee5a8;
   --overlay: rgb(0 0 0 / 0.6);
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-float: 0 12px 40px rgb(0 0 0 / 0.5);
@@ -80,6 +107,15 @@
   --color-brand: var(--brand);
   --color-brand-ink: var(--brand-ink);
   --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
+  --color-cta: var(--cta);
+  --color-on-cta: var(--on-cta);
+  --color-owed: var(--owed);
+  --color-pending: var(--pending);
+  --color-forgiven: var(--forgiven);
+  --color-forgiven-strong: var(--forgiven-strong);
+  --color-forgiven-soft: var(--forgiven-soft);
+  --color-danger-strong: var(--danger-strong);
   --color-positive: var(--positive);
   --color-positive-soft: var(--positive-soft);
   --color-positive-fill: var(--positive-fill);
@@ -108,6 +144,8 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     overscroll-behavior-y: none;
+    /* Números tabulares en toda la app: los montos no "bailan" al cambiar. */
+    font-variant-numeric: tabular-nums;
   }
   button {
     cursor: pointer;
@@ -116,7 +154,7 @@
     cursor: default;
   }
   :focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--brand) 70%, transparent);
+    outline: 3px solid var(--focus);
     outline-offset: 2px;
     border-radius: 10px;
   }

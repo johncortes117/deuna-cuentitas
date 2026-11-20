@@ -76,7 +76,7 @@ function CodeChip({ code }: { code: string }) {
 export function InvitePanel({ bundle, compact }: { bundle: BillBundle; compact: boolean }) {
   const [open, setOpen] = useState(false)
   const { bill } = bundle
-  const message = inviteMessage(bill.title, grandTotal(bundle), bill.currency, bill.code)
+  const message = inviteMessage(bundle.members.find((m) => m.is_host)?.name ?? '', bill.code)
   const onShared = (channel: string) => track('invite_shared', { channel })
 
   if (compact) {
