@@ -212,22 +212,22 @@
 .logo-half-right {
   transform-box: fill-box;
   transform-origin: center;
-  animation: mm-half-left 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+  animation: mm-half-left 1s cubic-bezier(0.2, 0.9, 0.3, 1.15) 0.15s both;
 }
 .logo-half-right {
   animation-name: mm-half-right;
-  animation-delay: 0.08s;
+  animation-delay: 0.27s;
 }
 @keyframes mm-word-in {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes mm-intro-out {
-  0%, 72% { opacity: 1; }
+  0%, 80% { opacity: 1; }
   100% { opacity: 0; visibility: hidden; }
 }
-.intro-overlay { animation: mm-intro-out 1.3s ease-out both; }
-.intro-word { animation: mm-word-in 0.4s ease-out 0.45s both; }
+.intro-overlay { animation: mm-intro-out 2.3s ease-out both; }
+.intro-word { animation: mm-word-in 0.5s ease-out 0.9s both; }
 
 @keyframes mm-sheet-in {
   from { transform: translateY(100%); }
