@@ -1,9 +1,11 @@
-// Dos mitades iguales de un círculo: miti-miti.
-export function LogoMark({ size = 32, className }: { size?: number; className?: string }) {
+// Dos medios tickets, con su perforación hacia afuera: miti-miti, como un recibo partido.
+import { LOGO_LEFT, LOGO_RIGHT } from '../lib/logoPaths'
+
+export function LogoMark({ size = 32, className, animated = false }: { size?: number; className?: string; animated?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" className={className} aria-hidden="true">
-      <path fill="currentColor" d="M22 8a16 16 0 0 0 0 32z" />
-      <path fill="var(--brand)" d="M26 8a16 16 0 0 1 0 32z" />
+      <path fill="currentColor" d={LOGO_LEFT} className={animated ? 'logo-half-left' : undefined} />
+      <path fill="var(--brand)" d={LOGO_RIGHT} className={animated ? 'logo-half-right' : undefined} />
     </svg>
   )
 }

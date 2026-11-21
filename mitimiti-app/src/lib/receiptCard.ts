@@ -4,6 +4,8 @@
 // mesa). Se dibuja en un canvas de 1080 × 1350 px (4:5), en claro siempre,
 // para que se vea igual de nítida en cualquier teléfono, y sale como PNG.
 
+import { LOGO_LEFT, LOGO_RIGHT } from './logoPaths'
+
 export const CARD_WIDTH = 1080
 export const CARD_HEIGHT = 1350
 
@@ -50,12 +52,17 @@ const C = {
   lavender: '#7C6FF7',
   lavenderText: '#5F50D6',
   lavenderBg: '#F2F0FF',
+  tintForgiven: '#F5F3FF',
+  tintSettled: '#EEFBF5',
 }
+
+/** El ticket: márgenes, perforaciones (y de cada línea punteada) y muescas. */
+const T = { x: 90, y: 76, w: CARD_WIDTH - 180, h: CARD_HEIGHT - 152, r: 48, notch: 34, perf1: 420, perf2: 1028 }
 
 const FONT = '"Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
 
 /** Dónde va el sello, en fracciones de la tarjeta (para animarlo encima). */
-export const STAMP_POSITION = { x: 0.5, y: 292 / CARD_HEIGHT, rotate: -6 }
+export const STAMP_POSITION = { x: 0.5, y: 326 / CARD_HEIGHT, rotate: -6 }
 
 export const STAMP = {
   forgiven: { text: 'PERDONADA', color: C.lavender, bg: C.lavenderBg },
@@ -145,28 +152,61 @@ function drawLogo(ctx: CanvasRenderingContext2D, cx: number, y: number) {
   ctx.save()
   ctx.font = `800 46px ${FONT}`
   ctx.letterSpacing = '-1.5px'
-  const word1 = 'Miti'
-  const w1 = ctx.measureText(word1).width
-  const total = 52 + 16 + w1 * 2
+  const word = 'Miti'
+  const w = ctx.measureText(word).width
+  const mark = 60
+  const total = mark + 14 + w * 2
   const x = cx - total / 2
-  // Círculo partido: tinta y menta.
-  const r = 24
-  const mx = x + r + 2
+  // Los dos medios tickets del logo.
+  ctx.translate(x, y - mark / 2)
+  ctx.scale(mark / 48, mark / 48)
   ctx.fillStyle = C.ink
-  ctx.beginPath()
-  ctx.arc(mx - 2, y, r, Math.PI / 2, (Math.PI * 3) / 2)
-  ctx.fill()
+  ctx.fill(new Path2D(LOGO_LEFT))
   ctx.fillStyle = C.mint
-  ctx.beginPath()
-  ctx.arc(mx + 2, y, r, -Math.PI / 2, Math.PI / 2)
-  ctx.fill()
+  ctx.fill(new Path2D(LOGO_RIGHT))
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'left'
   ctx.fillStyle = C.ink
-  ctx.fillText(word1, x + 68, y + 2)
+  ctx.fillText(word, x + mark + 14, y + 2)
   ctx.fillStyle = C.mintDeep
-  ctx.fillText(word1, x + 68 + w1, y + 2)
+  ctx.fillText(word, x + mark + 14 + w, y + 2)
   ctx.restore()
+}
+
+/**
+ * El ticket troquelado: blanco, con la cabecera teñida y un medio círculo
+ * recortado a cada lado de las dos perforaciones. Se dibuja aparte para que
+ * la sombra siga el troquel.
+ */
+function drawTicket(ctx: CanvasRenderingContext2D, tint: string) {
+  const t = document.createElement('canvas')
+  t.width = CARD_WIDTH
+  t.height = CARD_HEIGHT
+  const k = t.getContext('2d')!
+  roundRect(k, T.x, T.y, T.w, T.h, T.r)
+  k.fillStyle = C.surface
+  k.fill()
+  k.globalCompositeOperation = 'source-atop'
+  k.fillStyle = tint
+  k.fillRect(T.x, T.y, T.w, T.perf1 - T.y)
+  k.globalCompositeOperation = 'destination-out'
+  for (const y of [T.perf1, T.perf2]) {
+    for (const x of [T.x, T.x + T.w]) {
+      k.beginPath()
+      k.arc(x, y, T.notch, 0, Math.PI * 2)
+      k.fill()
+    }
+  }
+  ctx.save()
+  ctx.shadowColor = 'rgba(18, 21, 20, 0.12)'
+  ctx.shadowBlur = 44
+  ctx.shadowOffsetY = 14
+  ctx.drawImage(t, 0, 0)
+  ctx.restore()
+  // Las perforaciones, entre muesca y muesca.
+  dashed(ctx, T.perf1, T.x + T.notch + 22, T.x + T.w - T.notch - 22)
+  dashed(ctx, T.perf2, T.x + T.notch + 22, T.x + T.w - T.notch - 22)
 }
 
 function centered(ctx: CanvasRenderingContext2D, lines: string[], y: number, lineHeight: number) {
@@ -187,56 +227,60 @@ export async function renderReceiptCard(card: ReceiptCard, options: RenderOption
   // Fondo y ticket
   ctx.fillStyle = C.bg
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
-  ctx.save()
-  ctx.shadowColor = 'rgba(18, 21, 20, 0.10)'
-  ctx.shadowBlur = 48
-  ctx.shadowOffsetY = 16
-  roundRect(ctx, 72, 84, CARD_WIDTH - 144, CARD_HEIGHT - 168, 56)
-  ctx.fillStyle = C.surface
-  ctx.fill()
-  ctx.restore()
+  drawTicket(ctx, card.kind === 'forgiven' ? C.tintForgiven : C.tintSettled)
 
   ctx.textAlign = 'center'
   ctx.textBaseline = 'alphabetic'
 
-  // Encabezado
+  // Cabecera
+  ctx.fillStyle = card.kind === 'forgiven' ? C.lavenderText : C.mintDeep
+  ctx.font = `700 26px ${FONT}`
+  ctx.letterSpacing = '5px'
+  ctx.fillText(card.kind === 'forgiven' ? 'RECIBO DE BUENA ONDA' : 'COMPROBANTE DE PAGO', CARD_WIDTH / 2, 150)
   ctx.fillStyle = C.ink
-  ctx.font = `800 62px ${FONT}`
+  ctx.font = `800 64px ${FONT}`
   ctx.letterSpacing = '-1.5px'
-  ctx.fillText(card.kind === 'forgiven' ? 'Cuenta perdonada' : '¡Deuda saldada!', CARD_WIDTH / 2, 178)
+  ctx.fillText(card.kind === 'forgiven' ? 'Cuenta perdonada' : '¡Deuda saldada!', CARD_WIDTH / 2, 222)
   if (options.stamp !== false) drawStamp(ctx, card.kind)
-  dashed(ctx, 392, 144, CARD_WIDTH - 144)
 
   const hide = card.kind === 'forgiven' && card.hideAmount
-  let y = 372
+  let y = T.perf1
   if (!hide) {
     ctx.fillStyle = C.ink
-    ctx.font = `800 168px ${FONT}`
+    let size = 172
+    ctx.font = `800 ${size}px ${FONT}`
     ctx.letterSpacing = '-6px'
-    let size = 168
-    while (measure(card.amount) > CARD_WIDTH - 260 && size > 90) {
+    while (measure(card.amount) > T.w - 160 && size > 90) {
       size -= 8
       ctx.font = `800 ${size}px ${FONT}`
     }
-    ctx.fillText(card.amount, CARD_WIDTH / 2, 590)
+    ctx.fillText(card.amount, CARD_WIDTH / 2, 640)
     ctx.letterSpacing = '0px'
     ctx.fillStyle = C.muted
     ctx.font = `600 40px ${FONT}`
     const detail =
       card.kind === 'forgiven' ? `${card.creditorName} le perdonó a ${card.debtorName} · ${card.concept}` : `${card.debtorName} le pagó a ${card.creditorName}`
-    y = centered(ctx, wrapText(measure, detail, CARD_WIDTH - 280, 2), 680, 54)
+    y = centered(ctx, wrapText(measure, detail, T.w - 160, 2), 724, 54)
   } else {
     ctx.fillStyle = C.ink
     ctx.font = `800 64px ${FONT}`
     ctx.letterSpacing = '-1.5px'
-    y = centered(ctx, wrapText(measure, `${card.creditorName} perdonó una cuenta de ${card.concept}`, CARD_WIDTH - 280, 4), 540, 80)
+    y = centered(ctx, wrapText(measure, `${card.creditorName} perdonó una cuenta de ${card.concept}`, T.w - 160, 4), 590, 80)
     ctx.letterSpacing = '0px'
   }
 
   if (card.kind === 'forgiven' && card.note) {
+    // La frase, en una cápsula lavanda.
+    ctx.font = `600 42px ${FONT}`
+    const lines = wrapText(measure, `«${card.note}»`, T.w - 240, 2)
+    const top = Math.max(y + 90, 840)
+    const boxW = Math.max(...lines.map(measure)) + 96
+    const boxH = lines.length * 56 + 52
+    roundRect(ctx, CARD_WIDTH / 2 - boxW / 2, top, boxW, boxH, 36)
+    ctx.fillStyle = C.lavenderBg
+    ctx.fill()
     ctx.fillStyle = C.lavenderText
-    ctx.font = `600 44px ${FONT}`
-    centered(ctx, wrapText(measure, `«${card.note}»`, CARD_WIDTH - 300, 2), Math.max(y + 120, 860), 58)
+    centered(ctx, lines, top + 72, 56)
   }
 
   if (card.kind === 'settled') {
@@ -245,31 +289,34 @@ export async function renderReceiptCard(card: ReceiptCard, options: RenderOption
       ['Fecha', card.date],
       ['Tiempo', `⚡ ${card.elapsed}`],
     ]
-    let ry = 820
-    for (const [label, value] of rows) {
+    let ry = 840
+    for (const [i, [label, value]] of rows.entries()) {
       ctx.textAlign = 'left'
       ctx.fillStyle = C.subtle
       ctx.font = `500 34px ${FONT}`
-      ctx.fillText(label, 160, ry)
+      ctx.fillText(label, T.x + 80, ry)
       ctx.textAlign = 'right'
       ctx.fillStyle = C.ink
       ctx.font = `700 36px ${FONT}`
-      ctx.fillText(wrapText(measure, value, 560, 1)[0], CARD_WIDTH - 160, ry)
-      ry += 76
+      ctx.fillText(wrapText(measure, value, 520, 1)[0], T.x + T.w - 80, ry)
+      if (i < rows.length - 1) {
+        ctx.fillStyle = '#EEF1EF'
+        ctx.fillRect(T.x + 80, ry + 26, T.w - 160, 2)
+      }
+      ry += 70
     }
     ctx.textAlign = 'center'
   }
 
-  // Pie de marca
-  dashed(ctx, 1040, 144, CARD_WIDTH - 144)
-  drawLogo(ctx, CARD_WIDTH / 2, 1110)
+  // Talón con la marca
+  drawLogo(ctx, CARD_WIDTH / 2, 1112)
   ctx.textAlign = 'center'
   ctx.fillStyle = C.ink
   ctx.font = `600 32px ${FONT}`
-  ctx.fillText('Divide cuentas, no amistades.', CARD_WIDTH / 2, 1184)
+  ctx.fillText('Divide cuentas, no amistades.', CARD_WIDTH / 2, 1186)
   ctx.fillStyle = C.subtle
   ctx.font = `500 28px ${FONT}`
-  ctx.fillText(options.domain ?? 'mitimiti.app', CARD_WIDTH / 2, 1228)
+  ctx.fillText(options.domain ?? 'mitimiti.app', CARD_WIDTH / 2, 1230)
 
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No se pudo crear la imagen'))), 'image/png'))
 }

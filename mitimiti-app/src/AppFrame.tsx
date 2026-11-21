@@ -1,7 +1,7 @@
 // ─── Marco de la app ─────────────────────────────────────────
 // Columna de teléfono centrada (en computador también), avisos de conexión,
 // notificaciones en vivo y métricas de páginas sin datos sensibles.
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { Analytics } from '@vercel/analytics/react'
 import { WifiOff } from 'lucide-react'
@@ -33,10 +33,36 @@ function OfflineBanner() {
   )
 }
 
+// Una vez por apertura de la app (no en cada pantalla).
+let introShown = false
+
+/** El logo animado al abrir la app; no bloquea toques y se quita solo. */
+function LogoIntro() {
+  const [visible, setVisible] = useState(() => !introShown)
+  useEffect(() => {
+    introShown = true
+  }, [])
+  if (!visible) return null
+  return (
+    <div
+      className="intro-overlay pointer-events-none fixed inset-0 z-[90] flex flex-col items-center justify-center gap-3 bg-bg"
+      aria-hidden="true"
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget) setVisible(false)
+      }}
+    >
+      <LogoMark size={84} animated className="text-ink" />
+      <span className="intro-word text-[26px] font-extrabold tracking-[-0.04em] text-ink">
+        Miti<span className="text-brand">Miti</span>
+      </span>
+    </div>
+  )
+}
+
 export function Splash() {
   return (
     <div className="flex min-h-dvh flex-1 items-center justify-center" aria-busy="true" aria-label="Cargando">
-      <LogoMark size={56} className="animate-pulse text-ink" />
+      <LogoMark size={56} animated className="text-ink" />
     </div>
   )
 }
@@ -66,6 +92,7 @@ export function AppFrame() {
     <NotificationsProvider>
       <ReceiptsProvider>
       <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-bg sm:border-x sm:border-line">
+        <LogoIntro />
         <OfflineBanner />
         <Outlet />
       </div>

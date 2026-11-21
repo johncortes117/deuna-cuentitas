@@ -87,6 +87,8 @@ test('las hojas se cierran deslizando hacia abajo', async ({ browser }) => {
   await phone.page.getByRole('button', { name: 'Cambiar tu nombre' }).click()
   const sheet = phone.page.getByRole('dialog', { name: 'Tu nombre' })
   await expect(sheet).toBeVisible()
+  // Medir cuando la hoja ya terminó de entrar.
+  await sheet.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
   const box = (await sheet.boundingBox())!
   // Desde la barrita de arriba, hacia abajo.
   await phone.page.mouse.move(box.x + box.width / 2, box.y + 12)

@@ -14,8 +14,8 @@ const MINT = '#22D39A'
 
 const mark = (left, right, size) => `
   <svg width="${size}" height="${size}" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path fill="${left}" d="M22 8a16 16 0 0 0 0 32z"/>
-    <path fill="${right}" d="M26 8a16 16 0 0 1 0 32z"/>
+    <path fill="${left}" d="M6 10H19a3 3 0 0 1 3 3v22a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-5.5a5.5 5.5 0 0 0 0-11V13a3 3 0 0 1 3-3z"/>
+    <path fill="${right}" d="M29 10h13a3 3 0 0 1 3 3v5.5a5.5 5.5 0 0 0 0 11V35a3 3 0 0 1-3 3H29a3 3 0 0 1-3-3V13a3 3 0 0 1 3-3z"/>
   </svg>`
 
 const base = `

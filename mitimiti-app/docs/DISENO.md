@@ -11,7 +11,11 @@ nada que sobre.
 - **Nombre:** MitiMiti, "mitad y mitad". Fácil de decir en la mesa ("pásalo por MitiMiti").
 - **Dirección visual:** *Limpio con pulso*. Lienzo muy limpio, números nítidos, botones en negro
   carbón y el **Verde Menta** como color firma.
-- **Logo:** un círculo partido en dos mitades, tinta y menta (`public/favicon.svg`).
+- **Logo:** dos medios tickets (tinta y menta) con la perforación semicircular hacia afuera, como
+  un recibo partido miti-miti (`src/lib/logoPaths.ts`, `public/favicon.svg`). Al abrir la app, las
+  dos mitades llegan desde los lados y se juntan (sin animación con "reducir movimiento").
+- **Tarjetas para compartir:** recibos troquelados de 1080 × 1350: cabecera teñida, perforaciones
+  punteadas con medios círculos recortados a los lados y un talón con la marca (`src/lib/receiptCard.ts`).
 - **Lema:** *Divide cuentas, no amistades.* El título "¡Cuentas claras!" se usa solo para
   celebrar el cierre de una mesa.
 
