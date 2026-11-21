@@ -86,7 +86,7 @@ export default function BalancesPage() {
         ) : data && data.people.length === 0 ? (
           <EmptyState emoji="🎉" title="Estás al día" body="Nadie te debe y no le debes a nadie. Si le prestas algo a un amigo, anótalo para que no se olvide.">
             <Button full variant="secondary" icon={<HandCoins size={19} />} onClick={() => navigate('/prestamo')}>
-              Anotar un préstamo
+              Anotar lo que acolité
             </Button>
           </EmptyState>
         ) : (
@@ -161,7 +161,7 @@ export default function BalancesPage() {
               )}
               <div className="mt-6 flex flex-col gap-1">
                 <Button full variant="secondary" size="md" icon={<HandCoins size={18} />} onClick={() => navigate('/prestamo')}>
-                  Anotar un préstamo
+                  Anotar lo que acolité
                 </Button>
                 <Button full variant="ghost" size="md" icon={<History size={18} />} onClick={() => navigate('/saldos/historial')}>
                   Ver historial

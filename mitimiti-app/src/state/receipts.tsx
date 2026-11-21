@@ -1,13 +1,13 @@
 // ─── Recibos en pantalla ─────────────────────────────────────
 // La tarjeta que aparece después de perdonar (o de confirmar un pago) vive
 // aquí, encima de todo: si esa acción cierra la cuenta y la pantalla cambia a
-// "¡Cuentas claras!", el recibo sigue abierto.
+// "¡Todo cuadrado!", el recibo sigue abierto.
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ForgivenReceiptSheet, SettledReceiptSheet } from '../features/shared/Receipt'
-import type { ForgivenData, SettledData } from '../features/shared/Receipt'
+import { ForgivenReceiptSheet, GroupReceiptSheet, SettledReceiptSheet } from '../features/shared/Receipt'
+import type { ForgivenData, GroupData, SettledData } from '../features/shared/Receipt'
 
-type Receipt = { kind: 'forgiven'; data: ForgivenData } | { kind: 'settled'; data: SettledData }
+type Receipt = { kind: 'forgiven'; data: ForgivenData } | { kind: 'settled'; data: SettledData } | { kind: 'group'; data: GroupData }
 
 const ReceiptsContext = createContext<(r: Receipt) => void>(() => {})
 
@@ -23,6 +23,7 @@ export function ReceiptsProvider({ children }: { children: ReactNode }) {
     <ReceiptsContext.Provider value={value}>
       {children}
       {current?.kind === 'forgiven' && <ForgivenReceiptSheet key={JSON.stringify(current.data)} data={current.data} onClose={close} />}
+      {current?.kind === 'group' && <GroupReceiptSheet key={JSON.stringify(current.data)} data={current.data} onClose={close} />}
       {current?.kind === 'settled' && <SettledReceiptSheet key={JSON.stringify(current.data)} data={current.data} onClose={close} />}
     </ReceiptsContext.Provider>
   )

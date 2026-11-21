@@ -23,26 +23,26 @@ test('al confirmar "Recibido" sale el recibo y se envía el comprobante', async 
   await luis.page.getByRole('button', { name: 'Sí, avisarle a Ana' }).click()
 
   await row(ana.page, 'Luis').getByRole('button', { name: 'Recibido' }).click()
-  const receipt = ana.page.getByRole('dialog', { name: '¡Deuda saldada!' })
+  const receipt = ana.page.getByRole('dialog', { name: '¡Quedamos a mano!' })
   await expect(receipt.getByRole('img', { name: /^Recibo: Luis le pagó \$10,00 a Ana por Cena\. Saldada (al instante|en 1 min)\.$/ })).toBeVisible()
 
   // Computador: se descarga el PNG y se abre el chat con el texto.
   const download = ana.page.waitForEvent('download')
   await receipt.getByRole('button', { name: 'Enviar comprobante a Luis' }).click()
   const file = await download
-  expect(file.suggestedFilename()).toBe('mitimiti-saldada.png')
+  expect(file.suggestedFilename()).toBe('mitimiti-a-mano.png')
   expect(await pngSize(await file.path())).toEqual({ width: 1080, height: 1350 })
   await expect.poll(() => ana.whatsapp.length).toBe(1)
   expect(ana.whatsapp[0]).toBe('Listo Luis, ya quedó tachado lo de Cena en MitiMiti ✅')
 
   // Era la única deuda: la cuenta se cerró debajo y el recibo siguió abierto.
   await receipt.getByRole('button', { name: 'Cerrar' }).last().click()
-  await expect(ana.page.getByRole('heading', { name: '¡Cuentas claras!' })).toBeVisible()
+  await expect(ana.page.getByRole('heading', { name: '¡Todo cuadrado!' })).toBeVisible()
 
   // Desde el historial se vuelve a abrir.
   await ana.page.goto('/saldos/historial')
   await ana.page.getByRole('button', { name: 'Luis te pagó. Ver recibo' }).click()
-  await expect(ana.page.getByRole('dialog', { name: '¡Deuda saldada!' }).getByRole('button', { name: 'Enviar comprobante a Luis' })).toBeVisible()
+  await expect(ana.page.getByRole('dialog', { name: '¡Quedamos a mano!' }).getByRole('button', { name: 'Enviar comprobante a Luis' })).toBeVisible()
 })
 
 test('el recibo cuenta los días desde la deuda más antigua, y quien pagó también lo ve', async ({ browser }) => {
@@ -74,14 +74,14 @@ test('el recibo cuenta los días desde la deuda más antigua, y quien pagó tamb
   })
   await pedro.page.getByRole('button', { name: 'Ya me pagó' }).click()
   await pedro.page.getByRole('button', { name: 'Sí, ya me pagó' }).click()
-  const receipt = pedro.page.getByRole('dialog', { name: '¡Deuda saldada!' })
+  const receipt = pedro.page.getByRole('dialog', { name: '¡Quedamos a mano!' })
   await expect(receipt.getByRole('img', { name: /Sofía le pagó \$8,00 a Pedro .*Saldada en 3 días\./ })).toBeVisible()
   await receipt.getByRole('button', { name: 'Cerrar' }).last().click()
 
   // Sofía, desde su historial, ve su comprobante para mandárselo a Pedro.
   await sofia.page.goto('/saldos/historial')
   await sofia.page.getByRole('button', { name: /^Le pagaste a Pedro\. Ver recibo$/ }).first().click()
-  await expect(sofia.page.getByRole('dialog', { name: '¡Deuda saldada!' }).getByRole('button', { name: 'Enviar comprobante a Pedro' })).toBeVisible()
+  await expect(sofia.page.getByRole('dialog', { name: '¡Quedamos a mano!' }).getByRole('button', { name: 'Enviar comprobante a Pedro' })).toBeVisible()
 })
 
 test('una deuda perdonada se reabre desde el historial', async ({ browser }) => {
@@ -102,7 +102,7 @@ test('una deuda perdonada se reabre desde el historial', async ({ browser }) => 
   await pedro.page.getByText('Sofía').first().click()
   await pedro.page.getByRole('button', { name: 'Perdonar' }).click()
   const ask = pedro.page.getByRole('dialog', { name: '¿Perdonas los $4,00 de Sofía?' })
-  await ask.getByRole('button', { name: 'Invito yo esta vez.' }).click()
+  await ask.getByRole('button', { name: 'Esta va por mi cuenta.' }).click()
   await ask.getByRole('button', { name: 'Sí, perdonar' }).click()
   await pedro.page.getByRole('dialog', { name: '¡Cuenta perdonada!' }).getByRole('button', { name: 'Listo' }).click()
 

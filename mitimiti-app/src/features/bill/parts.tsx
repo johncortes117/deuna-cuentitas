@@ -109,7 +109,7 @@ export function InvitePanel({ bundle, compact }: { bundle: BillBundle; compact: 
           </span>
         </button>
         <div className="min-w-0 flex-1">
-          <p className="text-[17px] font-bold leading-tight text-ink">Invita a la mesa</p>
+          <p className="text-[17px] font-bold leading-tight text-ink">Invita a la cuenta</p>
           <p className="mt-1 text-[14px] leading-snug text-muted">Que escaneen el QR con la cámara, o mándales el link. Nadie tiene que descargar nada.</p>
         </div>
       </div>
@@ -130,7 +130,7 @@ function QrMini({ url }: { url: string }) {
 
 function InviteSheet({ open, onClose, bundle, message, onShared }: { open: boolean; onClose: () => void; bundle: BillBundle; message: string; onShared: (c: string) => void }) {
   return (
-    <Sheet open={open} onClose={onClose} title="Invita a la mesa" description="Escanean con la cámara del celular y entran con su nombre.">
+    <Sheet open={open} onClose={onClose} title="Invita a la cuenta" description="Escanean con la cámara del celular y entran con su nombre.">
       <div className="flex flex-col items-center gap-4 pb-4 pt-3">
         <QrCode url={billLink(bundle.bill.code)} size={232} />
         <CodeChip code={bundle.bill.code} />

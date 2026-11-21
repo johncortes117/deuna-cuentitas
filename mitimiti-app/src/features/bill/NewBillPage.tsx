@@ -49,7 +49,7 @@ export default function NewBillPage() {
         <div className="pt-4 text-center tiny:pt-1">
           <p className="text-[16px] font-semibold text-ink-2">¿Cuánto es la cuenta?</p>
           <AmountInput value={amount} className="mt-2" />
-          <p className="mx-auto mt-3 max-w-[300px] text-[14px] leading-snug text-muted short:hidden">El total que dice la cuenta, con IVA y servicio. Después se divide con todos en la mesa.</p>
+          <p className="mx-auto mt-3 max-w-[300px] text-[14px] leading-snug text-muted short:hidden">El total que dice la cuenta, con IVA y servicio. Después se divide entre todos.</p>
           <p className="mt-2 hidden text-[13.5px] text-muted short:block">El total, con IVA y servicio incluidos.</p>
         </div>
 

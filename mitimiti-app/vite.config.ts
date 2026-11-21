@@ -15,7 +15,7 @@ export default defineConfig({
       manifest: {
         name: 'MitiMiti · Divide la cuenta',
         short_name: 'MitiMiti',
-        description: 'Divide la cuenta en la mesa, sin calculadora. Divide cuentas, no amistades.',
+        description: 'Divide cualquier cuenta, sin calculadora. Divide y acolita entre panas.',
         lang: 'es',
         dir: 'ltr',
         start_url: '/',

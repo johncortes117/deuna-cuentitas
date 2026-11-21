@@ -198,7 +198,7 @@ export function HostOpenView(props: BillViewProps) {
             ) : undefined
           }
         >
-          En la mesa · {members.length}
+          En esta cuenta · {members.length}
         </SectionTitle>
         <Card className="overflow-hidden">
           <ul className="divide-y divide-line">
@@ -306,7 +306,7 @@ export function MemberOpenView(props: BillViewProps) {
           </>
         )}
 
-        <SectionTitle>En la mesa · {members.length}</SectionTitle>
+        <SectionTitle>En esta cuenta · {members.length}</SectionTitle>
         <Card className="overflow-hidden">
           <ul className="divide-y divide-line">
             {members.map((m) => (

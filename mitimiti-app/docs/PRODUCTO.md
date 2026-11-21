@@ -1,6 +1,6 @@
 # MitiMiti · Producto y estrategia
 
-> **De "¿cuánto es cada uno?" a "¡Cuentas claras!" en minutos, en el chat donde ya están tus amigos.**
+> **De "¿cuánto es cada uno?" a "¡Todo cuadrado!" en minutos, en el chat donde ya están tus amigos.**
 
 ## 1. El problema
 
@@ -40,7 +40,7 @@ instalen y creen cuenta, y en su versión gratis ponen cada vez más límites y 
 4. **Centavos exactos y justos.** La suma siempre cuadra; los centavos que sobran los pone
    quien pagó, nadie paga de más por redondear; el servicio se reparte según lo que consumió
    cada uno.
-5. **Cerrar el ciclo.** No basta con dividir: "Ya le pagué" → "Recibido" → "¡Cuentas claras!".
+5. **Cerrar el ciclo.** No basta con dividir: "Ya le pagué" → "Recibido" → "¡Todo cuadrado!".
    Esa confirmación es lo que genera confianza y lo que nos diferencia.
 6. **Cero vergüenza.** Recordatorios amables, con límite (uno cada 20 horas), escritos como
    los escribiría un amigo.
@@ -88,7 +88,7 @@ la escena de la mesa.
 
 ## 7. Métricas
 
-- **North Star: cuentas saldadas por semana** (llegan a "¡Cuentas claras!"). Junta las dos
+- **North Star: cuentas saldadas por semana** (llegan a "¡Todo cuadrado!"). Junta las dos
   cosas que importan: que se use en la mesa y que el ciclo de pago se cierre.
 - **Entradas (las que movemos):**
   - % de cuentas divididas que se saldan en 7 días, y horas medianas hasta saldarse.

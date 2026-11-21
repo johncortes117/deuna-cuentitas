@@ -5,6 +5,7 @@
 // para que se vea igual de nítida en cualquier teléfono, y sale como PNG.
 
 import { LOGO_LEFT, LOGO_RIGHT } from './logoPaths'
+import { participantsLine } from './groupPrize'
 
 export const CARD_WIDTH = 1080
 export const CARD_HEIGHT = 1350
@@ -30,6 +31,20 @@ export type ReceiptCard =
       date: string
       /** "Saldada en 14 min" */
       elapsed: string
+    }
+  | {
+      /** Cierre grupal: la cuenta quedó 100 % cuadrada. */
+      kind: 'group'
+      planName: string
+      hostName: string
+      participants: string[]
+      /** "$48,75" */
+      total: string
+      date: string
+      /** "12 min", "Mismo día" */
+      elapsed: string
+      prize?: { icon: string; label: string; value: string } | null
+      hideAmount?: boolean
     }
 
 export interface RenderOptions {
@@ -66,7 +81,8 @@ export const STAMP_POSITION = { x: 0.5, y: 326 / CARD_HEIGHT, rotate: -6 }
 
 export const STAMP = {
   forgiven: { text: 'PERDONADA', color: C.lavender, bg: C.lavenderBg },
-  settled: { text: 'SALDADA', color: C.mintDeep, bg: C.mintIce },
+  settled: { text: 'A MANO', color: C.mintDeep, bg: C.mintIce },
+  group: { text: 'CUADRADA', color: C.mintDeep, bg: C.mintIce },
 } as const
 
 async function fontsReady() {
@@ -236,12 +252,18 @@ export async function renderReceiptCard(card: ReceiptCard, options: RenderOption
   ctx.fillStyle = card.kind === 'forgiven' ? C.lavenderText : C.mintDeep
   ctx.font = `700 26px ${FONT}`
   ctx.letterSpacing = '5px'
-  ctx.fillText(card.kind === 'forgiven' ? 'RECIBO DE BUENA ONDA' : 'COMPROBANTE DE PAGO', CARD_WIDTH / 2, 150)
+  ctx.fillText(card.kind === 'forgiven' ? 'RECIBO DE BUENA ONDA' : card.kind === 'group' ? 'CUENTA CERRADA' : 'COMPROBANTE DE PAGO', CARD_WIDTH / 2, 150)
   ctx.fillStyle = C.ink
   ctx.font = `800 64px ${FONT}`
   ctx.letterSpacing = '-1.5px'
-  ctx.fillText(card.kind === 'forgiven' ? 'Cuenta perdonada' : '¡Deuda saldada!', CARD_WIDTH / 2, 222)
+  ctx.fillText(card.kind === 'forgiven' ? 'Cuenta perdonada' : card.kind === 'group' ? '¡Todo cuadrado!' : '¡Quedamos a mano!', CARD_WIDTH / 2, 222)
   if (options.stamp !== false) drawStamp(ctx, card.kind)
+
+  if (card.kind === 'group') {
+    drawGroupBody(ctx, card, measure)
+    drawStub(ctx, options)
+    return toPng(canvas)
+  }
 
   const hide = card.kind === 'forgiven' && card.hideAmount
   let y = T.perf1
@@ -308,15 +330,86 @@ export async function renderReceiptCard(card: ReceiptCard, options: RenderOption
     ctx.textAlign = 'center'
   }
 
+  drawStub(ctx, options)
+  return toPng(canvas)
+}
+
+function toPng(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No se pudo crear la imagen'))), 'image/png'))
+}
+
+function drawStub(ctx: CanvasRenderingContext2D, options: RenderOptions) {
   // Talón con la marca
   drawLogo(ctx, CARD_WIDTH / 2, 1112)
   ctx.textAlign = 'center'
   ctx.fillStyle = C.ink
   ctx.font = `600 32px ${FONT}`
-  ctx.fillText('Divide cuentas, no amistades.', CARD_WIDTH / 2, 1186)
+  ctx.fillText('Divide y acolita entre panas.', CARD_WIDTH / 2, 1186)
   ctx.fillStyle = C.subtle
   ctx.font = `500 28px ${FONT}`
   ctx.fillText(options.domain ?? 'mitimiti.app', CARD_WIDTH / 2, 1230)
 
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No se pudo crear la imagen'))), 'image/png'))
+}
+
+/** El cuerpo del recibo grupal: el plan, cuántos panas, quiénes, el premio y las filas. */
+function drawGroupBody(ctx: CanvasRenderingContext2D, card: Extract<ReceiptCard, { kind: 'group' }>, measure: (t: string) => number) {
+  const maxW = T.w - 160
+  ctx.textAlign = 'center'
+  ctx.fillStyle = C.ink
+  ctx.font = `800 86px ${FONT}`
+  ctx.letterSpacing = '-2.5px'
+  let y = centered(ctx, wrapText(measure, card.planName, maxW, 2), 528, 92)
+  ctx.letterSpacing = '0px'
+
+  ctx.font = `700 42px ${FONT}`
+  ctx.fillStyle = C.ink
+  const n = card.participants.length
+  ctx.fillText(`${n} ${n === 1 ? 'pana' : 'panas'} · ${card.hideAmount ? 'Sin dramas' : card.total}`, CARD_WIDTH / 2, y + 74)
+  ctx.font = `500 32px ${FONT}`
+  ctx.fillStyle = C.muted
+  ctx.fillText(wrapText(measure, participantsLine(card.participants), maxW, 1)[0], CARD_WIDTH / 2, y + 124)
+  y += 124
+
+  if (card.prize) {
+    ctx.font = `700 34px ${FONT}`
+    const text = `${card.prize.icon} ${card.prize.label}: ${card.prize.value}`
+    const label = wrapText(measure, text, maxW - 80, 1)[0]
+    const w = measure(label) + 72
+    const top = y + 30
+    roundRect(ctx, CARD_WIDTH / 2 - w / 2, top, w, 70, 35)
+    ctx.fillStyle = C.mintIce
+    ctx.fill()
+    ctx.lineWidth = 2
+    ctx.strokeStyle = 'rgba(11, 143, 101, 0.35)'
+    ctx.stroke()
+    ctx.fillStyle = C.mintDeep
+    ctx.textBaseline = 'middle'
+    ctx.fillText(label, CARD_WIDTH / 2, top + 37)
+    ctx.textBaseline = 'alphabetic'
+    y = top + 70
+  }
+
+  const rows: [string, string][] = [
+    ['Armada por', card.hostName],
+    ['Tiempo', card.elapsed],
+    ['Fecha', card.date],
+  ]
+  let ry = Math.max(y + 66, 820)
+  const gap = Math.min(64, (T.perf2 - 36 - ry) / 2)
+  for (const [i, [label, value]] of rows.entries()) {
+    ctx.textAlign = 'left'
+    ctx.fillStyle = C.subtle
+    ctx.font = `500 32px ${FONT}`
+    ctx.fillText(label, T.x + 80, ry)
+    ctx.textAlign = 'right'
+    ctx.fillStyle = C.ink
+    ctx.font = `700 34px ${FONT}`
+    ctx.fillText(wrapText(measure, value, 520, 1)[0], T.x + T.w - 80, ry)
+    if (i < rows.length - 1) {
+      ctx.fillStyle = '#EEF1EF'
+      ctx.fillRect(T.x + 80, ry + gap / 2 - 6, T.w - 160, 2)
+    }
+    ry += gap
+  }
+  ctx.textAlign = 'center'
 }

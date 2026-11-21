@@ -16,8 +16,11 @@ nada que sobre.
   dos mitades llegan desde los lados y se juntan (sin animación con "reducir movimiento").
 - **Tarjetas para compartir:** recibos troquelados de 1080 × 1350: cabecera teñida, perforaciones
   punteadas con medios círculos recortados a los lados y un talón con la marca (`src/lib/receiptCard.ts`).
-- **Lema:** *Divide cuentas, no amistades.* El título "¡Cuentas claras!" se usa solo para
-  celebrar el cierre de una mesa.
+- **Lema:** *Divide y acolita entre panas.* El cierre de una cuenta grupal es "¡Todo cuadrado!"
+  (con su recibo grupal y un solo micro-premio positivo) y el de una deuda 1 a 1, "¡Quedamos a
+  mano!" (sello `A MANO`).
+- **Acolitar** es el verbo para prestar o cubrir a un pana ("Te acolité con $5"). Los saldos
+  siguen diciendo "Te deben" y "Debes".
 
 ## Color
 

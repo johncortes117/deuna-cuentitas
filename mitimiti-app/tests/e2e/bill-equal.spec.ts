@@ -1,8 +1,15 @@
 // Una cena en partes iguales: Ana paga en el local, Luis entra con el link y
 // Sofía con el código. Luis avisa que pagó por Deuna y Ana lo confirma; Sofía
 // le paga en efectivo. Todo en vivo entre los tres teléfonos.
+import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { addDeuna, createBill, joinBill, newPhone, row, signUp } from './helpers'
+
+/** Ancho y alto de un PNG (cabecera IHDR). */
+async function pngSize(path: string) {
+  const buf = await readFile(path)
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
+}
 
 test('dividir en partes iguales, avisar el pago y confirmarlo', async ({ browser }) => {
   const ana = await newPhone(browser)
@@ -12,10 +19,10 @@ test('dividir en partes iguales, avisar el pago y confirmarlo', async ({ browser
   await signUp(ana.page, 'Ana')
   await addDeuna(ana.page, '0991234567')
   const code = await createBill(ana.page, '45,10', 'Cena')
-  await expect(ana.page.getByText('Invita a la mesa')).toBeVisible()
+  await expect(ana.page.getByText('Invita a la cuenta')).toBeVisible()
   await ana.page.getByRole('button', { name: 'Enviar por WhatsApp' }).click()
   await expect.poll(() => ana.whatsapp.length).toBe(1)
-  expect(ana.whatsapp.pop()).toBe(`Únete a la sala de Ana. Aquí cuadramos cuánto pone cada uno sin sacar calculadora: http://127.0.0.1:5190/c/${code}`)
+  expect(ana.whatsapp.pop()).toBe(`Entra a la sala de Ana. Aquí dividimos cuánto pone cada uno sin sacar calculadora: http://127.0.0.1:5190/c/${code}`)
   await expect(ana.page.getByText(/Comparte el link: hace falta al menos otra persona/)).toBeVisible()
 
   // Luis entra con el link y Sofía dictando el código (en minúsculas, da igual).
@@ -28,7 +35,7 @@ test('dividir en partes iguales, avisar el pago y confirmarlo', async ({ browser
   await expect(sofia.page.getByText('Por ahora te toca')).toBeVisible()
 
   // Ana los ve llegar sin recargar. $45,10 entre 3: el centavo que sobra lo pone quien pagó.
-  await expect(ana.page.getByText('En la mesa · 3')).toBeVisible()
+  await expect(ana.page.getByText('En esta cuenta · 3')).toBeVisible()
   await ana.page.getByRole('button', { name: 'Dividir entre 3 · $15,03 c/u' }).click()
   await expect(ana.page.getByText('Te deben')).toBeVisible()
   await expect(ana.page.getByText('$30,06')).toBeVisible()
@@ -47,7 +54,7 @@ test('dividir en partes iguales, avisar el pago y confirmarlo', async ({ browser
   await expect(luisRow.getByText('Dice que te pagó')).toBeVisible()
   await luisRow.getByRole('button', { name: 'Recibido' }).click()
   // Sale el recibo de deuda saldada; se cierra para seguir cobrando.
-  const receipt = ana.page.getByRole('dialog', { name: '¡Deuda saldada!' })
+  const receipt = ana.page.getByRole('dialog', { name: '¡Quedamos a mano!' })
   await expect(receipt.getByRole('button', { name: 'Enviar comprobante a Luis' })).toBeVisible()
   await receipt.getByRole('button', { name: 'Cerrar' }).last().click()
   await expect(luisRow.getByText('Pagó ✓')).toBeVisible()
@@ -56,14 +63,34 @@ test('dividir en partes iguales, avisar el pago y confirmarlo', async ({ browser
   // Recordarle a Sofía: el mensaje nuevo, con su link al final.
   await row(ana.page, 'Sofía').getByRole('button', { name: 'Recordar' }).click()
   await expect.poll(() => ana.whatsapp.length).toBe(1)
-  expect(ana.whatsapp[0]).toBe(`Hola Sofía, soy MitiMiti 👀 Paso a recordarte los $15,03 de «Cena» que cubrió Ana. Cuando le pases, avísale para tacharlo.\nhttp://127.0.0.1:5190/c/${code}`)
+  expect(ana.whatsapp[0]).toBe(`Hola Sofía, soy MitiMiti 👀 Te recuerdo los $15,03 de «Cena» que puso Ana. Apenas le pagues, avísale para dejarlo a mano.\nhttp://127.0.0.1:5190/c/${code}`)
 
   // Sofía le pagó en efectivo: Ana lo anota y la cuenta se cierra sola.
   await row(ana.page, 'Sofía').getByRole('button', { name: 'Ya me pagó' }).click()
   await ana.page.getByRole('button', { name: 'Sí, ya me pagó' }).click()
-  await expect(ana.page.getByRole('heading', { name: '¡Cuentas claras!' })).toBeVisible()
-  await expect(sofia.page.getByRole('heading', { name: '¡Cuentas claras!' })).toBeVisible()
-  await expect(luis.page.getByRole('heading', { name: '¡Cuentas claras!' })).toBeVisible()
+  await expect(ana.page.getByRole('heading', { name: '¡Todo cuadrado!' })).toBeVisible()
+  await expect(sofia.page.getByRole('heading', { name: '¡Todo cuadrado!' })).toBeVisible()
+  await expect(luis.page.getByRole('heading', { name: '¡Todo cuadrado!' })).toBeVisible()
+
+  // El recibo 1 a 1 de Sofía sale encima; se cierra y queda la pantalla de cierre.
+  const sofiaReceipt = ana.page.getByRole('dialog', { name: '¡Quedamos a mano!' })
+  await sofiaReceipt.getByRole('button', { name: 'Cerrar' }).last().click()
+  await expect(sofiaReceipt).toBeHidden()
+
+  // "Contarle al grupo": el recibo grupal con un solo micro-premio (Luis pagó al toque).
+  await ana.page.getByRole('button', { name: 'Contarle al grupo' }).click()
+  const group = ana.page.getByRole('dialog', { name: 'Contarle al grupo' })
+  await expect(group.getByRole('img', { name: /^Recibo grupal: Cena, 3 panas, \$45,10\. Pagó al toque: Luis \(\d+ (seg|min)/ })).toBeVisible()
+  await group.getByRole('switch', { name: 'Ocultar monto' }).click()
+  await expect(group.getByRole('img', { name: /^Recibo grupal: Cena, 3 panas\. Pagó al toque/ })).toBeVisible()
+  const download = ana.page.waitForEvent('download')
+  await group.getByRole('button', { name: 'Compartir en el grupo' }).click()
+  const file = await download
+  expect(file.suggestedFilename()).toBe('mitimiti-todo-cuadrado.png')
+  expect(await pngSize(await file.path())).toEqual({ width: 1080, height: 1350 })
+  await expect(ana.page.getByText('Imagen guardada. Ya puedes enviarla al grupo.')).toBeVisible()
+  await group.getByRole('button', { name: 'Listo' }).click()
+  await expect(group).toBeHidden()
 
   // En el inicio de Ana ya no queda nada pendiente.
   await ana.page.goto('/')
