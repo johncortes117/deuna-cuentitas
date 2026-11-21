@@ -2,7 +2,7 @@
   "name": "mitimiti",
   "private": true,
   "version": "0.1.0",
-  "description": "MitiMiti: divide la cuenta en la mesa, sin calculadora. Cuentas claras, amistades largas.",
+  "description": "MitiMiti: divide cualquier cuenta, sin calculadora. Divide y acolita entre panas.",
   "type": "module",
   "scripts": {
     "dev": "vite",

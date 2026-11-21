@@ -1,6 +1,6 @@
 # MitiMiti
 
-**Divide la cuenta en la mesa, sin calculadora. Divide cuentas, no amistades.**
+**Divide cualquier cuenta, sin calculadora. Divide y acolita entre panas.**
 
 MitiMiti es una app web (PWA) para dividir cuentas entre amigos y anotar préstamos
 pequeños. Quien pagó crea la cuenta, los demás entran con un link de WhatsApp, un QR
@@ -172,7 +172,7 @@ su navegador, se puede usar otro Chromium instalado con `PW_CHROMIUM_PATH=/ruta/
 backend local y la app (puerto 5190). Lo que cubren las pruebas de punta a punta:
 
 - dividir en partes iguales con tres teléfonos, avisar el pago por Deuna, confirmarlo y
-  anotar uno en efectivo hasta "¡Cuentas claras!";
+  anotar uno en efectivo hasta "¡Todo cuadrado!" y su recibo grupal;
 - dividir por productos con alguien sin celular, y que su familia reclame su parte por link;
 - préstamos: aceptar, pagar y confirmar; deudas en los dos sentidos (solo el neto); decir
   "no reconozco esta deuda" sin tener la app;

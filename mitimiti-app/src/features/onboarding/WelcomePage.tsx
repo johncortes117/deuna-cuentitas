@@ -106,7 +106,7 @@ export default function WelcomePage() {
       </div>
 
       <div className="mt-12">
-        <h1 className="text-[34px] font-extrabold leading-[1.02] tracking-[-0.04em] text-ink text-balance">Divide la cuenta en la mesa.</h1>
+        <h1 className="text-[34px] font-extrabold leading-[1.02] tracking-[-0.04em] text-ink text-balance">Divide cualquier cuenta.</h1>
         <p className="mt-3 text-[17px] leading-snug text-muted text-balance">Tus amigos entran con un link, ven cuánto les toca y te pagan como prefieran.</p>
       </div>
 
@@ -128,7 +128,7 @@ export default function WelcomePage() {
         <Button full onClick={() => setStep('name')}>
           Empezar
         </Button>
-        <p className="mt-3 text-center text-[13px] text-muted">Divide cuentas, no amistades.</p>
+        <p className="mt-3 text-center text-[13px] text-muted">Divide y acolita entre panas.</p>
       </div>
     </div>
   )

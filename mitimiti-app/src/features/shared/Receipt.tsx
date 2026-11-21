@@ -10,6 +10,7 @@ import type { ReceiptCard } from '../../lib/receiptCard'
 import { APP_URL } from '../../lib/env'
 import { appDomain, openWhatsApp, shareImage } from '../../lib/share'
 import { settledElapsedLabel, shortDate } from '../../lib/dates'
+import { groupElapsedLabel } from '../../lib/groupPrize'
 import { FORGIVE_NOTES, TEMPLATES, fillTemplate } from '../../lib/templates'
 import { track } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
@@ -145,6 +146,10 @@ export function ReceiptPreview({ card, onReady }: { card: ReceiptCard; onReady?:
 
 function describeCard(card: ReceiptCard): string {
   if (card.kind === 'settled') return `Recibo: ${card.debtorName} le pagó ${card.amount} a ${card.creditorName} por ${card.concept}. ${card.elapsed}.`
+  if (card.kind === 'group') {
+    const prize = card.prize ? ` ${card.prize.label}: ${card.prize.value}.` : ''
+    return `Recibo grupal: ${card.planName}, ${card.participants.length} panas${card.hideAmount ? '' : `, ${card.total}`}.${prize}`
+  }
   return card.hideAmount
     ? `Tarjeta: ${card.creditorName} perdonó una cuenta de ${card.concept}.`
     : `Tarjeta: ${card.creditorName} le perdonó ${card.amount} a ${card.debtorName} por ${card.concept}.`
@@ -266,7 +271,7 @@ export function SettledReceiptSheet({ data, onClose }: { data: SettledData | nul
       const text = asDebtor
         ? fillTemplate(TEMPLATES.settledByDebtor, { creditorName: creditor, concept: data.concept })
         : fillTemplate(TEMPLATES.settled, { debtorName: debtor, concept: data.concept })
-      const result = await shareImage(blob, 'mitimiti-saldada.png', { title: 'Deuda saldada · MitiMiti', text })
+      const result = await shareImage(blob, 'mitimiti-a-mano.png', { title: 'Quedamos a mano · MitiMiti', text })
       if (result === 'downloaded') {
         // Sin compartir archivos (computador): la imagen queda guardada y se abre el chat con el texto.
         openWhatsApp(text)
@@ -284,7 +289,7 @@ export function SettledReceiptSheet({ data, onClose }: { data: SettledData | nul
       open
       onClose={onClose}
       dismissible={!busy}
-      title="¡Deuda saldada!"
+      title="¡Quedamos a mano!"
       description={asDebtor ? `Le pagaste a ${creditor}. Aquí está tu comprobante.` : `${debtor} ya te pagó. Mándale el comprobante.`}
     >
       <div className="flex flex-col gap-4 pb-4 pt-2">
@@ -314,5 +319,69 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
     >
       <span className={cx('absolute top-1 h-6 w-6 rounded-full bg-surface shadow transition-transform', checked ? 'translate-x-[24px]' : 'translate-x-1')} />
     </button>
+  )
+}
+
+export interface GroupData {
+  planName: string
+  hostName: string
+  participants: string[]
+  totalCents: number
+  currency: string
+  /** Cuándo se creó la cuenta y cuándo quedó cuadrada (ISO). */
+  createdAt: string
+  settledAt: string
+  prize: { icon: string; label: string; value: string } | null
+}
+
+/** "Contarle al grupo": el recibo de la cuenta cerrada, con o sin monto. */
+export function GroupReceiptSheet({ data, onClose }: { data: GroupData | null; onClose: () => void }) {
+  const toast = useToast()
+  const [hideAmount, setHideAmount] = useState(false)
+  const [busy, setBusy] = useState(false)
+  if (!data) return null
+  const card = (hide: boolean): ReceiptCard => ({
+    kind: 'group',
+    planName: data.planName,
+    hostName: firstName(data.hostName),
+    participants: data.participants.map(firstName),
+    total: formatMoney(data.totalCents, data.currency),
+    date: shortDate(data.settledAt),
+    elapsed: groupElapsedLabel(data.createdAt, data.settledAt),
+    prize: data.prize,
+    hideAmount: hide,
+  })
+  const share = async () => {
+    setBusy(true)
+    try {
+      const blob = await renderReceiptCard(card(hideAmount), { domain: appDomain() })
+      const text = fillTemplate(TEMPLATES.groupSettled, { planName: data.planName })
+      const result = await shareImage(blob, 'mitimiti-todo-cuadrado.png', { title: '¡Todo cuadrado! · MitiMiti', text })
+      if (result === 'downloaded') toast({ title: 'Imagen guardada. Ya puedes enviarla al grupo.', emoji: '🖼️', tone: 'good' })
+      if (result !== 'cancelled') track('group_receipt_shared', { hide_amount: hideAmount, how: result, prize: data.prize?.label ?? null })
+    } catch {
+      toast({ title: 'No pudimos crear la imagen. Intenta de nuevo.', tone: 'error', emoji: '⚠️' })
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Sheet open onClose={onClose} dismissible={!busy} title="Contarle al grupo" description="Así quedó la cuenta. Compártela en el chat del grupo.">
+      <div className="flex flex-col gap-4 pb-4 pt-2">
+        <ReceiptPreview card={card(hideAmount)} />
+        <label className="flex items-center justify-between gap-3 rounded-2xl bg-surface-2 px-4 py-3">
+          <span className="text-[15px] font-semibold text-ink">Ocultar monto</span>
+          <Switch checked={hideAmount} onChange={setHideAmount} label="Ocultar monto" />
+        </label>
+        <div className="flex flex-col gap-2">
+          <Button full loading={busy} onClick={() => void share()}>
+            Compartir en el grupo
+          </Button>
+          <Button full variant="ghost" size="md" onClick={onClose} disabled={busy}>
+            Listo
+          </Button>
+        </div>
+      </div>
+    </Sheet>
   )
 }

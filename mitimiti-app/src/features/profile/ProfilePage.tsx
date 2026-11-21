@@ -136,7 +136,7 @@ export default function ProfilePage() {
 
         <div className="mt-10 flex flex-col items-center gap-2 text-center">
           <LogoMark size={28} className="text-ink" />
-          <p className="text-[13px] text-muted">MitiMiti · Divide cuentas, no amistades.</p>
+          <p className="text-[13px] text-muted">MitiMiti · Divide y acolita entre panas.</p>
           <p className="max-w-[300px] text-[12.5px] leading-snug text-subtle">MitiMiti no mueve tu dinero: te dice cuánto y a quién, y cada uno paga como prefiera.</p>
           {!isAnonymous && (
             <button type="button" onClick={() => setSheet('signout')} className="mt-3 px-3 py-2 text-[14px] font-semibold text-muted">

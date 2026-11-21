@@ -43,7 +43,7 @@ export default function NewLoanPage() {
       const debt = await api.createDebt(direction, cents, concept)
       // Mismo toque: WhatsApp con el mensaje. Si el navegador lo bloquea, la
       // pantalla siguiente lo pide con un botón.
-      const sent = openWhatsApp(debtLinkMessage(cents, 'USD', concept, debt.link_token))
+      const sent = openWhatsApp(debtLinkMessage(lent, cents, 'USD', concept, debt.link_token))
       success()
       track('loan_created', { direction, auto_shared: sent })
       setCreated({ token: debt.link_token, sent })
@@ -81,7 +81,7 @@ export default function NewLoanPage() {
           </div>
           <div className="mt-auto flex flex-col gap-2.5 pt-8">
             <ShareButtons
-              message={debtLinkMessage(cents, 'USD', concept, created.token)}
+              message={debtLinkMessage(lent, cents, 'USD', concept, created.token)}
               link={debtLink(created.token)}
               primaryLabel={created.sent ? 'Enviar otra vez' : 'Enviar por WhatsApp'}
               quiet={created.sent}

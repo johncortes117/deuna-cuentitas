@@ -174,7 +174,7 @@ export function GuestSheet({ open, onClose, onSave }: { open: boolean; onClose: 
       onClose={onClose}
       dismissible={!busy}
       title="Alguien sin celular"
-      description="Para quien está en la mesa pero no va a abrir el link. Tú cobras su parte y, si quieres, le mandas su link después."
+      description="Para quien está en el plan pero no va a abrir el link. Tú cobras su parte y, si quieres, le mandas su link después."
       footer={
         <Button full disabled={!name.trim()} loading={busy} onClick={submit}>
           Agregar a la cuenta

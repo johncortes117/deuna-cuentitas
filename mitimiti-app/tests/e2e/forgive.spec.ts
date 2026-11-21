@@ -40,7 +40,7 @@ test('perdonar desde la cuenta, con frase, y compartir la tarjeta sin monto', as
 
   // Era la única deuda: la cuenta se cerró debajo, y el recibo siguió abierto.
   await receipt.getByRole('button', { name: 'Listo' }).click()
-  await expect(ana.page.getByRole('heading', { name: '¡Cuentas claras!' })).toBeVisible()
+  await expect(ana.page.getByRole('heading', { name: '¡Todo cuadrado!' })).toBeVisible()
 
   // A Luis le llega el aviso con la frase.
   await luis.page.goto('/actividad')

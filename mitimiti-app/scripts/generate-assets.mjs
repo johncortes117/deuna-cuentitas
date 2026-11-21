@@ -38,9 +38,9 @@ const og = `${base}
         ${mark(INK, MINT, 64)}
         <span style="font-size:40px;font-weight:800;letter-spacing:-1.2px;color:${INK}">Miti<span style="color:${MINT}">Miti</span></span>
       </div>
-      <h1 style="font-size:68px;line-height:1.02;font-weight:850;letter-spacing:-2.6px;color:${INK}">Divide la cuenta<br/>en la mesa.</h1>
+      <h1 style="font-size:68px;line-height:1.02;font-weight:850;letter-spacing:-2.6px;color:${INK}">Divide cualquier<br/>cuenta.</h1>
       <p style="margin-top:24px;font-size:28px;line-height:1.35;color:#646E6A;max-width:600px">Tus amigos entran con un link, ven cuánto les toca y te pagan. Sin calculadora y sin descargar nada.</p>
-      <p style="margin-top:34px;display:inline-block;font-size:22px;font-weight:700;color:${INK};background:#fff;border:2px solid #E5E8E6;border-radius:999px;padding:10px 22px">Divide cuentas, no amistades.</p>
+      <p style="margin-top:34px;display:inline-block;font-size:22px;font-weight:700;color:${INK};background:#fff;border:2px solid #E5E8E6;border-radius:999px;padding:10px 22px">Divide y acolita entre panas.</p>
     </div>
     <div style="width:360px;position:relative;transform:rotate(3deg)">
       <div style="background:#fff;border-radius:28px 28px 0 0;padding:30px 30px 18px;box-shadow:0 24px 60px rgba(18,21,20,.14)">

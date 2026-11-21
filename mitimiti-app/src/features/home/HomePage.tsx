@@ -18,7 +18,7 @@ import { cx } from '../../ui/cx'
 import { titleEmoji } from '../shared/titles'
 
 function billStatus(b: HomeBill): { text: string; tone: 'good' | 'warn' | 'muted' | 'info' } {
-  if (b.status === 'settled') return { text: '¡Cuentas claras!', tone: 'good' }
+  if (b.status === 'settled') return { text: '¡Todo cuadrado!', tone: 'good' }
   if (b.status === 'open') {
     if (b.is_host) return b.member_count < 2 ? { text: 'Esperando que se unan', tone: 'info' } : { text: `${b.member_count} personas · lista para dividir`, tone: 'info' }
     return { text: 'Esperando que se divida', tone: 'muted' }
@@ -112,13 +112,13 @@ export default function HomePage() {
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Link to="/prestamo" className="flex flex-col gap-2 rounded-3xl border border-line bg-surface px-4 py-4 shadow-card transition active:scale-[0.98]">
             <HandCoins size={24} className="text-brand-ink" aria-hidden="true" />
-            <span className="text-[15px] font-bold leading-tight text-ink">Anotar un préstamo</span>
+            <span className="text-[15px] font-bold leading-tight text-ink">Anotar lo que acolité</span>
             <span className="text-[13px] leading-snug text-muted">“Te presté $5 para el taxi”</span>
           </Link>
           <Link to="/unirme" className="flex flex-col gap-2 rounded-3xl border border-line bg-surface px-4 py-4 shadow-card transition active:scale-[0.98]">
             <Hash size={24} className="text-brand-ink" aria-hidden="true" />
             <span className="text-[15px] font-bold leading-tight text-ink">Unirme con código</span>
-            <span className="text-[13px] leading-snug text-muted">Si alguien te lo dicta en la mesa</span>
+            <span className="text-[13px] leading-snug text-muted">Si alguien te lo dicta</span>
           </Link>
         </div>
 

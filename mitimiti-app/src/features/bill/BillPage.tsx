@@ -137,7 +137,7 @@ function JoinGate({ preview, onJoined }: { preview: BillPreview; onJoined: () =>
           </p>
           <p className="mt-1.5 text-[15px] leading-snug text-muted text-balance">
             {preview.status === 'locked'
-              ? `Si estabas en la mesa, pídele a ${firstName(preview.host_name)} que te envíe tu parte o que corrija la división para sumarte.`
+              ? `Si estabas en el plan, pídele a ${firstName(preview.host_name)} que te envíe tu parte o que corrija la división para sumarte.`
               : 'No hay nada que hacer aquí.'}
           </p>
           <Button className="mt-6" full variant="secondary" onClick={() => navigate('/')}>
@@ -169,7 +169,7 @@ function JoinGate({ preview, onJoined }: { preview: BillPreview; onJoined: () =>
         </div>
       )}
 
-      <p className="mt-auto pt-10 text-center text-[13px] text-muted">MitiMiti divide la cuenta sin calculadora. Divide cuentas, no amistades.</p>
+      <p className="mt-auto pt-10 text-center text-[13px] text-muted">MitiMiti divide la cuenta sin calculadora. Divide y acolita entre panas.</p>
     </div>
   )
 }

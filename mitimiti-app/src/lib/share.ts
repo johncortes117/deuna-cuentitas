@@ -5,7 +5,7 @@
 import { APP_URL } from './env'
 import { formatMoney } from './money'
 import { firstName } from './avatar'
-import { TEMPLATES, conceptText, fillTemplate } from './templates'
+import { TEMPLATES, conceptText, fillTemplate, withoutConcept } from './templates'
 
 export const billLink = (code: string) => `${APP_URL}/c/${code}`
 export const debtLink = (token: string) => `${APP_URL}/d/${token}`
@@ -88,20 +88,29 @@ export function personReminderMessage(debtorName: string, amountCents: number, c
 }
 
 /** Préstamo 1 a 1 recién anotado (sirve en los dos sentidos). */
-export function debtLinkMessage(amountCents: number, currency: string, concept: string | null, token: string): string {
-  return fillTemplate(TEMPLATES.loan, {
+/** Préstamo 1 a 1 recién anotado: "Te acolité con…" o "Me acolitaste con…". */
+export function debtLinkMessage(lent: boolean, amountCents: number, currency: string, concept: string | null, token: string): string {
+  const base = lent ? TEMPLATES.loan : TEMPLATES.loanBorrowed
+  const c = concept?.trim()
+  return fillTemplate(c ? base : withoutConcept(base), {
     amount: formatMoney(amountCents, currency),
-    concept: conceptText(concept),
+    concept: c ? `«${c}»` : '',
+    loanUrl: debtLink(token),
+  })
+}
+
+/** Recordar un préstamo 1 a 1 (con su link). */
+export function loanReminderMessage(amountCents: number, currency: string, concept: string | null, token: string): string {
+  const c = concept?.trim()
+  return fillTemplate(c ? TEMPLATES.loanReminder : withoutConcept(TEMPLATES.loanReminder), {
+    amount: formatMoney(amountCents, currency),
+    concept: c ? `«${c}»` : '',
     loanUrl: debtLink(token),
   })
 }
 
 export function payCardMessage(code: string): string {
   return `Aquí están mis datos para pagarme, listos para copiar 👉 ${payCardLink(code)}`
-}
-
-export function settledMessage(title: string, totalCents: number, currency: string, people: number): string {
-  return `✅ Dividimos «${title}» (${formatMoney(totalCents, currency)}) entre ${people} con MitiMiti: sin calculadora y sin "te transfiero luego". Divide cuentas, no amistades 💚 ${APP_URL}`
 }
 
 // ─── Compartir imágenes (tarjetas) ───────────────────────────

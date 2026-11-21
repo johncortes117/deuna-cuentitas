@@ -3,8 +3,9 @@ import { centsToInput, formatMoney, inputToCents, keypadInput, parsePrice, perce
 import { idNumberKind, isDeunaLink, isMethodComplete, isValidCedula, methodCopyText, methodSummary } from './payMethods'
 import { buildBalances, originsLabel } from './ledger'
 import { tableColors } from './avatar'
-import { conceptText, fillTemplate, TEMPLATES } from './templates'
+import { conceptText, fillTemplate, TEMPLATES, withoutConcept } from './templates'
 import { settledElapsedLabel } from './dates'
+import { groupElapsedLabel, groupPrize, participantsLine } from './groupPrize'
 import type { Ledger, LedgerDebt } from './types'
 
 describe('dinero', () => {
@@ -173,7 +174,18 @@ describe('mensajes de WhatsApp', () => {
   it('llena las marcas y deja vacías las que faltan', () => {
     expect(fillTemplate('Hola {a}, {b}!', { a: 'Ana' })).toBe('Hola Ana, !')
     expect(fillTemplate(TEMPLATES.loan, { amount: '$5,00', concept: conceptText('Taxi'), loanUrl: 'https://x/d/1' })).toBe(
-      'Anoté en MitiMiti los $5,00 de «Taxi» para que no se nos olvide a ninguno. Échale un ojo aquí: https://x/d/1',
+      'Te acolité con $5,00 de «Taxi». Lo anoté en MitiMiti para que no se nos olvide:\nhttps://x/d/1',
+    )
+  })
+  it('acolitar: préstamo recibido y recordatorio, con y sin concepto', () => {
+    expect(fillTemplate(withoutConcept(TEMPLATES.loanBorrowed), { amount: '$12,00', loanUrl: 'https://x/d/2' })).toBe(
+      'Me acolitaste con $12,00. Lo anoté en MitiMiti para no olvidarme:\nhttps://x/d/2',
+    )
+    expect(fillTemplate(TEMPLATES.loanReminder, { amount: '$5,00', concept: '«Taxi»', loanUrl: 'https://x/d/1' })).toBe(
+      'Te recuerdo que te acolité con $5,00 de «Taxi» 👀 Apenas me pagues, lo dejamos a mano aquí:\nhttps://x/d/1',
+    )
+    expect(fillTemplate(withoutConcept(TEMPLATES.loanReminder), { amount: '$5,00', loanUrl: 'https://x/d/1' })).toBe(
+      'Te recuerdo que te acolité con $5,00 👀 Apenas me pagues, lo dejamos a mano aquí:\nhttps://x/d/1',
     )
   })
   it('sin concepto usa uno genérico', () => {
@@ -204,5 +216,31 @@ describe('tiempo de cierre del recibo', () => {
   })
   it('una fecha al revés no da tiempos negativos', () => {
     expect(settledElapsedLabel(plus(MIN), t0)).toBe('Saldada al instante')
+  })
+})
+
+describe('micro-premio del recibo grupal', () => {
+  const base = { loans: [], firstPayment: null, splitMode: 'equal' as const, totalSeconds: 3 * 86400 }
+  it('respeta el orden y elige uno solo', () => {
+    expect(groupPrize({ ...base, loans: [{ helperName: 'Ana', cents: 500 }, { helperName: 'Luis', cents: 900 }], firstPayment: { name: 'Carla', seconds: 28 }, splitMode: 'items', totalSeconds: 60 })).toEqual({ icon: '🤝', label: 'El que acolitó', value: 'Luis' })
+    expect(groupPrize({ ...base, firstPayment: { name: 'Carla', seconds: 28 }, splitMode: 'items', totalSeconds: 60 })?.value).toBe('Carla (28 seg)')
+    expect(groupPrize({ ...base, firstPayment: { name: 'Carla', seconds: 130 } })?.value).toBe('Carla (2 min 10 seg)')
+    expect(groupPrize({ ...base, firstPayment: { name: 'Carla', seconds: 400 }, splitMode: 'amounts' })?.label).toBe('Cuadró al centavo')
+    expect(groupPrize({ ...base, totalSeconds: 150 })?.label).toBe('Cuadrado al toque')
+  })
+  it('si nada aplica, no hay premio', () => {
+    expect(groupPrize(base)).toBeNull()
+    expect(groupPrize({ ...base, firstPayment: { name: 'Luis', seconds: 5 * 60 } })).toBeNull()
+  })
+  it('lista de participantes sin desbordarse', () => {
+    expect(participantsLine(['Ana', 'Luis', 'Carla', 'Pedro'])).toBe('Ana · Luis · Carla · Pedro')
+    expect(participantsLine(['Ana', 'Luis', 'Carla', 'Pedro', 'Sofía'])).toBe('Ana · Luis · Carla y +2 más')
+  })
+  it('tiempo de la cuenta', () => {
+    const t = '2026-11-20T15:00:00Z'
+    const plus = (s: number) => new Date(Date.parse(t) + s * 1000).toISOString()
+    expect(groupElapsedLabel(t, plus(100))).toBe('1 min 40 seg')
+    expect(groupElapsedLabel(t, plus(12 * 60))).toBe('12 min')
+    expect(groupElapsedLabel(t, plus(3 * 86400))).toBe('3 días')
   })
 })

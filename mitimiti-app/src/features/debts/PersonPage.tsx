@@ -16,7 +16,7 @@ import { formatMoney } from '../../lib/money'
 import { firstName } from '../../lib/avatar'
 import { relativeDay, timeAgo } from '../../lib/dates'
 import { PAID_VIA, PAID_WITH, capitalize } from '../../lib/payMethods'
-import { copyText, debtLink, debtLinkMessage, guestShareMessage, openWhatsApp, personReminderMessage } from '../../lib/share'
+import { copyText, debtLink, debtLinkMessage, guestShareMessage, loanReminderMessage, openWhatsApp, personReminderMessage } from '../../lib/share'
 import type { PayMethodType } from '../../lib/types'
 import { Avatar } from '../../ui/Avatar'
 import { Button } from '../../ui/Button'
@@ -108,7 +108,13 @@ export default function PersonPage() {
   }
 
   const remind = () => {
-    openWhatsApp(personReminderMessage(p.name, abs, currency, what, profile!.name))
+    // Si todo lo pendiente son préstamos 1 a 1, el recordatorio de préstamo con su link.
+    const loans = creditDebts.filter((d) => d.kind === 'direct' && d.link_token)
+    openWhatsApp(
+      loans.length > 0 && loans.length === creditDebts.length
+        ? loanReminderMessage(abs, currency, loans.length === 1 ? loans[0].concept : what, loans[0].link_token!)
+        : personReminderMessage(p.name, abs, currency, what, profile!.name),
+    )
     if (p.userId) void api.remind(p.userId).catch(() => undefined)
     track('person_reminder_sent', {})
     toast({ title: `Le recordamos a ${firstName(p.name)}`, emoji: '👋', tone: 'good' })
@@ -207,7 +213,7 @@ export default function PersonPage() {
                 icon={<Send size={18} />}
                 onClick={() => {
                   const d = p.debts[0]
-                  openWhatsApp(debtLinkMessage(d.amount_cents, d.currency, d.concept, d.link_token ?? ''))
+                  openWhatsApp(debtLinkMessage(d.creditor_id === profile!.id, d.amount_cents, d.currency, d.concept, d.link_token ?? ''))
                 }}
               >
                 Enviar el link otra vez

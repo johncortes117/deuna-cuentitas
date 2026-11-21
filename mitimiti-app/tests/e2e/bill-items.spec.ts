@@ -18,7 +18,7 @@ test('dividir por productos, con alguien sin celular que después reclama su par
   await ana.page.getByRole('button', { name: 'Agregar a alguien sin celular' }).click()
   await ana.page.getByRole('dialog').getByRole('textbox').fill('Abuela')
   await ana.page.getByRole('button', { name: 'Agregar a la cuenta' }).click()
-  await expect(ana.page.getByText('En la mesa · 3')).toBeVisible()
+  await expect(ana.page.getByText('En esta cuenta · 3')).toBeVisible()
 
   // Por productos: Ana anota la cuenta de corrido.
   await ana.page.getByRole('radio', { name: /Productos/ }).click()

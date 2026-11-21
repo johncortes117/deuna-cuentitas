@@ -109,7 +109,7 @@ export default function DebtLinkPage() {
           <Summary p={p} lead={p.status === 'pending' ? 'Tu link, esperando que lo abran' : `${firstName(p.counterpart_name ?? 'Tu amigo')} ya lo respondió`} />
           <BottomBar>
             {p.status === 'pending' ? (
-              <ShareButtons message={debtLinkMessage(p.amount_cents, p.currency, p.concept, token)} link={debtLink(token)} />
+              <ShareButtons message={debtLinkMessage(p.creator_is_creditor, p.amount_cents, p.currency, p.concept, token)} link={debtLink(token)} />
             ) : (
               <Button full onClick={() => navigate('/saldos')}>Ver mis saldos</Button>
             )}
@@ -223,7 +223,7 @@ export default function DebtLinkPage() {
         <Summary p={p} lead={lead} />
         <p className="mx-auto mt-5 max-w-[320px] text-center text-[15px] leading-snug text-muted">
           {p.kind === 'bill'
-            ? `Si estuviste en la mesa, quédate con tu parte: verás cómo pagarle a ${creator}.`
+            ? `Si estuviste en el plan, quédate con tu parte: verás cómo pagarle a ${creator}.`
             : iOwe
               ? `Si es correcto, queda anotado y ves cómo pagarle a ${creator}, ahora o después.`
               : `Si es correcto, queda anotado y ${creator} podrá pagarte.`}
